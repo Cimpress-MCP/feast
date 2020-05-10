@@ -31,7 +31,10 @@ import feast.auth.config.SecurityProperties.AuthorizationProperties;
 import feast.auth.credentials.CoreAuthenticationProperties;
 import feast.common.logging.config.LoggingProperties;
 import feast.proto.core.StoreProto;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.validation.ConstraintViolation;
@@ -320,6 +323,10 @@ public class FeastProperties {
               StoreProto.Store.CassandraConfig.newBuilder();
           JsonFormat.parser().merge(jsonWriter.writeValueAsString(config), cassandraConfig);
           return storeProtoBuilder.setCassandraConfig(cassandraConfig.build()).build();
+        case JDBC:
+          StoreProto.Store.JdbcConfig.Builder jdbcConfig = StoreProto.Store.JdbcConfig.newBuilder();
+          JsonFormat.parser().merge(jsonWriter.writeValueAsString(config), jdbcConfig);
+          return storeProtoBuilder.setJdbcConfig(jdbcConfig.build()).build();
         default:
           throw new InvalidProtocolBufferException("Invalid store set");
       }
