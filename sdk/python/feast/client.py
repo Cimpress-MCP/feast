@@ -554,6 +554,7 @@ class Client:
         entity_rows: Union[pd.DataFrame, str],
         compute_statistics: bool = False,
         project: str = None,
+        data_format: DataFormat = DataFormat.DATA_FORMAT_AVRO,
     ) -> RetrievalJob:
         """
         Deprecated. Please see get_historical_features.
@@ -564,7 +565,7 @@ class Client:
             DeprecationWarning,
         )
         return self.get_historical_features(
-            feature_refs, entity_rows, compute_statistics, project
+            feature_refs, entity_rows, compute_statistics, project, data_format
         )
 
     def get_historical_features(
@@ -573,6 +574,7 @@ class Client:
         entity_rows: Union[pd.DataFrame, str],
         compute_statistics: bool = False,
         project: str = None,
+        data_format: DataFormat = DataFormat.DATA_FORMAT_AVRO,
     ) -> RetrievalJob:
         """
         Retrieves historical features from a Feast Serving deployment.
@@ -592,6 +594,7 @@ class Client:
                 Indicates whether Feast should compute statistics over the retrieved dataset.
             project: Specifies the project which contain the FeatureSets
                 which the requested features belong to.
+            data_format: DataFormat used to persist data during retrieval
 
         Returns:
             feast.job.RetrievalJob:
@@ -643,9 +646,9 @@ class Client:
                 ).tz_localize(None)
         elif isinstance(entity_rows, str):
             # String based source
-            if not entity_rows.endswith((".avro", "*")):
+            if not entity_rows.endswith((".avro", "*", ".csv")):
                 raise Exception(
-                    "Only .avro and wildcard paths are accepted as entity_rows"
+                    "Only .avro, .csv, and wildcard paths are accepted as entity_rows"
                 )
         else:
             raise Exception(
@@ -656,8 +659,9 @@ class Client:
         # Export and upload entity row DataFrame to staging location
         # provided by Feast
         staged_files = export_source_to_staging_location(
-            entity_rows, serving_info.job_staging_location
+            entity_rows, serving_info.job_staging_location, data_format
         )  # type: List[str]
+
         request = GetBatchFeaturesRequest(
             features=_build_feature_references(
                 feature_ref_strs=feature_refs,
@@ -665,7 +669,7 @@ class Client:
             ),
             dataset_source=DatasetSource(
                 file_source=DatasetSource.FileSource(
-                    file_uris=staged_files, data_format=DataFormat.DATA_FORMAT_AVRO
+                    file_uris=staged_files, data_format=data_format
                 )
             ),
             compute_statistics=compute_statistics,
