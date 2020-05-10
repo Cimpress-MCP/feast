@@ -19,15 +19,12 @@ package feast.serving.config;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.InvalidProtocolBufferException;
 import feast.proto.core.StoreProto;
-import feast.serving.service.HistoricalServingService;
-import feast.serving.service.JobService;
-import feast.serving.service.NoopJobService;
-import feast.serving.service.OnlineServingService;
-import feast.serving.service.ServingService;
+import feast.serving.service.*;
 import feast.serving.specs.CachedSpecService;
 import feast.storage.api.retriever.HistoricalRetriever;
 import feast.storage.api.retriever.OnlineRetriever;
 import feast.storage.connectors.bigquery.retriever.BigQueryHistoricalRetriever;
+import feast.storage.connectors.jdbc.retriever.JdbcHistoricalRetriever;
 import feast.storage.connectors.redis.retriever.RedisClusterOnlineRetriever;
 import feast.storage.connectors.redis.retriever.RedisOnlineRetriever;
 import io.opentracing.Tracer;
@@ -63,12 +60,15 @@ public class ServingServiceConfig {
         servingService = new OnlineServingService(redisRetriever, specService, tracer);
         break;
       case BIGQUERY:
-        if (jobService.getClass() == NoopJobService.class) {
-          throw new IllegalArgumentException(
-              "Unable to instantiate JobService which is required by BigQueryHistoricalRetriever.");
-        }
+        validateJobServicePresence(jobService);
         HistoricalRetriever bqRetriever = BigQueryHistoricalRetriever.create(config);
         servingService = new HistoricalServingService(bqRetriever, specService, jobService);
+        break;
+      case JDBC:
+        validateJobServicePresence(jobService);
+        HistoricalRetriever jdbcHistoricalRetriever = JdbcHistoricalRetriever.create(config);
+        servingService =
+            new HistoricalServingService(jdbcHistoricalRetriever, specService, jobService);
         break;
       case CASSANDRA:
       case UNRECOGNIZED:
@@ -80,5 +80,12 @@ public class ServingServiceConfig {
     }
 
     return servingService;
+  }
+
+  private void validateJobServicePresence(JobService jobService) {
+    if (jobService.getClass() == NoopJobService.class) {
+      throw new IllegalArgumentException(
+          "Job service has not been instantiated. The Job service is required for all historical stores.");
+    }
   }
 }

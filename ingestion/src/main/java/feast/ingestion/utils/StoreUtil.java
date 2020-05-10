@@ -24,6 +24,7 @@ import feast.proto.core.StoreProto.Store.StoreType;
 import feast.proto.types.ValueProto.ValueType.Enum;
 import feast.storage.api.writer.FeatureSink;
 import feast.storage.connectors.bigquery.writer.BigQueryFeatureSink;
+import feast.storage.connectors.jdbc.writer.JdbcFeatureSink;
 import feast.storage.connectors.redis.writer.RedisFeatureSink;
 import java.util.HashMap;
 import java.util.Map;
@@ -86,6 +87,8 @@ public class StoreUtil {
         return RedisFeatureSink.fromConfig(store.getRedisConfig());
       case BIGQUERY:
         return BigQueryFeatureSink.fromConfig(store.getBigqueryConfig());
+      case JDBC:
+        return JdbcFeatureSink.fromConfig(store.getJdbcConfig());
       default:
         throw new RuntimeException(String.format("Store type '%s' is unsupported", storeType));
     }
