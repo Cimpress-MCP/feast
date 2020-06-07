@@ -50,7 +50,7 @@ public class JdbcFeatureSinkTest {
   private String url = "jdbc:postgresql://localhost:5432/postgres";
   private String className = "org.postgresql.Driver";
   private String userName = "postgres";
-
+  private String pw = "-";
   private Connection conn;
 
   @Before
@@ -106,7 +106,7 @@ public class JdbcFeatureSinkTest {
             StoreProto.Store.JdbcConfig.newBuilder()
                 .setUrl(this.url)
                 .setClassName(this.className)
-                .setUsername(this.userName)
+                .setUsername(this.userName).setPassword(pw)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
 
@@ -122,7 +122,7 @@ public class JdbcFeatureSinkTest {
     }
     try {
       Class.forName(this.className);
-      conn = DriverManager.getConnection(this.url, userName, null);
+      conn = DriverManager.getConnection(this.url, userName, this.pw);
     } catch (ClassNotFoundException | SQLException e) {
       System.err.println(e.getClass().getName() + ": " + e.getMessage());
     }
