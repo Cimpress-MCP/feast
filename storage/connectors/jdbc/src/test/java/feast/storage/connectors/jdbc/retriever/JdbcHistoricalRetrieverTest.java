@@ -52,7 +52,7 @@ public class JdbcHistoricalRetrieverTest {
         sqliteFeatureRetriever = JdbcHistoricalRetriever.create(config);
     }
     @Test
-    public void shouldRetrieveFromSqlite() {
+    public void shouldRetrieveFromPostgresql() {
         //    TODO:
         String retrievalId = "1234";
         FeatureSetRequest featureSetRequest =

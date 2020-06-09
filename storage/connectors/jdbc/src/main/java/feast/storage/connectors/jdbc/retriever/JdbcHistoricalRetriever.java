@@ -104,19 +104,19 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
     // 3. Load entity rows into database
     Iterator<String> fileList = datasetSource.getFileSource().getFileUrisList().iterator();
-    String entityTableWithRowCountName = loadEntities(conn, featureSetQueryInfos, fileList);
+    String entityTableWithRowCountName = this.loadEntities(conn, featureSetQueryInfos, fileList);
 
-    // 2. Retrieve the temporal bounds of the entity dataset provided
+    // 4. Retrieve the temporal bounds of the entity dataset provided
     Map<String, Timestamp> timestampLimits =
         this.getTimestampLimits(conn, entityTableWithRowCountName);
 
-    // 3. Generate the subqueries
+    // 5. Generate the subqueries
     List<String> featureSetQueries =
-        generateQueries(entityTableWithRowCountName, timestampLimits, featureSetQueryInfos);
+        this.generateQueries(entityTableWithRowCountName, timestampLimits, featureSetQueryInfos);
 
-    // 4. Run the subqueries and collect outputs
+    // 6. Run the subqueries and collect outputs
     String resultTable =
-        runBatchQuery(conn, entityTableWithRowCountName, featureSetQueryInfos, featureSetQueries);
+        this.runBatchQuery(conn, entityTableWithRowCountName, featureSetQueryInfos, featureSetQueries);
 
     String fileUri = exportResultsToDisk(conn, resultTable, stagingLocation);
     List<String> fileUris = new ArrayList<>();
