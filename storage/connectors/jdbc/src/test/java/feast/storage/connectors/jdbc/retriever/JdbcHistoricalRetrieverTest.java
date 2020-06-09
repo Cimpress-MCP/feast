@@ -27,6 +27,8 @@ import org.apache.beam.sdk.transforms.Create;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
+
 
 public class JdbcHistoricalRetrieverTest {
     @Rule public transient TestPipeline p = TestPipeline.create();
@@ -66,8 +68,9 @@ public class JdbcHistoricalRetrieverTest {
         List< FeatureSetRequest > featureSetRequests = new ArrayList<>();
         featureSetRequests.add(featureSetRequest);
 //        TODO: find out datasetSource
-
+        ServingAPIProto.DatasetSource datasetSource = ServingAPIProto.DatasetSource;
         ServingAPIProto.DatasetSource datasetSource = getFeaturesRequest.getDatasetSource();
+
         sqliteFeatureRetriever.getHistoricalFeatures(retrievalId, datasetSource, featureSetRequests);
 
     }
