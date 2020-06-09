@@ -37,6 +37,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import lombok.Getter;
+import lombok.var;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.hash.Hashing;
 

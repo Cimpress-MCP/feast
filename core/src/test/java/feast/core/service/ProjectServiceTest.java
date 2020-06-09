@@ -60,6 +60,11 @@ public class ProjectServiceTest {
     projectService =
         new ProjectService(feastProperties, projectRepository, mock(AuthorizationProvider.class));
   }
+  
+  @Test
+  public void testDefaultProjectCreateInConstructor() {
+    verify(this.projectRepository).saveAndFlush(new Project(Project.DEFAULT_NAME));
+  }
 
   @Test
   public void shouldCreateProjectIfItDoesntExist() {
@@ -83,6 +88,12 @@ public class ProjectServiceTest {
     when(projectRepository.findById(projectName)).thenReturn(Optional.of(new Project(projectName)));
     projectService.archiveProject(projectName);
     verify(projectRepository, times(1)).saveAndFlush(any(Project.class));
+  }
+  
+  @Test
+  public void shouldNotArchiveDefaultProject() {
+    expectedException.expect(IllegalArgumentException.class);
+    this.projectService.archiveProject(Project.DEFAULT_NAME);
   }
 
   @Test(expected = IllegalArgumentException.class)

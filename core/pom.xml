@@ -31,15 +31,36 @@
   <artifactId>feast-core</artifactId>
 
   <build>
-    <plugins>
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-        <configuration>
-          <skip>false</skip>
-        </configuration>
-      </plugin>
-    </plugins>
+      <plugins>
+          <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-compiler-plugin</artifactId>
+              <configuration>
+                  <release>11</release>
+              </configuration>
+          </plugin>
+
+          <plugin>
+              <groupId>org.jacoco</groupId>
+              <artifactId>jacoco-maven-plugin</artifactId>
+          </plugin>
+
+          <plugin>
+              <groupId>org.springframework.boot</groupId>
+              <artifactId>spring-boot-maven-plugin</artifactId>
+              <configuration>
+                  <skip>false</skip>
+              </configuration>
+              <executions>
+                  <execution>
+                      <id>build-info</id>
+                      <goals>
+                          <goal>build-info</goal>
+                      </goals>
+                  </execution>
+              </executions>
+          </plugin>
+      </plugins>
   </build>
 
   <dependencies>
@@ -127,6 +148,10 @@
       <version>5.3.0.RELEASE</version>
     </dependency>
 
+    <dependency>
+        <groupId>io.github.lognet</groupId>
+        <artifactId>grpc-spring-boot-starter</artifactId>
+    </dependency>
     <!--compile "org.springframework.boot:spring-boot-starter-data-jpa:${springBootVersion}"-->
     <dependency>
       <groupId>org.springframework.boot</groupId>

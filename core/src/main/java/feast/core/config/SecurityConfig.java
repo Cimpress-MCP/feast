@@ -16,7 +16,7 @@
  */
 package feast.core.config;
 
-import feast.core.CoreServiceGrpc;
+import feast.proto.core.CoreServiceGrpc;
 import feast.core.auth.authentication.GoogleOID.GoogleOpenIDAuthenticationProvider;
 import feast.core.auth.authorization.AuthorizationProvider;
 import feast.core.auth.authorization.Keto.KetoAuthorizationProvider;
