@@ -94,7 +94,11 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
         </dependency>
-
+ 		<dependency>
+        	<groupId>net.snowflake</groupId>
+			<artifactId>snowflake-jdbc</artifactId>
+			<version>3.12.6</version>
+        </dependency>
         <dependency>
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
@@ -107,6 +111,11 @@
             <artifactId>jcl-over-slf4j</artifactId>
             <version>2.0.0-alpha1</version>
         </dependency>
+        <dependency>
+		    <groupId>org.slf4j</groupId>
+		    <artifactId>slf4j-jdk14</artifactId>
+		    <version>1.7.25</version>
+		</dependency>
 
         <dependency>
             <groupId>org.apache.commons</groupId>

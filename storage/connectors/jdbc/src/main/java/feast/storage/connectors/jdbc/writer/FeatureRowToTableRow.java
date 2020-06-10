@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package feast.storage.connectors.bigquery.writer;
+package feast.storage.connectors.jdbc.writer;
 
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.protobuf.util.Timestamps;
