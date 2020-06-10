@@ -3,14 +3,18 @@ import os
 import random
 import time
 import uuid
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from urllib.parse import urlparse
 
 import numpy as np
 import pandas as pd
 import pytest
 import pytz
+from google.cloud import bigquery, storage
+from google.cloud.storage import Blob
+from google.protobuf.duration_pb2 import Duration
+from pandavro import to_avro
+
 from feast.client import Client
 from feast.core.CoreService_pb2 import ListStoresRequest
 from feast.core.IngestionJob_pb2 import IngestionJobStatus
@@ -18,10 +22,6 @@ from feast.entity import Entity
 from feast.feature import Feature
 from feast.feature_set import FeatureSet
 from feast.type_map import ValueType
-from google.cloud import storage, bigquery
-from google.cloud.storage import Blob
-from google.protobuf.duration_pb2 import Duration
-from pandavro import to_avro
 
 pd.set_option("display.max_columns", None)
 
@@ -707,4 +707,3 @@ def clean_up_remote_files(files):
         if file_uri.scheme == "gs":
             blob = Blob.from_string(file_uri.geturl(), client=storage_client)
             blob.delete()
-

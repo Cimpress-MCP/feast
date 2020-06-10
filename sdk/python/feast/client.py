@@ -26,10 +26,9 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import grpc
 import pandas as pd
-from google.protobuf.timestamp_pb2 import Timestamp
-
 import pyarrow as pa
 import pyarrow.parquet as pq
+from google.protobuf.timestamp_pb2 import Timestamp
 
 import feast.grpc.auth as feast_auth
 from feast.config import Config
@@ -68,8 +67,8 @@ from feast.core.CoreService_pb2_grpc import CoreServiceStub
 from feast.core.FeatureSet_pb2 import FeatureSetStatus
 from feast.feature import FeatureRef
 from feast.feature_set import Entity, FeatureSet, FeatureSetRef
-from feast.job import IngestJob, RetrievalJob
 from feast.grpc.grpc import create_grpc_channel
+from feast.job import IngestJob, RetrievalJob
 from feast.loaders.abstract_producer import get_producer
 from feast.loaders.file import export_source_to_staging_location
 from feast.loaders.ingest import KAFKA_CHUNK_PRODUCTION_TIMEOUT, get_feature_row_chunks
@@ -438,7 +437,7 @@ class Client:
         feature_set_protos = self._core_service.ListFeatureSets(
             ListFeatureSetsRequest(filter=filter), metadata=self._get_grpc_metadata(),
         )  # type: ListFeatureSetsResponse
-        
+
         # Extract feature sets and return
         feature_sets = []
         for feature_set_proto in feature_set_protos.feature_sets:

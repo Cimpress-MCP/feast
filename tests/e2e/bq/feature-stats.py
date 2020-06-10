@@ -1,21 +1,21 @@
+import os
+import time
+import uuid
+from datetime import datetime, timedelta
+
 import pandas as pd
 import pytest
 import pytz
-import uuid
-import time
-import os
-from datetime import datetime, timedelta
+from google.protobuf.duration_pb2 import Duration
+from google.protobuf.json_format import MessageToDict
 
+import tensorflow_data_validation as tfdv
+from deepdiff import DeepDiff
 from feast.client import Client
 from feast.entity import Entity
 from feast.feature import Feature
 from feast.feature_set import FeatureSet
 from feast.type_map import ValueType
-from google.protobuf.duration_pb2 import Duration
-import tensorflow_data_validation as tfdv
-from deepdiff import DeepDiff
-from google.protobuf.json_format import MessageToDict
-
 
 pd.set_option("display.max_columns", None)
 

@@ -59,6 +59,7 @@ public class FeastProperties {
   @NotNull
   /* Feast Kafka stream properties */
   private StreamProperties stream;
+
   private SecurityProperties security;
 
   /** Feast job properties. These properties are used for ingestion jobs. */

@@ -22,24 +22,24 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import feast.core.auth.authorization.AuthorizationProvider;
+import feast.core.config.FeastProperties;
+import feast.core.config.FeastProperties.SecurityProperties;
+import feast.core.dao.ProjectRepository;
+import feast.core.model.Entity;
+import feast.core.model.Feature;
+import feast.core.model.FeatureSet;
+import feast.core.model.Source;
+import feast.core.service.JobService;
+import feast.core.service.ProjectService;
+import feast.core.service.SpecService;
+import feast.core.service.StatsService;
 import feast.proto.core.CoreServiceProto.ApplyFeatureSetRequest;
 import feast.proto.core.CoreServiceProto.ApplyFeatureSetResponse;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.FeatureSetProto.FeatureSetStatus;
 import feast.proto.core.SourceProto.KafkaSourceConfig;
 import feast.proto.core.SourceProto.SourceType;
-import feast.core.auth.authorization.AuthorizationProvider;
-import feast.core.config.FeastProperties;
-import feast.core.config.FeastProperties.SecurityProperties;
-import feast.core.dao.ProjectRepository;
-import feast.core.model.FeatureSet;
-import feast.core.model.Entity;
-import feast.core.model.Feature;
-import feast.core.model.Source;
-import feast.core.service.JobService;
-import feast.core.service.ProjectService;
-import feast.core.service.SpecService;
-import feast.core.service.StatsService;
 import feast.proto.types.ValueProto.ValueType.Enum;
 import io.grpc.internal.testing.StreamRecorder;
 import java.sql.Date;
@@ -77,7 +77,8 @@ class CoreServiceAuthTest {
     FeastProperties feastProperties = new FeastProperties();
     feastProperties.setSecurity(sp);
     projectService = new ProjectService(feastProperties, projectRepository, authProvider);
-    coreService = new CoreServiceImpl(specService, projectService, statsService, jobService, feastProperties );
+    coreService =
+        new CoreServiceImpl(specService, projectService, statsService, jobService, feastProperties);
   }
 
   @Test
@@ -126,8 +127,8 @@ class CoreServiceAuthTest {
   }
 
   private FeatureSet newDummyFeatureSet(String name, int version, String project) {
-	Feature feature = new Feature("feature", Enum.INT64);
-	Entity entity = new Entity("entity", Enum.STRING);
+    Feature feature = new Feature("feature", Enum.INT64);
+    Entity entity = new Entity("entity", Enum.STRING);
 
     Source defaultSource =
         new Source(

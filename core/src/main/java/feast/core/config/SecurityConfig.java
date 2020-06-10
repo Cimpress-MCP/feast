@@ -16,11 +16,11 @@
  */
 package feast.core.config;
 
-import feast.proto.core.CoreServiceGrpc;
 import feast.core.auth.authentication.GoogleOID.GoogleOpenIDAuthenticationProvider;
 import feast.core.auth.authorization.AuthorizationProvider;
 import feast.core.auth.authorization.Keto.KetoAuthorizationProvider;
 import feast.core.config.FeastProperties.SecurityProperties;
+import feast.proto.core.CoreServiceGrpc;
 import java.util.ArrayList;
 import java.util.List;
 import net.devh.boot.grpc.server.security.authentication.BearerAuthenticationReader;

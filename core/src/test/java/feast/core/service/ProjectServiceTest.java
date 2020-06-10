@@ -60,7 +60,7 @@ public class ProjectServiceTest {
     projectService =
         new ProjectService(feastProperties, projectRepository, mock(AuthorizationProvider.class));
   }
-  
+
   @Test
   public void testDefaultProjectCreateInConstructor() {
     verify(this.projectRepository).saveAndFlush(new Project(Project.DEFAULT_NAME));
@@ -89,7 +89,7 @@ public class ProjectServiceTest {
     projectService.archiveProject(projectName);
     verify(projectRepository, times(1)).saveAndFlush(any(Project.class));
   }
-  
+
   @Test
   public void shouldNotArchiveDefaultProject() {
     expectedException.expect(IllegalArgumentException.class);
