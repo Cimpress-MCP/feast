@@ -13,6 +13,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+from enum import Enum
+
+
+class AuthProvider(Enum):
+    GOOGLE = "Google"
+    OAUTH = "OAuth"
+
 
 DATETIME_COLUMN = "datetime"
 
@@ -46,6 +53,13 @@ CONFIG_GRPC_CONNECTION_TIMEOUT_APPLY_KEY = "grpc_connection_timeout_apply"
 CONFIG_BATCH_FEATURE_REQUEST_WAIT_TIME_SECONDS_KEY = (
     "batch_feature_request_wait_time_seconds"
 )
+CONFIG_OAUTH_GRANT_TYPE_KEY = "oauth_grant_type"
+CONFIG_OAUTH_CLIENT_ID_KEY = "oauth_client_id"
+CONFIG_OAUTH_CLIENT_SECRET_KEY = "oauth_client_secret"
+CONFIG_OAUTH_AUDIENCE_KEY = "oauth_audience"
+CONFIG_OAUTH_TOKEN_REQUEST_URL_KEY = "oauth_token_request_url"
+CONFIG_OAUTH_CONTENT_TYPE_KEY = "oauth_content_type"
+CONFIG_CORE_AUTH_PROVIDER = "core_auth_provider"
 
 # Configuration option default values
 FEAST_DEFAULT_OPTIONS = {
@@ -72,4 +86,6 @@ FEAST_DEFAULT_OPTIONS = {
     CONFIG_GRPC_CONNECTION_TIMEOUT_APPLY_KEY: "600",
     # Time to wait for batch feature requests before timing out.
     CONFIG_BATCH_FEATURE_REQUEST_WAIT_TIME_SECONDS_KEY: "600",
+    # Authentication Provider - Google OpenID/OAuth
+    CONFIG_CORE_AUTH_PROVIDER: AuthProvider.GOOGLE
 }
