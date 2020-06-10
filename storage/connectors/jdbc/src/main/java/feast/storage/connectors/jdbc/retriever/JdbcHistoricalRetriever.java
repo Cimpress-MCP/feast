@@ -63,15 +63,16 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     }
     try {
       Class.forName(className);
-      // Username and password is provided
+      // Username and password are provided
       if (!username.isEmpty() && !password.isEmpty()) {
-        this.connection = DriverManager.getConnection(url);
+        this.connection = DriverManager.getConnection(url, username, password);
       }
       // Only username provided
-      if (!username.isEmpty()) {
+      else if (!username.isEmpty()) {
         this.connection = DriverManager.getConnection(url, username, null);
+      } else {
+        this.connection = DriverManager.getConnection(url, username, password);
       }
-      this.connection = DriverManager.getConnection(url, username, password);
     } catch (ClassNotFoundException | SQLException e) {
       throw new RuntimeException(
           String.format(
