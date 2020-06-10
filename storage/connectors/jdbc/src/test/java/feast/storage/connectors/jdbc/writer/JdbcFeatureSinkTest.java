@@ -50,7 +50,7 @@ public class JdbcFeatureSinkTest {
   private String url = "jdbc:postgresql://localhost:5432/postgres";
   private String className = "org.postgresql.Driver";
   private String userName = "postgres";
-  private String pw = "-";
+  private String pw = System.getenv("postgres_pw");
   private Connection conn;
 
 //  Snowflake account
@@ -108,7 +108,6 @@ public class JdbcFeatureSinkTest {
 
     Map<String, FeatureSetProto.FeatureSetSpec> specMap =
         ImmutableMap.of("myproject2/fs", spec1, "myproject2/feature_set", spec2);
-
     sqliteFeatureSink =
         JdbcFeatureSink.fromConfig(
             StoreProto.Store.JdbcConfig.newBuilder()
@@ -117,7 +116,6 @@ public class JdbcFeatureSinkTest {
                 .setUsername(this.userName).setPassword(pw)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
-
     sqliteFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec1).build());
     sqliteFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec2).build());
 

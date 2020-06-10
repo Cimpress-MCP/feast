@@ -1,5 +1,6 @@
 package feast.storage.connectors.jdbc.retriever;
 import static feast.storage.common.testing.TestUtil.field;
+import static org.mockito.Mockito.mock;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -27,27 +28,35 @@ import org.apache.beam.sdk.transforms.Create;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
-
+@RunWith(MockitoJUnitRunner.class)
 public class JdbcHistoricalRetrieverTest {
     @Rule public transient TestPipeline p = TestPipeline.create();
     private HistoricalRetriever sqliteFeatureRetriever;
 
     private String staging_location = "";
     private String url = "jdbc:postgresql://localhost:5432/postgres";
-    private String className = "org.postgresql.Driver";
-    private String userName = "postgres";
-    private String pw = "-";
+    private String class_name = "org.postgresql.Driver";
+    private String username = "postgres";
+    private String pw = System.getenv("postgres_pw");
     private Connection conn;
     private Map<String, String> config = new HashMap<>();
+    //TODO: init datasetSource
+
+    ServingAPIProto.DatasetSource mockDatasetSource = mock(ServingAPIProto.DatasetSource.class);
 
 
     @Before
     public void setUp() {
-        config.put("className",className);
-        config.put("userName",userName);
-        config.put("pw",pw);
+        config.put("class_name",class_name);
+        config.put("username",username);
+        config.put("password",pw);
         config.put("url", url);
         config.put("staging_location", staging_location);
 
@@ -55,7 +64,6 @@ public class JdbcHistoricalRetrieverTest {
     }
     @Test
     public void shouldRetrieveFromPostgresql() {
-        //    TODO:
         String retrievalId = "1234";
         FeatureSetRequest featureSetRequest =
                 FeatureSetRequest.newBuilder()
@@ -67,11 +75,8 @@ public class JdbcHistoricalRetrieverTest {
                         .build();
         List< FeatureSetRequest > featureSetRequests = new ArrayList<>();
         featureSetRequests.add(featureSetRequest);
-//        TODO: find out datasetSource
-        ServingAPIProto.DatasetSource datasetSource = ServingAPIProto.DatasetSource;
-        ServingAPIProto.DatasetSource datasetSource = getFeaturesRequest.getDatasetSource();
-
-        sqliteFeatureRetriever.getHistoricalFeatures(retrievalId, datasetSource, featureSetRequests);
+        System.out.println(mockDatasetSource.getFileSource());
+        sqliteFeatureRetriever.getHistoricalFeatures(retrievalId, mockDatasetSource, featureSetRequests);
 
     }
     private FeatureSetProto.FeatureSetSpec getFeatureSetSpec() {
