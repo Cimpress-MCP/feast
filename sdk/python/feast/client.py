@@ -335,7 +335,6 @@ class Client:
             project: Name of project to archive
         """
 
-        self._connect_core()
         try:
             self._core_service_stub.ArchiveProject(
                 ArchiveProjectRequest(name=project),
@@ -493,7 +492,7 @@ class Client:
         self,
         feature_refs: List[str],
         entity_rows: Union[pd.DataFrame, str],
-        project: str = None,
+        default_project: str = None,
     ) -> RetrievalJob:
         """
         Retrieves historical features from a Feast Serving deployment.
@@ -509,8 +508,7 @@ class Client:
                 Each entity in a feature set must be present as a column in this
                 dataframe. The datetime column must contain timestamps in
                 datetime64 format.
-            project: Specifies the project which contain the FeatureSets
-                which the requested features belong to.
+            default_project: Default project where feature values will be found.
 
         Returns:
             feast.job.RetrievalJob:
@@ -536,9 +534,8 @@ class Client:
             >>> print(df)
         """
 
-        self._connect_serving()
         feature_references = _build_feature_references(
-            feature_refs=feature_refs, default_project=default_project
+            feature_ref_strs=feature_refs, project=default_project
         )
 
         # Retrieve serving information to determine store type and
@@ -582,10 +579,7 @@ class Client:
             entity_rows, serving_info.job_staging_location
         )  # type: List[str]
         request = GetBatchFeaturesRequest(
-            features=_build_feature_references(
-                feature_ref_strs=feature_refs,
-                project=project if project is not None else self.project,
-            ),
+            features=feature_references,
             dataset_source=DatasetSource(
                 file_source=DatasetSource.FileSource(
                     file_uris=staged_files, data_format=DataFormat.DATA_FORMAT_AVRO
@@ -682,7 +676,6 @@ class Client:
         Returns:
             List of IngestJobs matching the given filters
         """
-        self._connect_core()
         # construct list request
         feature_set_ref = None
         list_filter = ListIngestionJobsRequest.Filter(
@@ -706,7 +699,6 @@ class Client:
         Args:
             job: IngestJob to restart
         """
-        self._connect_core()
         request = RestartIngestionJobRequest(id=job.id)
         try:
             self._core_service_stub.RestartIngestionJob(request)
@@ -723,7 +715,6 @@ class Client:
         Args:
             job: IngestJob to restart
         """
-        self._connect_core()
         request = StopIngestionJobRequest(id=job.id)
         try:
             self._core_service_stub.StopIngestionJob(request)
@@ -891,7 +882,6 @@ class Client:
            Returns a tensorflow DatasetFeatureStatisticsList containing TFDV featureStatistics.
         """
 
-        self._connect_core()
         if ingestion_ids is not None and (
             start_date is not None or end_date is not None
         ):
