@@ -70,8 +70,6 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       // Only username provided
       else if (!username.isEmpty()) {
         this.connection = DriverManager.getConnection(url, username, null);
-      } else {
-        this.connection = DriverManager.getConnection(url, username, password);
       }
     } catch (ClassNotFoundException | SQLException e) {
       throw new RuntimeException(
@@ -105,6 +103,7 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
     // 3. Load entity rows into database
     Iterator<String> fileList = datasetSource.getFileSource().getFileUrisList().iterator();
+//    TODO: Chi: fix entityTable is empty
     String entityTableWithRowCountName = this.loadEntities(conn, featureSetQueryInfos, fileList);
 
     // 4. Retrieve the temporal bounds of the entity dataset provided
@@ -218,7 +217,9 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       File filePath;
       String fileString = fileList.next();
       try {
-        filePath = new File(new URI(fileString));
+//        TODO: Chi: fixed URI not absolute error
+        URI fileURI = new URI(fileString);
+        filePath = new File(fileString);
       } catch (URISyntaxException e) {
         throw new RuntimeException(String.format("Could not parse file string %s", fileString), e);
       }
@@ -240,6 +241,7 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     }
   }
 
+//  TODO:
   private String createStagedEntityTable(
       Connection conn, List<FeatureSetQueryInfo> featureSetQueryInfos) {
     String entityTableWithRowCountName = createTempTableName();
