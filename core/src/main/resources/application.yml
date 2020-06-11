@@ -74,7 +74,7 @@ feast:
   security:
     authentication:
       enabled: false
-      provider: GoogleOpenID
+      provider: jwt
     authorization:
       enabled: false
       provider: KetoAuthorization

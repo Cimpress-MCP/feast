@@ -17,6 +17,7 @@
 package feast.core.auth;
 
 import java.util.Properties;
+import javax.inject.Inject;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -28,8 +29,10 @@ import feast.core.config.FeastProperties;
 @EnableConfigurationProperties(FeastProperties.class)
 public class AuthTestConfig {
   
+  public @Inject FeastProperties feast;
+  
   @Bean 
-  BuildProperties buildProperties() {
+  public BuildProperties buildProperties() {
     Properties props = new Properties();
     props.put("version", "test");
     return new BuildProperties(props);
