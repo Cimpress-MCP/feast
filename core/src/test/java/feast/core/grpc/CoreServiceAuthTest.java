@@ -17,12 +17,15 @@
 package feast.core.grpc;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import feast.core.auth.authorization.AuthorizationProvider;
+import feast.core.auth.authorization.AuthorizationResult;
 import feast.core.config.FeastProperties;
 import feast.core.config.FeastProperties.SecurityProperties;
 import feast.core.dao.ProjectRepository;
@@ -90,7 +93,9 @@ class CoreServiceAuthTest {
     SecurityContextHolder.setContext(context);
     when(context.getAuthentication()).thenReturn(auth);
 
-    doThrow(AccessDeniedException.class).when(authProvider).checkIfProjectMember(project, auth);
+    doReturn(AuthorizationResult.failed(null))
+        .when(authProvider)
+        .checkAccess(anyString(), any(Authentication.class));
 
     StreamRecorder<ApplyFeatureSetResponse> responseObserver = StreamRecorder.create();
     FeatureSetProto.FeatureSet incomingFeatureSet = newDummyFeatureSet("f2", 1, project).toProto();
@@ -113,6 +118,9 @@ class CoreServiceAuthTest {
     SecurityContext context = mock(SecurityContext.class);
     SecurityContextHolder.setContext(context);
     when(context.getAuthentication()).thenReturn(auth);
+    doReturn(AuthorizationResult.success())
+        .when(authProvider)
+        .checkAccess(anyString(), any(Authentication.class));
 
     StreamRecorder<ApplyFeatureSetResponse> responseObserver = StreamRecorder.create();
     FeatureSetProto.FeatureSet incomingFeatureSet = newDummyFeatureSet("f2", 1, project).toProto();
