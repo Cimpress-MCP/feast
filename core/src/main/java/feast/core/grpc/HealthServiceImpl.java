@@ -16,7 +16,6 @@
  */
 package feast.core.grpc;
 
-import feast.core.grpc.interceptors.MonitoringInterceptor;
 import feast.core.service.ProjectService;
 import io.grpc.Status;
 import io.grpc.health.v1.HealthGrpc.HealthImplBase;
@@ -29,7 +28,7 @@ import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
-@GrpcService(interceptors = {MonitoringInterceptor.class})
+@GrpcService
 public class HealthServiceImpl extends HealthImplBase {
   private final ProjectService projectService;
 
