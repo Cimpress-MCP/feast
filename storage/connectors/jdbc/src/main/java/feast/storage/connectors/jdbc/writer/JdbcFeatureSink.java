@@ -22,8 +22,8 @@ import feast.proto.core.StoreProto.Store.JdbcConfig;
 import feast.storage.api.writer.FeatureSink;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
 import feast.storage.connectors.jdbc.postgres.PostgresqlTemplater;
-import feast.storage.connectors.jdbc.sqlite.SqliteTemplater;
 import feast.storage.connectors.jdbc.snowflake.SnowflakeTemplater;
+import feast.storage.connectors.jdbc.sqlite.SqliteTemplater;
 import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
@@ -53,7 +53,7 @@ public class JdbcFeatureSink implements FeatureSink {
       case "org.postgresql.Driver":
         return new PostgresqlTemplater();
       case "net.snowflake.client.jdbc.SnowflakeDriver":
-    	  return new SnowflakeTemplater();
+        return new SnowflakeTemplater();
       default:
         throw new RuntimeException(
             "JDBC class name was not specified, was incorrect, or had no implementation for templating.");
@@ -71,16 +71,16 @@ public class JdbcFeatureSink implements FeatureSink {
   /** @param featureSet Feature set to be written */
   @Override
   public void prepareWrite(FeatureSetProto.FeatureSet featureSet) {
-	FeatureSetProto.FeatureSetSpec featureSetSpec = featureSet.getSpec();
+    FeatureSetProto.FeatureSetSpec featureSetSpec = featureSet.getSpec();
     String featureSetKey = getFeatureSetRef(featureSetSpec);
     this.subscribedFeatureSets.put(featureSetKey, featureSet);
 
     Connection conn = connect(this.getConfig());
     if (tableExists(conn, featureSetSpec)) {
-    	System.out.println("inside table exists condition");
+      System.out.println("inside table exists condition");
       updateTable(conn, this.getJdbcTemplater(), featureSetSpec);
     } else {
-    	System.out.println("inside else condition");
+      System.out.println("inside else condition");
       createTable(conn, this.getJdbcTemplater(), featureSetSpec);
     }
   }
@@ -165,7 +165,7 @@ public class JdbcFeatureSink implements FeatureSink {
   private static boolean tableExists(
       Connection conn, FeatureSetProto.FeatureSetSpec featureSetSpec) {
     String tableName = JdbcTemplater.getTableName(featureSetSpec);
-    
+
     String featureSetRef = getFeatureSetRef(featureSetSpec);
     try {
       if (tableName.isEmpty()) {
@@ -174,7 +174,7 @@ public class JdbcFeatureSink implements FeatureSink {
       }
       DatabaseMetaData md = conn.getMetaData();
       ResultSet rs = md.getTables(null, null, tableName, null);
-//      rs.last();
+      //      rs.last();
       return rs.getRow() > 0;
     } catch (SQLException e) {
       throw new RuntimeException(
@@ -194,5 +194,5 @@ public class JdbcFeatureSink implements FeatureSink {
   public JdbcWrite writer() {
     return new JdbcWrite(
         this.getConfig(), this.getJdbcTemplater(), this.getSubscribedFeatureSets());
-  }		
+  }
 }

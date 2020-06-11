@@ -39,14 +39,13 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-
 public class JdbcSnowflakeFeatureSinkTest {
   @Rule public transient TestPipeline p = TestPipeline.create();
 
-  private FeatureSink snowflakeFeatureSinkObj ;
+  private FeatureSink snowflakeFeatureSinkObj;
   // TODO: Clean up url
-  
-  private String userName = "SWATIARORA";          
+
+  private String userName = "SWATIARORA";
   private String password = "Vistaprint1@";
   private String snowflakeUrl = "jdbc:snowflake://kia19877.snowflakecomputing.com";
   private String className = "net.snowflake.client.jdbc.SnowflakeDriver";
@@ -61,7 +60,7 @@ public class JdbcSnowflakeFeatureSinkTest {
             .setName("feature_set_1")
             .setProject("snowflake_proj")
             .addEntities(
-            		FeatureSetProto.EntitySpec.newBuilder()
+                FeatureSetProto.EntitySpec.newBuilder()
                     .setName("entity")
                     .setValueType(Enum.INT64)
                     .build())
@@ -76,7 +75,7 @@ public class JdbcSnowflakeFeatureSinkTest {
         FeatureSetProto.FeatureSetSpec.newBuilder()
             .setName("feature_set_2")
             .setProject("snowflake_proj")
-//            .setDatabase()
+            //            .setDatabase()
             .addEntities(
                 FeatureSetProto.EntitySpec.newBuilder()
                     .setName("entity_id_primary")
@@ -100,19 +99,23 @@ public class JdbcSnowflakeFeatureSinkTest {
             .build();
 
     Map<String, FeatureSetProto.FeatureSetSpec> specMap =
-    		ImmutableMap.of("snowflake_proj/feature_set_1", spec1, "snowflake_proj/feature_set_2", spec2);
+        ImmutableMap.of(
+            "snowflake_proj/feature_set_1", spec1, "snowflake_proj/feature_set_2", spec2);
 
-     this.snowflakeFeatureSinkObj = JdbcFeatureSink.fromConfig(
-	    StoreProto.Store.JdbcConfig.newBuilder()
-	        .setUrl(this.snowflakeUrl)
-	        .setClassName(this.className)
-	        .setUsername(this.userName)
-	        .setPassword(this.password)
-	        .setBatchSize(1) // This must be set to 1 for DirectRunner
-	        .build());
+    this.snowflakeFeatureSinkObj =
+        JdbcFeatureSink.fromConfig(
+            StoreProto.Store.JdbcConfig.newBuilder()
+                .setUrl(this.snowflakeUrl)
+                .setClassName(this.className)
+                .setUsername(this.userName)
+                .setPassword(this.password)
+                .setBatchSize(1) // This must be set to 1 for DirectRunner
+                .build());
 
-    this.snowflakeFeatureSinkObj.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec1).build());
-    this.snowflakeFeatureSinkObj.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec2).build());
+    this.snowflakeFeatureSinkObj.prepareWrite(
+        FeatureSetProto.FeatureSet.newBuilder().setSpec(spec1).build());
+    this.snowflakeFeatureSinkObj.prepareWrite(
+        FeatureSetProto.FeatureSet.newBuilder().setSpec(spec2).build());
     this.connect();
   }
 
@@ -121,10 +124,10 @@ public class JdbcSnowflakeFeatureSinkTest {
       return;
     }
     try {
-    	 
+
       Class.forName(this.className);
       conn = DriverManager.getConnection(this.snowflakeUrl, this.userName, this.password);
-      System.out.println("inside connect "+ conn);
+      System.out.println("inside connect " + conn);
     } catch (ClassNotFoundException | SQLException e) {
       System.err.println(e.getClass().getName() + ": " + e.getMessage());
     }
@@ -168,9 +171,9 @@ public class JdbcSnowflakeFeatureSinkTest {
                         .build())
                 .addFields(field("feature_2", 4, Enum.INT64))
                 .build());
-    
-	p.apply(Create.of(featureRows)).apply(this.snowflakeFeatureSinkObj.writer());
-	p.run();
+
+    p.apply(Create.of(featureRows)).apply(this.snowflakeFeatureSinkObj.writer());
+    p.run();
     // TODO: Remove this assert, add SQL query
     assert (true);
   }
