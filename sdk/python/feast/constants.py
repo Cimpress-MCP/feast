@@ -58,7 +58,6 @@ CONFIG_OAUTH_CLIENT_ID_KEY = "oauth_client_id"
 CONFIG_OAUTH_CLIENT_SECRET_KEY = "oauth_client_secret"
 CONFIG_OAUTH_AUDIENCE_KEY = "oauth_audience"
 CONFIG_OAUTH_TOKEN_REQUEST_URL_KEY = "oauth_token_request_url"
-CONFIG_OAUTH_CONTENT_TYPE_KEY = "oauth_content_type"
 CONFIG_CORE_AUTH_PROVIDER = "core_auth_provider"
 
 # Configuration option default values
