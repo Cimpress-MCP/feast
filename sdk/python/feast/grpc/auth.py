@@ -1,6 +1,7 @@
 import grpc
 from google.auth.exceptions import DefaultCredentialsError
 
+from http import HTTPStatus
 from feast.config import Config
 from feast.constants import AuthProvider, \
     CONFIG_CORE_ENABLE_AUTH_TOKEN_KEY, \
@@ -9,8 +10,7 @@ from feast.constants import AuthProvider, \
     CONFIG_OAUTH_AUDIENCE_KEY, \
     CONFIG_OAUTH_TOKEN_REQUEST_URL_KEY, \
     CONFIG_CORE_AUTH_PROVIDER, \
-    CONFIG_OAUTH_GRANT_TYPE_KEY, \
-    CONFIG_OAUTH_CONTENT_TYPE_KEY
+    CONFIG_OAUTH_GRANT_TYPE_KEY
 
 
 def get_auth_metadata_plugin(config: Config):
@@ -27,9 +27,9 @@ def get_auth_metadata_plugin(config: Config):
     Args:
         config: Feast Configuration object
     """
-    if config.get(CONFIG_CORE_AUTH_PROVIDER) == AuthProvider.GOOGLE:
+    if AuthProvider(config.get(CONFIG_CORE_AUTH_PROVIDER)) == AuthProvider.GOOGLE:
         return GoogleOpenIDAuthMetadataPlugin(config)
-    elif config.get(CONFIG_CORE_AUTH_PROVIDER) == AuthProvider.OAUTH:
+    elif AuthProvider(config.get(CONFIG_CORE_AUTH_PROVIDER)) == AuthProvider.OAUTH:
         return OAuthMetadataPlugin(config)
     else:
         raise RuntimeError(
@@ -61,7 +61,19 @@ class OAuthMetadataPlugin(grpc.AuthMetadataPlugin):
         if config.exists(CONFIG_CORE_ENABLE_AUTH_TOKEN_KEY):
             self._static_token = config.get(CONFIG_CORE_ENABLE_AUTH_TOKEN_KEY)
 
-        self._refresh_token(config)
+        if config.exists(CONFIG_OAUTH_GRANT_TYPE_KEY) \
+            and config.exists(CONFIG_OAUTH_CLIENT_ID_KEY) \
+            and config.exists(CONFIG_OAUTH_CLIENT_SECRET_KEY) \
+                and config.exists(CONFIG_OAUTH_AUDIENCE_KEY) \
+                and config.exists(CONFIG_OAUTH_TOKEN_REQUEST_URL_KEY):
+            self._refresh_token(config)
+        else:
+            raise RuntimeError(
+                " Please ensure that the "
+                "necessary parameters are passed to the client - "
+                "oauth_grant_type, oauth_client_id, oauth_client_secret, "
+                "oauth_audience, oauth_token_request_url."
+            )
 
     def get_signed_meta(self):
         """ Creates a signed authorization metadata token."""
@@ -77,27 +89,23 @@ class OAuthMetadataPlugin(grpc.AuthMetadataPlugin):
 
         import json
         import requests
-
-        try:
-            headers_token = {
-                'content-type': config.get(CONFIG_OAUTH_CONTENT_TYPE_KEY),
-            }
-            data_token = {
-                "grant_type": config.get(CONFIG_OAUTH_GRANT_TYPE_KEY),
-                "client_id": config.get(CONFIG_OAUTH_CLIENT_ID_KEY),
-                "client_secret": config.get(CONFIG_OAUTH_CLIENT_SECRET_KEY),
-                "audience": config.get(CONFIG_OAUTH_AUDIENCE_KEY)
-            }
-            data_token = json.dumps(data_token)
-            response_token = requests.post(config.get(CONFIG_OAUTH_TOKEN_REQUEST_URL_KEY),
-                                           headers=headers_token, data=data_token)
+        headers_token = {
+            'content-type': "application/json"
+        }
+        data_token = {
+            "grant_type": config.get(CONFIG_OAUTH_GRANT_TYPE_KEY),
+            "client_id": config.get(CONFIG_OAUTH_CLIENT_ID_KEY),
+            "client_secret": config.get(CONFIG_OAUTH_CLIENT_SECRET_KEY),
+            "audience": config.get(CONFIG_OAUTH_AUDIENCE_KEY)
+        }
+        data_token = json.dumps(data_token)
+        response_token = requests.post(config.get(CONFIG_OAUTH_TOKEN_REQUEST_URL_KEY),
+                                       headers=headers_token, data=data_token)
+        if response_token.status_code == HTTPStatus.OK:
             return response_token.json().get('access_token')
-
-        except:
+        else:
             raise RuntimeError(
-                "Could not determine OAuth token. Please ensure that the "
-                "necessary parameters are passed to the client - "
-                "Content type, Grant type, Client ID, Client secret, Audience, Token request URL."
+                f"Could not fetch OAuth token, got response : {response_token.status_code}"
             )
 
     def set_static_token(self, token):
@@ -108,6 +116,16 @@ class OAuthMetadataPlugin(grpc.AuthMetadataPlugin):
             token: String token
         """
         self._static_token = token
+
+    def __call__(self, context, callback):
+        """Passes authorization metadata into the given callback.
+
+        Args:
+            context (grpc.AuthMetadataContext): The RPC context.
+            callback (grpc.AuthMetadataPluginCallback): The callback that will
+                be invoked to pass in the authorization metadata.
+        """
+        callback(self.get_signed_meta(), None)
 
 
 class GoogleOpenIDAuthMetadataPlugin(grpc.AuthMetadataPlugin):
@@ -193,13 +211,12 @@ class GoogleOpenIDAuthMetadataPlugin(grpc.AuthMetadataPlugin):
         """
         self._static_token = token
 
+    def __call__(self, context, callback):
+        """Passes authorization metadata into the given callback.
 
-def __call__(self, context, callback):
-    """Passes authorization metadata into the given callback.
-
-    Args:
-        context (grpc.AuthMetadataContext): The RPC context.
-        callback (grpc.AuthMetadataPluginCallback): The callback that will
-            be invoked to pass in the authorization metadata.
-    """
-    callback(self.get_signed_meta(), None)
+        Args:
+            context (grpc.AuthMetadataContext): The RPC context.
+            callback (grpc.AuthMetadataPluginCallback): The callback that will
+                be invoked to pass in the authorization metadata.
+        """
+        callback(self.get_signed_meta(), None)
