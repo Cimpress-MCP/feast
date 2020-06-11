@@ -72,38 +72,37 @@ public class JdbcSnowflakeFeatureSinkTest {
                     .build())
             .build();
 
-//    FeatureSetProto.FeatureSetSpec spec2 =
-//        FeatureSetProto.FeatureSetSpec.newBuilder()
-//            .setName("feature_set_2")
-//            .setProject("snowflake_proj")
-//            .addEntities(
-//                FeatureSetProto.EntitySpec.newBuilder()
-//                    .setName("entity_id_primary")
-//                    .setValueType(Enum.INT32)
-//                    .build())
-//            .addEntities(
-//                EntitySpec.newBuilder()
-//                    .setName("entity_id_secondary")
-//                    .setValueType(Enum.STRING)
-//                    .build())
-//            .addFeatures(
-//                FeatureSetProto.FeatureSpec.newBuilder()
-//                    .setName("feature_1")
-//                    .setValueType(Enum.STRING_LIST)
-//                    .build())
-//            .addFeatures(
-//                FeatureSetProto.FeatureSpec.newBuilder()
-//                    .setName("feature_2")
-//                    .setValueType(Enum.INT64)
-//                    .build())
-//            .build();
+    FeatureSetProto.FeatureSetSpec spec2 =
+        FeatureSetProto.FeatureSetSpec.newBuilder()
+            .setName("feature_set_2")
+            .setProject("snowflake_proj")
+//            .setDatabase()
+            .addEntities(
+                FeatureSetProto.EntitySpec.newBuilder()
+                    .setName("entity_id_primary")
+                    .setValueType(Enum.INT32)
+                    .build())
+            .addEntities(
+                EntitySpec.newBuilder()
+                    .setName("entity_id_secondary")
+                    .setValueType(Enum.STRING)
+                    .build())
+            .addFeatures(
+                FeatureSetProto.FeatureSpec.newBuilder()
+                    .setName("feature_1")
+                    .setValueType(Enum.STRING_LIST)
+                    .build())
+            .addFeatures(
+                FeatureSetProto.FeatureSpec.newBuilder()
+                    .setName("feature_2")
+                    .setValueType(Enum.INT64)
+                    .build())
+            .build();
 
     Map<String, FeatureSetProto.FeatureSetSpec> specMap =
-    		ImmutableMap.of("snowflake_proj/feature_set_1", spec1);
+    		ImmutableMap.of("snowflake_proj/feature_set_1", spec1, "snowflake_proj/feature_set_2", spec2);
 
-//        ImmutableMap.of("snowflake_proj/feature_set_1", spec1, "snowflake_proj/feature_set_2", spec2);
-
-    FeatureSink snowflakeFeatureSinkObj = JdbcFeatureSink.fromConfig(
+     this.snowflakeFeatureSinkObj = JdbcFeatureSink.fromConfig(
 	    StoreProto.Store.JdbcConfig.newBuilder()
 	        .setUrl(this.snowflakeUrl)
 	        .setClassName(this.className)
@@ -112,20 +111,17 @@ public class JdbcSnowflakeFeatureSinkTest {
 	        .setBatchSize(1) // This must be set to 1 for DirectRunner
 	        .build());
 
-    snowflakeFeatureSinkObj.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec1).build());
-//    snowflakeFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec2).build());
-
+    this.snowflakeFeatureSinkObj.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec1).build());
+    this.snowflakeFeatureSinkObj.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec2).build());
     this.connect();
   }
 
   private void connect() {
     if (conn != null) {
-      System.out.println("conn is not null");
       return;
     }
     try {
-    	 System.out.println("inside connect");
-        
+    	 
       Class.forName(this.className);
       conn = DriverManager.getConnection(this.snowflakeUrl, this.userName, this.password);
       System.out.println("inside connect "+ conn);
@@ -153,27 +149,27 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setFeatureSet("snowflake_proj/feature_set_1")
                 .addFields(field("entity", 3, Enum.INT64))
                 .addFields(field("feature", "two", Enum.STRING))
+                .build(),
+            FeatureRow.newBuilder()
+                .setFeatureSet("snowflake_proj/feature_set_2")
+                .addFields(field("entity_id_primary", 4, Enum.INT32))
+                .addFields(field("entity_id_secondary", "asjdh", Enum.STRING))
+                .addFields(
+                    FieldProto.Field.newBuilder()
+                        .setName("feature_1")
+                        .setValue(
+                            ValueProto.Value.newBuilder()
+                                .setStringListVal(
+                                    ValueProto.StringList.newBuilder()
+                                        .addVal("abc")
+                                        .addVal("def")
+                                        .build())
+                                .build())
+                        .build())
+                .addFields(field("feature_2", 4, Enum.INT64))
                 .build());
-//            FeatureRow.newBuilder()
-//                .setFeatureSet("snowflake_proj/feature_set_2")
-//                .addFields(field("entity_id_primary", 4, Enum.INT32))
-//                .addFields(field("entity_id_secondary", "asjdh", Enum.STRING))
-//                .addFields(
-//                    FieldProto.Field.newBuilder()
-//                        .setName("feature_1")
-//                        .setValue(
-//                            ValueProto.Value.newBuilder()
-//                                .setStringListVal(
-//                                    ValueProto.StringList.newBuilder()
-//                                        .addVal("abc")
-//                                        .addVal("def")
-//                                        .build())
-//                                .build())
-//                        .build())
-//                .addFields(field("feature_2", 4, Enum.INT64))
-//                .build());
-
-	p.apply(Create.of(featureRows)).apply(snowflakeFeatureSinkObj.writer());
+    
+	p.apply(Create.of(featureRows)).apply(this.snowflakeFeatureSinkObj.writer());
 	p.run();
     // TODO: Remove this assert, add SQL query
     assert (true);

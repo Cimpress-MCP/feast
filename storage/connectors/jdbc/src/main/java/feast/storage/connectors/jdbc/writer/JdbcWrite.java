@@ -59,7 +59,6 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
     this.config = config;
     this.jdbcTemplater = jdbcTemplater;
     this.subscribedFeatureSets = subscribedFeatureSets;
-    System.out.println("Inside class JDBC writer----");
     Map<String, String> sqlInsertStatements = new HashMap<>();
     for (String subscribedFeatureSetRef : subscribedFeatureSets.keySet()) {
       FeatureSetProto.FeatureSet subscribedFeatureSet =

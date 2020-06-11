@@ -71,13 +71,11 @@ public class JdbcFeatureSink implements FeatureSink {
   /** @param featureSet Feature set to be written */
   @Override
   public void prepareWrite(FeatureSetProto.FeatureSet featureSet) {
-	  System.out.println("inside prepare write");
-    FeatureSetProto.FeatureSetSpec featureSetSpec = featureSet.getSpec();
+	FeatureSetProto.FeatureSetSpec featureSetSpec = featureSet.getSpec();
     String featureSetKey = getFeatureSetRef(featureSetSpec);
     this.subscribedFeatureSets.put(featureSetKey, featureSet);
 
     Connection conn = connect(this.getConfig());
-    System.out.println("after connecting to snowflake");
     if (tableExists(conn, featureSetSpec)) {
     	System.out.println("inside table exists condition");
       updateTable(conn, this.getJdbcTemplater(), featureSetSpec);
@@ -90,8 +88,6 @@ public class JdbcFeatureSink implements FeatureSink {
   private void createTable(
       Connection conn, JdbcTemplater jdbcTemplater, FeatureSetProto.FeatureSetSpec featureSetSpec) {
     String featureSetName = getFeatureSetRef(featureSetSpec);
-    System.out.println("creating table prepare write for "+ jdbcTemplater.getClass());
-    
     String createSqlTableCreationQuery = jdbcTemplater.getTableCreationSql(featureSetSpec);
 
     try {
@@ -152,8 +148,6 @@ public class JdbcFeatureSink implements FeatureSink {
     String password = config.getPassword();
     String className = config.getClassName();
     String url = config.getUrl();
-
-    System.out.println(String.format("username %s password %s classname %s url %s", username, password, className, url));
     try {
       Class.forName(className);
       if (!username.isEmpty()) {
@@ -179,9 +173,7 @@ public class JdbcFeatureSink implements FeatureSink {
             String.format("Table name could not be determined for %s", featureSetRef));
       }
       DatabaseMetaData md = conn.getMetaData();
-      System.out.println("table name:"+ tableName);
       ResultSet rs = md.getTables(null, null, tableName, null);
-      System.out.println("getting resultset rs.getRow():"+ rs.getRow());
 //      rs.last();
       return rs.getRow() > 0;
     } catch (SQLException e) {
@@ -200,8 +192,7 @@ public class JdbcFeatureSink implements FeatureSink {
 
   @Override
   public JdbcWrite writer() {
-	  System.out.println("inside write");
     return new JdbcWrite(
         this.getConfig(), this.getJdbcTemplater(), this.getSubscribedFeatureSets());
-  }
+  }		
 }

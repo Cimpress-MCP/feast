@@ -23,7 +23,6 @@ public class SnowflakeTemplater implements JdbcTemplater{
     for (String column : requiredColumns.keySet()) {
     	
       String type = requiredColumns.get(column);
-      System.out.println("column :"+ column +" : type: "+ type);
       columnsAndTypesSQL.add(String.format("%s %s", column, type));
     }
     
@@ -41,8 +40,8 @@ public class SnowflakeTemplater implements JdbcTemplater{
   public Map<String, String> getRequiredColumns(FeatureSetProto.FeatureSetSpec featureSetSpec) {
 	  Map<String, String> requiredColumns = new LinkedHashMap<>();
 
-    requiredColumns.put("event_timestamp", "TIMESTAMP");
-    requiredColumns.put("created_timestamp", "TIMESTAMP");
+    requiredColumns.put("event_timestamp", "TIMESTAMP_LTZ");
+    requiredColumns.put("created_timestamp", "TIMESTAMP_LTZ");
 
     for (FeatureSetProto.EntitySpec entity : featureSetSpec.getEntitiesList()) {
       requiredColumns.put(entity.getName(), SnowflakesqlTypeUtil.toSqlType(entity.getValueType()));
@@ -104,7 +103,6 @@ public class SnowflakeTemplater implements JdbcTemplater{
 	      columnsSql.add(column);
 	      valueSql.add("?");
 	    }
-
 	    return String.format(
 	        "INSERT INTO DEMO_DB.PUBLIC.%s (%s) VALUES (%s)",
 	        JdbcTemplater.getTableName(featureSetSpec), columnsSql, valueSql);
