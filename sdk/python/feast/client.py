@@ -589,11 +589,11 @@ class Client:
 
         # Retrieve Feast Job object to manage life cycle of retrieval
         try:
-            response = self._serving_service_stub.GetBatchFeatures(request)
+            response = self._serving_service.GetBatchFeatures(request)
         except grpc.RpcError as e:
             raise grpc.RpcError(e.details())
 
-        return RetrievalJob(response.job, self._serving_service_stub)
+        return RetrievalJob(response.job, self._serving_service)
 
     def get_online_features(
         self,
@@ -622,7 +622,7 @@ class Client:
         """
 
         try:
-            response = self._serving_service_stub.GetOnlineFeatures(
+            response = self._serving_service.GetOnlineFeatures(
                 GetOnlineFeaturesRequest(
                     features=_build_feature_references(
                         feature_ref_strs=feature_refs,
