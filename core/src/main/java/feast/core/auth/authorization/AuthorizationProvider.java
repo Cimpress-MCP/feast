@@ -25,13 +25,11 @@ import org.springframework.security.core.Authentication;
 public interface AuthorizationProvider {
 
   /**
-   * Validates whether a user has any of the specified role on the project
-   * 
+   * Validates whether a user is allowed access to the project
    *
    * @param project Name of the Feast project
    * @param authentication Spring Security Authentication object
-   * @param roles ProjectRole that the user needs
    * @return AuthorizationResult result of authorization query
    */
-  AuthorizationResult checkAccess(String project, Authentication authentication, ProjectRole... roles);
+  AuthorizationResult checkAccess(String project, Authentication authentication);
 }

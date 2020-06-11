@@ -16,14 +16,13 @@
  */
 package feast.core.auth.authorization.Keto;
 
+import feast.core.auth.authorization.AuthorizationProvider;
+import feast.core.auth.authorization.AuthorizationResult;
 import java.util.List;
 import java.util.Map;
 import org.hibernate.validator.internal.constraintvalidators.bv.EmailValidator;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
-import feast.core.auth.authorization.AuthorizationProvider;
-import feast.core.auth.authorization.AuthorizationResult;
-import feast.core.auth.authorization.ProjectRole;
 import sh.ory.keto.ApiClient;
 import sh.ory.keto.ApiException;
 import sh.ory.keto.Configuration;
@@ -51,15 +50,13 @@ public class KetoAuthorizationProvider implements AuthorizationProvider {
   }
 
   /**
-   * Validates whether a user has any of the specified role on the project
-   * 
+   * Validates whether a user has access to the project
    *
    * @param project Name of the Feast project
    * @param authentication Spring Security Authentication object
-   * @param roles ProjectRole that the user needs
    * @return AuthorizationResult result of authorization query
    */
-  public AuthorizationResult checkAccess(String project, Authentication authentication, ProjectRole... rolesToCheck) {
+  public AuthorizationResult checkAccess(String project, Authentication authentication) {
     String email = getEmailFromAuth(authentication);
     try {
       // Get all roles from Keto
@@ -69,12 +66,9 @@ public class KetoAuthorizationProvider implements AuthorizationProvider {
       // Loop through all roles the user has
       for (OryAccessControlPolicyRole role : roles) {
         // If the user has an admin or project specific role, return.
-        for (ProjectRole neededRole : rolesToCheck) {
-          if ((String.format("roles:", neededRole.name().toLowerCase()) ).equals(role.getId())
-              || (String.format("roles:feast:%s-%s", project, neededRole.name().toLowerCase()))
-              .equals(role.getId())) {
-            return AuthorizationResult.success();
-          }
+        if (("roles:admin").equals(role.getId())
+            || (String.format("roles:feast:%s-member", project)).equals(role.getId())) {
+          return AuthorizationResult.success();
         }
       }
     } catch (ApiException e) {
@@ -85,7 +79,8 @@ public class KetoAuthorizationProvider implements AuthorizationProvider {
       e.printStackTrace();
     }
     // Could not determine project membership, deny access.
-    return AuthorizationResult.failed(String.format("Access denied to project %s for user %s", project, email));
+    return AuthorizationResult.failed(
+        String.format("Access denied to project %s for user %s", project, email));
   }
 
   /**

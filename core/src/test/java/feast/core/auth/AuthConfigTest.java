@@ -17,6 +17,8 @@
 package feast.core.auth;
 
 import static org.junit.Assert.assertNotNull;
+
+import feast.core.config.SecurityConfig;
 import javax.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,7 +26,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import feast.core.config.SecurityConfig;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = {AuthTestConfig.class, SecurityConfig.class})
@@ -38,5 +39,4 @@ class AuthConfigTest {
   void canConfigureAuth() {
     assertNotNull(authManager);
   }
-
 }
