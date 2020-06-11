@@ -22,18 +22,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import java.sql.Date;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.HashMap;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
+
 import com.google.protobuf.InvalidProtocolBufferException;
 import feast.core.auth.authorization.AuthorizationProvider;
 import feast.core.config.FeastProperties;
@@ -55,6 +44,18 @@ import feast.proto.core.SourceProto.KafkaSourceConfig;
 import feast.proto.core.SourceProto.SourceType;
 import feast.proto.types.ValueProto.ValueType.Enum;
 import io.grpc.internal.testing.StreamRecorder;
+import java.sql.Date;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.HashMap;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @SpringBootTest
 class CoreServiceAuthTest {
@@ -91,7 +92,9 @@ class CoreServiceAuthTest {
     SecurityContextHolder.setContext(context);
     when(context.getAuthentication()).thenReturn(auth);
 
-    doThrow(AccessDeniedException.class).when(authProvider).checkIfProjectMember(anyString(), any(Authentication.class));
+    doThrow(AccessDeniedException.class)
+        .when(authProvider)
+        .checkIfProjectMember(anyString(), any(Authentication.class));
 
     StreamRecorder<ApplyFeatureSetResponse> responseObserver = StreamRecorder.create();
     FeatureSetProto.FeatureSet incomingFeatureSet = newDummyFeatureSet("f2", 1, project).toProto();

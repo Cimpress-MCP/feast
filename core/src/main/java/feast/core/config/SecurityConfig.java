@@ -16,10 +16,20 @@
  */
 package feast.core.config;
 
+import feast.core.auth.authorization.AuthorizationProvider;
+import feast.core.auth.authorization.Keto.KetoAuthorizationProvider;
+import feast.core.config.FeastProperties.SecurityProperties;
+import feast.proto.core.CoreServiceGrpc;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
+import net.devh.boot.grpc.server.security.authentication.BearerAuthenticationReader;
+import net.devh.boot.grpc.server.security.authentication.GrpcAuthenticationReader;
+import net.devh.boot.grpc.server.security.check.AccessPredicate;
+import net.devh.boot.grpc.server.security.check.AccessPredicateVoter;
+import net.devh.boot.grpc.server.security.check.GrpcSecurityMetadataSource;
+import net.devh.boot.grpc.server.security.check.ManualGrpcSecurityMetadataSource;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -34,25 +44,13 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.BearerTokenAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationProvider;
-import feast.core.auth.authorization.AuthorizationProvider;
-import feast.core.auth.authorization.Keto.KetoAuthorizationProvider;
-import feast.core.config.FeastProperties.SecurityProperties;
-import feast.proto.core.CoreServiceGrpc;
-import net.devh.boot.grpc.server.security.authentication.BearerAuthenticationReader;
-import net.devh.boot.grpc.server.security.authentication.GrpcAuthenticationReader;
-import net.devh.boot.grpc.server.security.check.AccessPredicate;
-import net.devh.boot.grpc.server.security.check.AccessPredicateVoter;
-import net.devh.boot.grpc.server.security.check.GrpcSecurityMetadataSource;
-import net.devh.boot.grpc.server.security.check.ManualGrpcSecurityMetadataSource;
 
 @Configuration
 public class SecurityConfig {
 
   private final SecurityProperties securityProperties;
-  
 
-  @Inject
-  private List<AuthenticationProvider> authenticationProviders;
+  @Inject private List<AuthenticationProvider> authenticationProviders;
 
   public SecurityConfig(FeastProperties feastProperties) {
     this.securityProperties = feastProperties.getSecurity();
@@ -73,7 +71,6 @@ public class SecurityConfig {
     }
     return new ProviderManager(providers);
   }
-  
 
   @Bean
   @ConditionalOnExpression("'${feast.security.authentication.provider}' == 'jwt'")
@@ -82,11 +79,12 @@ public class SecurityConfig {
     // Endpoint used to retrieve certificates to validate JWT token
     String jwkEndpointURI = "https://www.googleapis.com/oauth2/v3/certs";
     Map<String, String> options = securityProperties.getAuthentication().getOptions();
-     // Provide a custom endpoint to retrieve certificates
+    // Provide a custom endpoint to retrieve certificates
     if (options != null) {
       jwkEndpointURI = options.get("jwkEndpointURI");
     }
-    JwtAuthenticationProvider authProvider = new JwtAuthenticationProvider(NimbusJwtDecoder.withJwkSetUri(jwkEndpointURI).build());
+    JwtAuthenticationProvider authProvider =
+        new JwtAuthenticationProvider(NimbusJwtDecoder.withJwkSetUri(jwkEndpointURI).build());
     authProvider.setJwtAuthenticationConverter(new JwtAuthenticationConverter());
     return authProvider;
   }

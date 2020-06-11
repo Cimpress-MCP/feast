@@ -16,26 +16,25 @@
  */
 package feast.core.auth;
 
+import feast.core.config.FeastProperties;
 import java.util.Properties;
 import javax.inject.Inject;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import feast.core.config.FeastProperties;
 
 /** Configuration of JPA related services and beans for the core application. */
 @TestConfiguration
 @EnableConfigurationProperties(FeastProperties.class)
 public class AuthTestConfig {
-  
+
   public @Inject FeastProperties feast;
-  
-  @Bean 
+
+  @Bean
   public BuildProperties buildProperties() {
     Properties props = new Properties();
     props.put("version", "test");
     return new BuildProperties(props);
   }
-  
 }

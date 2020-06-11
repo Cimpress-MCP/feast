@@ -16,6 +16,8 @@
  */
 package feast.core.config;
 
+import feast.core.config.FeastProperties.StreamProperties.FeatureStreamOptions;
+import feast.core.validators.OneOfStrings;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -32,14 +34,12 @@ import javax.validation.ValidatorFactory;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Positive;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.stereotype.Component;
-import feast.core.config.FeastProperties.StreamProperties.FeatureStreamOptions;
-import feast.core.validators.OneOfStrings;
-import lombok.Getter;
-import lombok.Setter;
 
 @Getter
 @Setter
