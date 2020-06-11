@@ -94,7 +94,7 @@ class CoreServiceAuthTest {
 
     doThrow(AccessDeniedException.class)
         .when(authProvider)
-        .checkIfProjectMember(anyString(), any(Authentication.class));
+        .checkAccess(anyString(), any(Authentication.class));
 
     StreamRecorder<ApplyFeatureSetResponse> responseObserver = StreamRecorder.create();
     FeatureSetProto.FeatureSet incomingFeatureSet = newDummyFeatureSet("f2", 1, project).toProto();

@@ -112,6 +112,6 @@ public class ProjectService {
     if (!this.securityProperties.getAuthorization().isEnabled()) {
       return;
     }
-    this.authorizationProvider.checkIfProjectMember(project, authentication);
+    this.authorizationProvider.checkAccess(project, authentication);
   }
 }

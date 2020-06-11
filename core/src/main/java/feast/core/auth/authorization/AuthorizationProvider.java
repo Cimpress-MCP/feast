@@ -16,7 +16,6 @@
  */
 package feast.core.auth.authorization;
 
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 
 /**
@@ -26,13 +25,13 @@ import org.springframework.security.core.Authentication;
 public interface AuthorizationProvider {
 
   /**
-   * Validates whether a user is within a project. Throws an AccessDeniedException if user is not
-   * within the project.
+   * Validates whether a user has any of the specified role on the project
+   * 
    *
    * @param project Name of the Feast project
    * @param authentication Spring Security Authentication object
-   * @throws AccessDeniedException
+   * @param roles ProjectRole that the user needs
+   * @return AuthorizationResult result of authorization query
    */
-  void checkIfProjectMember(String project, Authentication authentication)
-      throws AccessDeniedException;
+  AuthorizationResult checkAccess(String project, Authentication authentication, ProjectRole... roles);
 }
