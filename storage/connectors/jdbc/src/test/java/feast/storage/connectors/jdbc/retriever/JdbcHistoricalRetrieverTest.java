@@ -16,7 +16,6 @@
  */
 package feast.storage.connectors.jdbc.retriever;
 
-
 import com.google.protobuf.Duration;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.FeatureSetProto.EntitySpec;
