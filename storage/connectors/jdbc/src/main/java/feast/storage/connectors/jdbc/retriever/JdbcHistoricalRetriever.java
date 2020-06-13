@@ -103,11 +103,9 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
     // 3. Load entity rows into database
     Iterator<String> fileList = datasetSource.getFileSource().getFileUrisList().iterator();
-    //    TODO: Chi: fix entityTable is empty
     String entityTableWithRowCountName = this.loadEntities(conn, featureSetQueryInfos, fileList);
 
     // 4. Retrieve the temporal bounds of the entity dataset provided
-    //    TODO: Chi: timestamp is empty
     Map<String, Timestamp> timestampLimits =
         this.getTimestampLimits(conn, entityTableWithRowCountName);
 
@@ -201,7 +199,6 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     return featureSetQueries;
   }
 
-  //  TODO:
   private String loadEntities(
       Connection conn, List<FeatureSetQueryInfo> featureSetQueryInfos, Iterator<String> fileList) {
     // Create table from existing feature set entities
@@ -220,7 +217,6 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       File filePath;
       String fileString = fileList.next();
       try {
-        //        TODO: Chi: fixed URI not absolute error
         URI fileURI = new URI(fileString);
         filePath = new File(fileString);
       } catch (URISyntaxException e) {
