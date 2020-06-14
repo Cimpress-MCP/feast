@@ -16,7 +16,6 @@
  */
 package feast.storage.connectors.jdbc.writer;
 
-
 import feast.storage.api.writer.FeatureSink;
 import java.sql.Connection;
 import org.apache.beam.sdk.testing.TestPipeline;
