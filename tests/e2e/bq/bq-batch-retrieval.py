@@ -3,14 +3,18 @@ import os
 import random
 import time
 import uuid
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from urllib.parse import urlparse
 
 import numpy as np
 import pandas as pd
 import pytest
 import pytz
+from google.cloud import bigquery, storage
+from google.cloud.storage import Blob
+from google.protobuf.duration_pb2 import Duration
+from pandavro import to_avro
+
 from feast.client import Client
 from feast.core.CoreService_pb2 import ListStoresRequest
 from feast.core.IngestionJob_pb2 import IngestionJobStatus
@@ -18,10 +22,6 @@ from feast.entity import Entity
 from feast.feature import Feature
 from feast.feature_set import FeatureSet
 from feast.type_map import ValueType
-from google.cloud import storage, bigquery
-from google.cloud.storage import Blob
-from google.protobuf.duration_pb2 import Duration
-from pandavro import to_avro
 
 pd.set_option("display.max_columns", None)
 
@@ -190,7 +190,7 @@ def test_batch_get_batch_features_with_file(client):
         feature_retrieval_job = client.get_batch_features(
             entity_rows="file://file_feature_set.avro",
             feature_refs=["feature_value1"],
-            project=PROJECT_NAME,
+            default_project=PROJECT_NAME,
         )
 
         output = feature_retrieval_job.to_dataframe(timeout_sec=180)
@@ -247,7 +247,7 @@ def test_batch_get_batch_features_with_gs_path(client, gcs_path):
         feature_retrieval_job = client.get_batch_features(
             entity_rows=f"{gcs_path}{ts}/*",
             feature_refs=["feature_value2"],
-            project=PROJECT_NAME,
+            default_project=PROJECT_NAME,
         )
 
         output = feature_retrieval_job.to_dataframe(timeout_sec=180)
@@ -291,7 +291,7 @@ def test_batch_order_by_creation_time(client):
         feature_retrieval_job = client.get_batch_features(
             entity_rows=incorrect_df[["datetime", "entity_id"]],
             feature_refs=["feature_value3"],
-            project=PROJECT_NAME,
+            default_project=PROJECT_NAME,
         )
         output = feature_retrieval_job.to_dataframe(timeout_sec=180)
         print(output.head())
@@ -332,7 +332,7 @@ def test_batch_additional_columns_in_entity_table(client):
         feature_retrieval_job = client.get_batch_features(
             entity_rows=entity_df,
             feature_refs=["feature_value4"],
-            project=PROJECT_NAME,
+            default_project=PROJECT_NAME,
         )
         output = feature_retrieval_job.to_dataframe(timeout_sec=180).sort_values(by=["entity_id"])
         print(output.head(10))
@@ -382,7 +382,7 @@ def test_batch_point_in_time_correctness_join(client):
         feature_retrieval_job = client.get_batch_features(
             entity_rows=entity_df,
             feature_refs=["feature_value5"],
-            project=PROJECT_NAME,
+            default_project=PROJECT_NAME,
         )
         output = feature_retrieval_job.to_dataframe(timeout_sec=180)
         print(output.head())
@@ -436,7 +436,7 @@ def test_batch_multiple_featureset_joins(client):
                 "feature_value6",
                 "feature_set_2:other_feature_value7",
             ],
-            project=PROJECT_NAME,
+            default_project=PROJECT_NAME,
         )
         output = feature_retrieval_job.to_dataframe(timeout_sec=180)
         print(output.head())
@@ -472,7 +472,7 @@ def test_batch_no_max_age(client):
         feature_retrieval_job = client.get_batch_features(
             entity_rows=features_8_df[["datetime", "entity_id"]],
             feature_refs=["feature_value8"],
-            project=PROJECT_NAME,
+            default_project=PROJECT_NAME,
         )
 
         output = feature_retrieval_job.to_dataframe(timeout_sec=180)
@@ -707,4 +707,3 @@ def clean_up_remote_files(files):
         if file_uri.scheme == "gs":
             blob = Blob.from_string(file_uri.geturl(), client=storage_client)
             blob.delete()
-
