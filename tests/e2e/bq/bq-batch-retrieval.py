@@ -190,7 +190,7 @@ def test_batch_get_batch_features_with_file(client):
         feature_retrieval_job = client.get_batch_features(
             entity_rows="file://file_feature_set.avro",
             feature_refs=["feature_value1"],
-            project=PROJECT_NAME,
+            default_project=PROJECT_NAME,
         )
 
         output = feature_retrieval_job.to_dataframe(timeout_sec=180)
