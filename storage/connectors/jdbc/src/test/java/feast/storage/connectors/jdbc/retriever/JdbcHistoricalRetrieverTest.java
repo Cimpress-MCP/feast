@@ -97,6 +97,7 @@ public class JdbcHistoricalRetrieverTest {
     File testFile = new File(files.get(0));
     // Check if file exist in staging location
     Assert.assertTrue(testFile.exists() && !testFile.isDirectory());
+    Assert.assertTrue(files.get(0).indexOf(staging_location) != -1);
   }
 
   private FeatureSetProto.FeatureSetSpec getFeatureSetSpec() {
