@@ -29,10 +29,13 @@ import feast.proto.types.ValueProto;
 import feast.proto.types.ValueProto.ValueType.Enum;
 import feast.storage.api.writer.FeatureSink;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
 import org.junit.Before;
@@ -47,6 +50,9 @@ public class JdbcSnowflakeFeatureSinkTest {
 
   private String userName = "SWATIARORA";
   private String password = "Vistaprint1@";
+  private String database = "DEMO_DB";
+  private String schema = "PUBLIC";
+  private String warehouse = "COMPUTE_WH";
   private String snowflakeUrl = "jdbc:snowflake://kia19877.snowflakecomputing.com";
   private String className = "net.snowflake.client.jdbc.SnowflakeDriver";
 
@@ -109,6 +115,9 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setClassName(this.className)
                 .setUsername(this.userName)
                 .setPassword(this.password)
+                .setDatabase(this.database)
+                .setSchema(this.schema)
+                .setWarehouse(this.warehouse)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
 
@@ -120,21 +129,26 @@ public class JdbcSnowflakeFeatureSinkTest {
   }
 
   private void connect() {
-    if (conn != null) {
+    if (this.conn != null) {
       return;
     }
     try {
 
       Class.forName(this.className);
-      conn = DriverManager.getConnection(this.snowflakeUrl, this.userName, this.password);
-      System.out.println("inside connect " + conn);
+      Properties props = new Properties();
+      props.put("user", this.userName);
+      props.put("password", this.password);
+      props.put("db", this.database);
+      props.put("schema", this.schema);
+      DriverManager.getConnection(this.snowflakeUrl, props);
+      this.conn = DriverManager.getConnection(this.snowflakeUrl, props);
     } catch (ClassNotFoundException | SQLException e) {
       System.err.println(e.getClass().getName() + ": " + e.getMessage());
     }
   }
 
   @Test
-  public void shouldWriteToSnowflake() {
+  public void shouldWriteToSnowflake() throws SQLException {
 
     List<FeatureRow> featureRows =
         ImmutableList.of(
@@ -175,6 +189,18 @@ public class JdbcSnowflakeFeatureSinkTest {
     p.apply(Create.of(featureRows)).apply(this.snowflakeFeatureSinkObj.writer());
     p.run();
     // TODO: Remove this assert, add SQL query
+    DatabaseMetaData dbm = this.conn.getMetaData();
+    ResultSet rs = dbm.getTables(null, "DEMO_DB.PUBLIC", "snowflake_proj_feature_set_1", null);
+    System.out.println("rs---"+rs);
+    System.out.println("rows--"+rs.getRow());
+    //      rs.last();
+  
+    System.out.println("dbm---" + dbm);
+
+    System.out.println(
+        dbm.getTables(null, this.schema, "snowflake_proj_feature_set_1", null).next());
+    //    Assert.assertEquals(true, dbm.getTables(null, null, "myproject2_feature_set",
+    // null).next());
     assert (true);
   }
 }

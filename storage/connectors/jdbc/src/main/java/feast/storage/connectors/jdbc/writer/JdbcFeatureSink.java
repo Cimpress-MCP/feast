@@ -27,6 +27,7 @@ import feast.storage.connectors.jdbc.sqlite.SqliteTemplater;
 import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import org.slf4j.Logger;
 
 public class JdbcFeatureSink implements FeatureSink {
@@ -76,7 +77,7 @@ public class JdbcFeatureSink implements FeatureSink {
     this.subscribedFeatureSets.put(featureSetKey, featureSet);
 
     Connection conn = connect(this.getConfig());
-    if (tableExists(conn, featureSetSpec)) {
+    if (tableExists(conn, featureSetSpec, this.getConfig())) {
       System.out.println("inside table exists condition");
       updateTable(conn, this.getJdbcTemplater(), featureSetSpec);
     } else {
@@ -149,10 +150,23 @@ public class JdbcFeatureSink implements FeatureSink {
     String className = config.getClassName();
     String url = config.getUrl();
     try {
-      Class.forName(className);
-      if (!username.isEmpty()) {
-        return DriverManager.getConnection(url, username, password);
-      }
+
+    	if (!username.isEmpty()) {
+    		if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+    	        String database = config.getDatabase();
+    	        String schema = config.getSchema();
+    	        Properties props = new Properties();
+    	        props.put("user", username);
+    	        props.put("password", password);
+    	        props.put("db", database);
+    	        props.put("schema", schema);
+    	        Class.forName(className);
+    	        return DriverManager.getConnection(url, props);
+    	      } else {
+    	        Class.forName(className);
+    	        return DriverManager.getConnection(url, username, password);
+    	      }
+    	}
       return DriverManager.getConnection(url);
     } catch (ClassNotFoundException | SQLException e) {
       throw new RuntimeException(
@@ -163,17 +177,23 @@ public class JdbcFeatureSink implements FeatureSink {
   }
 
   private static boolean tableExists(
-      Connection conn, FeatureSetProto.FeatureSetSpec featureSetSpec) {
+      Connection conn, FeatureSetProto.FeatureSetSpec featureSetSpec, StoreProto.Store.JdbcConfig config) {
     String tableName = JdbcTemplater.getTableName(featureSetSpec);
 
     String featureSetRef = getFeatureSetRef(featureSetSpec);
+    String database = null;
+    String schema = null;
     try {
       if (tableName.isEmpty()) {
         throw new RuntimeException(
             String.format("Table name could not be determined for %s", featureSetRef));
       }
       DatabaseMetaData md = conn.getMetaData();
-      ResultSet rs = md.getTables(null, null, tableName, null);
+      if (config.getClassName()== "") {
+    	  database = config.getDatabase();
+    	  schema = config.getSchema();	  
+      }
+      ResultSet rs = md.getTables(null, database+"."+schema, tableName, null);
       //      rs.last();
       return rs.getRow() > 0;
     } catch (SQLException e) {

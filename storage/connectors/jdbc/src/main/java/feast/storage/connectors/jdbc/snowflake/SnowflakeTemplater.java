@@ -38,12 +38,9 @@ public class SnowflakeTemplater implements JdbcTemplater {
       String type = requiredColumns.get(column);
       columnsAndTypesSQL.add(String.format("%s %s", column, type));
     }
-
-    System.out.println("Table name:" + JdbcTemplater.getTableName(featureSetSpec));
-
     String createTableStatement =
         String.format(
-            "CREATE TABLE IF NOT EXISTS DEMO_DB.PUBLIC.%s (%s);",
+            "CREATE TABLE IF NOT EXISTS %s (%s);",
             JdbcTemplater.getTableName(featureSetSpec), columnsAndTypesSQL);
     log.debug(createTableStatement);
     return createTableStatement;
@@ -100,8 +97,7 @@ public class SnowflakeTemplater implements JdbcTemplater {
       addColumnSql.add(String.format("ADD COLUMN %s %s", requiredColumn, requiredColumnType));
     }
 
-    String tableMigrationSql =
-        String.format("ALTER TABLE DEMO_DB.PUBLIC.%s %s", tableName, addColumnSql);
+    String tableMigrationSql = String.format("ALTER TABLE %s %s", tableName, addColumnSql);
     log.debug(tableMigrationSql);
     return tableMigrationSql;
   }
@@ -117,7 +113,7 @@ public class SnowflakeTemplater implements JdbcTemplater {
       valueSql.add("?");
     }
     return String.format(
-        "INSERT INTO DEMO_DB.PUBLIC.%s (%s) VALUES (%s)",
+        "INSERT INTO %s (%s) VALUES (%s)",
         JdbcTemplater.getTableName(featureSetSpec), columnsSql, valueSql);
   }
 }

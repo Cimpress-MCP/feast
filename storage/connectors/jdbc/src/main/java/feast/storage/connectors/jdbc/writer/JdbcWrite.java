@@ -160,19 +160,13 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
       FeatureSetProto.FeatureSetSpec currentFeatureSetSpec,
       StoreProto.Store.JdbcConfig jdbcConfig,
       JdbcTemplater jdbcTemplater) {
-    String username = jdbcConfig.getUsername();
-    String password = jdbcConfig.getPassword();
-    String className = jdbcConfig.getClassName();
-    String url = jdbcConfig.getUrl();
+
     int batchSize = jdbcConfig.getBatchSize() > 0 ? jdbcConfig.getBatchSize() : 1;
 
     featureSetInput.apply(
         String.format("WriteFeatureRowToJdbcIO-%s", featureSetRef),
         JdbcIO.<FeatureRowProto.FeatureRow>write()
-            .withDataSourceConfiguration(
-                JdbcIO.DataSourceConfiguration.create(className, url)
-                    .withUsername(!username.isEmpty() ? username : null)
-                    .withPassword(!password.isEmpty() ? password : null))
+            .withDataSourceConfiguration(create_dsconfig(jdbcConfig))
             .withStatement(jdbcTemplater.getFeatureRowInsertSql(currentFeatureSetSpec))
             .withBatchSize(batchSize)
             .withPreparedStatementSetter(
@@ -230,7 +224,6 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
                         counter++;
                       }
                       preparedStatement.getConnection().commit();
-                      System.out.println(preparedStatement);
                     } catch (SQLException e) {
                       log.error(
                           String.format(
@@ -309,6 +302,30 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
               "Could not cast value %s of type %s int SQL field: ",
               value.toString(), protoValueType),
           e.getMessage());
+    }
+  }
+
+  private static JdbcIO.DataSourceConfiguration create_dsconfig(
+      StoreProto.Store.JdbcConfig jdbcConfig) {
+    String username = jdbcConfig.getUsername();
+    String password = jdbcConfig.getPassword();
+    String className = jdbcConfig.getClassName();
+    String url = jdbcConfig.getUrl();
+
+    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+      String database = jdbcConfig.getDatabase();
+      String schema = jdbcConfig.getSchema();
+      String warehouse = jdbcConfig.getWarehouse();
+      return JdbcIO.DataSourceConfiguration.create(className, url)
+          .withUsername(!username.isEmpty() ? username : null)
+          .withPassword(!password.isEmpty() ? password : null)
+          .withConnectionProperties(
+              String.format("warehouse=%s;db=%s;schema=%s",warehouse, database, schema));
+
+    } else {
+      return JdbcIO.DataSourceConfiguration.create(className, url)
+          .withUsername(!username.isEmpty() ? username : null)
+          .withPassword(!password.isEmpty() ? password : null);
     }
   }
 }

@@ -139,6 +139,9 @@ message Store {
     string username = 4;
     string password = 5;
     string staging_location = 6;
+    string database = 7;
+    string schema = 8;
+    string warehouse = 9;
   }
 
   message Subscription {
