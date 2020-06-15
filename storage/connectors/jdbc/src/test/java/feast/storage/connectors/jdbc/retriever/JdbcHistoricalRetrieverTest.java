@@ -20,12 +20,15 @@ import com.google.protobuf.Duration;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
+import feast.storage.api.retriever.HistoricalRetrievalResult;
 import feast.storage.api.retriever.HistoricalRetriever;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.beam.sdk.testing.TestPipeline;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -87,9 +90,13 @@ public class JdbcHistoricalRetrieverTest {
     List<FeatureSetRequest> featureSetRequests = new ArrayList<>();
     featureSetRequests.add(featureSetRequest);
 
-    System.out.println(datasetSource.getFileSource());
-    postgresqlFeatureRetriever.getHistoricalFeatures(
-        retrievalId, datasetSource, featureSetRequests);
+    HistoricalRetrievalResult postgresHisRetrievalResult =
+        postgresqlFeatureRetriever.getHistoricalFeatures(
+            retrievalId, datasetSource, featureSetRequests);
+    List<String> files = postgresHisRetrievalResult.getFileUris();
+    File testFile = new File(files.get(0));
+    // Check if file exist in staging location
+    Assert.assertTrue(testFile.exists() && !testFile.isDirectory());
   }
 
   private FeatureSetProto.FeatureSetSpec getFeatureSetSpec() {
