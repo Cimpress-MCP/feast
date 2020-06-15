@@ -52,7 +52,7 @@ def get_auth_metadata_plugin(config: Config):
     else:
         raise RuntimeError(
             "Could not determine OAuth provider."
-            "Must be an enum - AuthProvider.GOOGLE or AuthProvider.OAUTH"
+            "Must be set to either \"Google\" or \"OAuth\""
         )
 
 
