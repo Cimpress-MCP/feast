@@ -82,7 +82,7 @@ def config_oauth():
     config_dict = {
         "core_url": "localhost:50051",
         "core_enable_auth": True,
-        "core_auth_provider": "OAuth",
+        "core_auth_provider": "oauth",
         "oauth_grant_type": "client_credentials",
         "oauth_client_id": "fakeID",
         "oauth_client_secret": "fakeSecret",
@@ -97,7 +97,7 @@ def config_google():
     config_dict = {
         "core_url": "localhost:50051",
         "core_enable_auth": True,
-        "core_auth_provider": "Google",
+        "core_auth_provider": "google",
         "oauth_grant_type": "client_credentials",
         "oauth_client_id": "fakeID",
         "oauth_client_secret": "fakeSecret",
@@ -112,7 +112,7 @@ def config_with_missing_variable():
     config_dict = {
         "core_url": "localhost:50051",
         "core_enable_auth": True,
-        "core_auth_provider": "OAuth",
+        "core_auth_provider": "oauth",
         "oauth_grant_type": "client_credentials",
         "oauth_client_id": "fakeID",
         "oauth_client_secret": "fakeSecret",

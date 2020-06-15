@@ -17,8 +17,8 @@ from enum import Enum
 
 
 class AuthProvider(Enum):
-    GOOGLE = "Google"
-    OAUTH = "OAuth"
+    GOOGLE = "google"
+    OAUTH = "oauth"
 
 
 DATETIME_COLUMN = "datetime"
@@ -86,5 +86,5 @@ FEAST_DEFAULT_OPTIONS = {
     # Time to wait for batch feature requests before timing out.
     CONFIG_BATCH_FEATURE_REQUEST_WAIT_TIME_SECONDS_KEY: "600",
     # Authentication Provider - Google OpenID/OAuth
-    CONFIG_CORE_AUTH_PROVIDER: "Google",
+    CONFIG_CORE_AUTH_PROVIDER: "google",
 }
