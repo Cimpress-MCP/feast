@@ -29,12 +29,14 @@ import feast.proto.types.ValueProto;
 import feast.proto.types.ValueProto.ValueType.Enum;
 import feast.storage.api.writer.FeatureSink;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -47,11 +49,18 @@ public class JdbcFeatureSinkTest {
   //  private String url = "jdbc:sqlite:/home/willem/Dump/sqldb/test.db";
   //  private String className = "org.sqlite.JDBC";
 
+  //  Postgres account
   private String url = "jdbc:postgresql://localhost:5432/postgres";
   private String className = "org.postgresql.Driver";
   private String userName = "postgres";
-
+  private String pw = System.getenv("postgres_pw");
   private Connection conn;
+
+  //  Snowflake account
+  private String SFurl = "jdbc:snowflake://ry42518.us-east-2.aws.snowflakecomputing.com";
+  private String SFclassName = "com.snowflake.client.jdbc.SnowflakeDriver";
+  private String SFusername = "";
+  private String SFpw = "123456Pw";
 
   @Before
   public void setUp() {
@@ -100,16 +109,15 @@ public class JdbcFeatureSinkTest {
 
     Map<String, FeatureSetProto.FeatureSetSpec> specMap =
         ImmutableMap.of("myproject2/fs", spec1, "myproject2/feature_set", spec2);
-
     sqliteFeatureSink =
         JdbcFeatureSink.fromConfig(
             StoreProto.Store.JdbcConfig.newBuilder()
                 .setUrl(this.url)
                 .setClassName(this.className)
                 .setUsername(this.userName)
+                .setPassword(pw)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
-
     sqliteFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec1).build());
     sqliteFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec2).build());
 
@@ -122,14 +130,14 @@ public class JdbcFeatureSinkTest {
     }
     try {
       Class.forName(this.className);
-      conn = DriverManager.getConnection(this.url, userName, null);
+      conn = DriverManager.getConnection(this.url, userName, this.pw);
     } catch (ClassNotFoundException | SQLException e) {
       System.err.println(e.getClass().getName() + ": " + e.getMessage());
     }
   }
 
   @Test
-  public void shouldWriteToSqlite() {
+  public void shouldWriteToSqlite() throws SQLException {
 
     List<FeatureRow> featureRows =
         ImmutableList.of(
@@ -169,7 +177,7 @@ public class JdbcFeatureSinkTest {
 
     p.apply(Create.of(featureRows)).apply(sqliteFeatureSink.writer());
     p.run();
-    // TODO: Remove this assert, add SQL query
-    assert (true);
+    DatabaseMetaData dbm = conn.getMetaData();
+    Assert.assertEquals(true, dbm.getTables(null, null, "myproject2_feature_set", null).next());
   }
 }
