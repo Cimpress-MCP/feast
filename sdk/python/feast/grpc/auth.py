@@ -1,16 +1,19 @@
+from http import HTTPStatus
+
 import grpc
 from google.auth.exceptions import DefaultCredentialsError
 
-from http import HTTPStatus
 from feast.config import Config
-from feast.constants import AuthProvider, \
-    CONFIG_CORE_ENABLE_AUTH_TOKEN_KEY, \
-    CONFIG_OAUTH_CLIENT_ID_KEY, \
-    CONFIG_OAUTH_CLIENT_SECRET_KEY, \
-    CONFIG_OAUTH_AUDIENCE_KEY, \
-    CONFIG_OAUTH_TOKEN_REQUEST_URL_KEY, \
-    CONFIG_CORE_AUTH_PROVIDER, \
-    CONFIG_OAUTH_GRANT_TYPE_KEY
+from feast.constants import (
+    CONFIG_CORE_AUTH_PROVIDER,
+    CONFIG_CORE_ENABLE_AUTH_TOKEN_KEY,
+    CONFIG_OAUTH_AUDIENCE_KEY,
+    CONFIG_OAUTH_CLIENT_ID_KEY,
+    CONFIG_OAUTH_CLIENT_SECRET_KEY,
+    CONFIG_OAUTH_GRANT_TYPE_KEY,
+    CONFIG_OAUTH_TOKEN_REQUEST_URL_KEY,
+    AuthProvider,
+)
 
 
 def get_auth_metadata_plugin(config: Config):
@@ -61,11 +64,13 @@ class OAuthMetadataPlugin(grpc.AuthMetadataPlugin):
         if config.exists(CONFIG_CORE_ENABLE_AUTH_TOKEN_KEY):
             self._static_token = config.get(CONFIG_CORE_ENABLE_AUTH_TOKEN_KEY)
 
-        if config.exists(CONFIG_OAUTH_GRANT_TYPE_KEY) \
-            and config.exists(CONFIG_OAUTH_CLIENT_ID_KEY) \
-            and config.exists(CONFIG_OAUTH_CLIENT_SECRET_KEY) \
-                and config.exists(CONFIG_OAUTH_AUDIENCE_KEY) \
-                and config.exists(CONFIG_OAUTH_TOKEN_REQUEST_URL_KEY):
+        if (
+            config.exists(CONFIG_OAUTH_GRANT_TYPE_KEY)
+            and config.exists(CONFIG_OAUTH_CLIENT_ID_KEY)
+            and config.exists(CONFIG_OAUTH_CLIENT_SECRET_KEY)
+            and config.exists(CONFIG_OAUTH_AUDIENCE_KEY)
+            and config.exists(CONFIG_OAUTH_TOKEN_REQUEST_URL_KEY)
+        ):
             self._refresh_token(config)
         else:
             raise RuntimeError(
@@ -89,20 +94,22 @@ class OAuthMetadataPlugin(grpc.AuthMetadataPlugin):
 
         import json
         import requests
-        headers_token = {
-            'content-type': "application/json"
-        }
+
+        headers_token = {"content-type": "application/json"}
         data_token = {
             "grant_type": config.get(CONFIG_OAUTH_GRANT_TYPE_KEY),
             "client_id": config.get(CONFIG_OAUTH_CLIENT_ID_KEY),
             "client_secret": config.get(CONFIG_OAUTH_CLIENT_SECRET_KEY),
-            "audience": config.get(CONFIG_OAUTH_AUDIENCE_KEY)
+            "audience": config.get(CONFIG_OAUTH_AUDIENCE_KEY),
         }
         data_token = json.dumps(data_token)
-        response_token = requests.post(config.get(CONFIG_OAUTH_TOKEN_REQUEST_URL_KEY),
-                                       headers=headers_token, data=data_token)
+        response_token = requests.post(
+            config.get(CONFIG_OAUTH_TOKEN_REQUEST_URL_KEY),
+            headers=headers_token,
+            data=data_token,
+        )
         if response_token.status_code == HTTPStatus.OK:
-            return response_token.json().get('access_token')
+            return response_token.json().get("access_token")
         else:
             raise RuntimeError(
                 f"Could not fetch OAuth token, got response : {response_token.status_code}"

@@ -86,5 +86,5 @@ FEAST_DEFAULT_OPTIONS = {
     # Time to wait for batch feature requests before timing out.
     CONFIG_BATCH_FEATURE_REQUEST_WAIT_TIME_SECONDS_KEY: "600",
     # Authentication Provider - Google OpenID/OAuth
-    CONFIG_CORE_AUTH_PROVIDER: AuthProvider.GOOGLE
+    CONFIG_CORE_AUTH_PROVIDER: AuthProvider.GOOGLE,
 }
