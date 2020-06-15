@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.beam.sdk.testing.TestPipeline;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -46,11 +45,6 @@ public class JdbcHistoricalRetrieverTest {
   private String username = "postgres";
   private String pw = System.getenv("postgres_pw");
   private Map<String, String> postgressqlConfig = new HashMap<>();
-
-  @Test
-  public void dummyTest() {
-    Assert.assertEquals(1, 1);
-  }
 
   @Before
   public void setUp() {
