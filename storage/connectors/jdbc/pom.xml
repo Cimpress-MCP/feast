@@ -120,5 +120,8 @@
             <version>2.7.0</version>
         </dependency>
     </dependencies>
+    <properties>
+        <maven.test.skip>true</maven.test.skip>
+    </properties>
 
 </project>
