@@ -106,6 +106,10 @@ class Client:
             project: Sets the active project. This field is optional.
             core_secure: Use client-side SSL/TLS for Core gRPC API
             serving_secure: Use client-side SSL/TLS for Serving gRPC API
+            core_enable_auth: Enable authentication and authorization
+            core_auth_provider: Authentication provider – "google" or "oauth"
+            if core_auth_provider is "oauth", the following fields are mandatory –
+            oauth_grant_type, oauth_client_id, oauth_client_secret, oauth_audience, oauth_token_request_url
 
         Args:
             options: Configuration options to initialize client with
@@ -519,8 +523,26 @@ class Client:
         Examples:
             >>> from feast import Client
             >>> from datetime import datetime
-            >>>
+            >>> # Initialize the client with desired properties
+            >>> # Client with insecure core
             >>> feast_client = Client(core_url="localhost:6565", serving_url="localhost:6566")
+            >>> # Client with secure core (Auth provider: Google OpenID)
+            >>> feast_client = Client(
+            >>>     core_url="localhost:6565",
+            >>>     serving_url="localhost:6566",
+            >>>     core_enable_auth=True,
+            >>>     core_auth_provider="google")
+            >>> # Client with secure core (Auth provider: OAuth)
+            >>> feast_client = Client(
+            >>>     core_url="localhost:6565",
+            >>>     serving_url="localhost:6566",
+            >>>     core_enable_auth=True,
+            >>>     core_auth_provider="oauth",
+            >>>     oauth_grant_type="client_credentials",
+            >>>     oauth_client_id="fakeID",
+            >>>     oauth_client_secret="fakeSecret",
+            >>>     oauth_audience="https://testaudience.io/",
+            >>>     oauth_token_request_url="https://test.auth.com/v2/token")
             >>> feature_refs = ["my_project/bookings_7d", "booking_14d"]
             >>> entity_rows = pd.DataFrame(
             >>>         {
