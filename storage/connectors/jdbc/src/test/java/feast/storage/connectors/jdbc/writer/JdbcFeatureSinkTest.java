@@ -59,7 +59,7 @@ public class JdbcFeatureSinkTest {
   //  Snowflake account
   private String SFurl = "jdbc:snowflake://ry42518.us-east-2.aws.snowflakecomputing.com";
   private String SFclassName = "com.snowflake.client.jdbc.SnowflakeDriver";
-  private String SFusername = "";
+  private String SFusername = "CHIZHANG";
   private String SFpw = "123456Pw";
 
   @Before
