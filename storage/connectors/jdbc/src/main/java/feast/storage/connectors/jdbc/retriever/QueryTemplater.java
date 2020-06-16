@@ -48,7 +48,7 @@ public class QueryTemplater {
         "SELECT max(event_timestamp) as max, min(event_timestamp) as min from %s", leftTableName);
   }
 
-  public static String createEntityTableRowCountQuery(
+  public static List<String> createEntityTableRowCountQuery(
       String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos) {
     StringJoiner featureSetTableSelectJoiner = new StringJoiner(", ");
     StringJoiner featureSetTableFromJoiner = new StringJoiner(" CROSS JOIN ");
@@ -68,9 +68,14 @@ public class QueryTemplater {
     entityColumns.sort(Comparator.comparing(entity -> entity.split("\\.")[0]));
     entityColumns.forEach(featureSetTableSelectJoiner::add);
 
-    return String.format(
-        "CREATE TABLE \"%s\" AS (SELECT %s FROM %s WHERE 1 = 2); ALTER TABLE \"%s\" ADD COLUMN event_timestamp TIMESTAMP, ADD COLUMN row_number SERIAL;",
-        destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner, destinationTable);
+//    TODO: fix row_number SERIAL for snowflake
+    List<String> createEntityTableRowCountQueries = new ArrayList<>();
+    createEntityTableRowCountQueries.add(String.format(
+            "CREATE TABLE \"%s\" AS (SELECT %s FROM %s WHERE 1 = 2);", destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
+    createEntityTableRowCountQueries.add(String.format(
+            "ALTER TABLE \"%s\" ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
+
+    return createEntityTableRowCountQueries;
   }
 
   /**

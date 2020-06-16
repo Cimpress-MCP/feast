@@ -240,16 +240,20 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     }
   }
 
+//  TODO: fix for snowflake database
   private String createStagedEntityTable(
       Connection conn, List<FeatureSetQueryInfo> featureSetQueryInfos) {
     String entityTableWithRowCountName = createTempTableName();
-    String entityTableRowCountQuery =
+    List<String> entityTableRowCountQueries =
         QueryTemplater.createEntityTableRowCountQuery(
             entityTableWithRowCountName, featureSetQueryInfos);
     Statement statement;
     try {
       statement = conn.createStatement();
-      statement.executeUpdate(entityTableRowCountQuery);
+      System.out.println(entityTableRowCountQueries);
+      for(String queries: entityTableRowCountQueries){
+        statement.executeUpdate(queries);
+      }
       return entityTableWithRowCountName;
     } catch (SQLException e) {
       throw new RuntimeException(
