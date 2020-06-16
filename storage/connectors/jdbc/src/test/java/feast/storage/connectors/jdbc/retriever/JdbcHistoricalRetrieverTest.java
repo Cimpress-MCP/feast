@@ -37,7 +37,6 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class JdbcHistoricalRetrieverTest {
-  @Rule public transient TestPipeline p = TestPipeline.create();
   private HistoricalRetriever postgresqlFeatureRetriever;
 
   //    Give postgresql writing permission to your staging_location
