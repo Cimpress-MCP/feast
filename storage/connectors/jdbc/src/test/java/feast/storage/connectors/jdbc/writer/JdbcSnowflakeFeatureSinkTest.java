@@ -31,13 +31,13 @@ import feast.storage.api.writer.FeatureSink;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -189,18 +189,13 @@ public class JdbcSnowflakeFeatureSinkTest {
     p.apply(Create.of(featureRows)).apply(this.snowflakeFeatureSinkObj.writer());
     p.run();
     // TODO: Remove this assert, add SQL query
-    DatabaseMetaData dbm = this.conn.getMetaData();
-    ResultSet rs = dbm.getTables(null, "DEMO_DB.PUBLIC", "snowflake_proj_feature_set_1", null);
-    System.out.println("rs---"+rs);
-    System.out.println("rows--"+rs.getRow());
-    //      rs.last();
-  
-    System.out.println("dbm---" + dbm);
 
-    System.out.println(
-        dbm.getTables(null, this.schema, "snowflake_proj_feature_set_1", null).next());
-    //    Assert.assertEquals(true, dbm.getTables(null, null, "myproject2_feature_set",
-    // null).next());
-    assert (true);
+    //    System.out.println(
+    //        dbm.getTables(null, this.schema, "snowflake_proj_feature_set_1", null).next());
+    DatabaseMetaData meta = conn.getMetaData();
+    Assert.assertEquals(
+        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_1", null).next());
+    Assert.assertEquals(
+        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_2", null).next());
   }
 }

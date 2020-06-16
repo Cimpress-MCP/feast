@@ -76,12 +76,12 @@ public class SnowflakeTemplater implements JdbcTemplater {
 
     // Filter required columns down to only the ones that don't exist
     for (String existingColumn : existingColumns.keySet()) {
-      if (!requiredColumns.containsKey(existingColumn)) {
+      if (!requiredColumns.containsKey(existingColumn.toLowerCase())) {
         throw new RuntimeException(
             String.format(
                 "Found column %s in table %s that should not exist", existingColumn, tableName));
       }
-      requiredColumns.remove(existingColumn);
+      requiredColumns.remove(existingColumn.toLowerCase());
     }
 
     if (requiredColumns.size() == 0) {
