@@ -33,9 +33,14 @@ import java.util.stream.Collectors;
 public class QueryTemplater {
 
   private static final PebbleEngine engine = new PebbleEngine.Builder().build();
-  private static final String FEATURESET_TEMPLATE_NAME =
+  private static final String FEATURESET_TEMPLATE_NAME_POSTGRES =
       "templates/single_featureset_pit_join_postgres.sql";
-  private static final String JOIN_TEMPLATE_NAME = "templates/join_featuresets_postgres.sql";
+  private static final String JOIN_TEMPLATE_NAME_POSTGRES =
+      "templates/join_featuresets_postgres.sql";
+  private static final String FEATURESET_TEMPLATE_NAME_SNOWFLAKE =
+      "templates/single_featureset_pit_join_snowflake.sql";
+  private static final String JOIN_TEMPLATE_NAME_SNOWFLAKE =
+      "templates/join_featuresets_snowflake.sql";
 
   /**
    * Get the query for retrieving the earliest and latest timestamps in the entity dataset.
@@ -49,7 +54,7 @@ public class QueryTemplater {
   }
 
   public static List<String> createEntityTableRowCountQuery(
-      String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos) {
+      String className, String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos) {
     StringJoiner featureSetTableSelectJoiner = new StringJoiner(", ");
     StringJoiner featureSetTableFromJoiner = new StringJoiner(" CROSS JOIN ");
     Set<String> entities = new HashSet<>();
@@ -68,15 +73,31 @@ public class QueryTemplater {
     entityColumns.sort(Comparator.comparing(entity -> entity.split("\\.")[0]));
     entityColumns.forEach(featureSetTableSelectJoiner::add);
 
-    //    TODO: fix row_number SERIAL for snowflake
     List<String> createEntityTableRowCountQueries = new ArrayList<>();
     createEntityTableRowCountQueries.add(
         String.format(
-            "CREATE TABLE \"%s\" AS (SELECT %s FROM %s WHERE 1 = 2);",
+            "CREATE TABLE %s AS (SELECT %s FROM %s WHERE 1 = 2);",
             destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
-    createEntityTableRowCountQueries.add(
-        String.format(
-            "ALTER TABLE \"%s\" ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
+    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+      // 1st create a sequence
+      //      createEntityTableRowCountQueries.add("create or replace sequence row_seq start = 1
+      // increment = 1;");
+      // 2nd insert sequence as the row num
+      createEntityTableRowCountQueries.add(
+          String.format("ALTER TABLE %s ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
+      //      createEntityTableRowCountQueries.add(
+      //              String.format(
+      //                      "ALTER TABLE \"%s\" ADD COLUMN row_number INT DEFAULT
+      // row_seq.nextval;", destinationTable));
+    } else {
+      createEntityTableRowCountQueries.add(
+          String.format(
+              "ALTER TABLE \"%s\" ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
+      //      createEntityTableRowCountQueries.add(
+      //              String.format(
+      //                      "ALTER TABLE \"%s\" ADD COLUMN row_number SERIAL;",
+      // destinationTable));
+    }
 
     return createEntityTableRowCountQueries;
   }
@@ -106,6 +127,7 @@ public class QueryTemplater {
     return featureSetInfos;
   }
 
+  // TODO: double-check functionality in snowflake
   /**
    * Generate the query for point in time correctness join of data for a single feature set to the
    * entity dataset.
@@ -117,13 +139,18 @@ public class QueryTemplater {
    * @return point in time correctness join BQ SQL query
    */
   public static String createFeatureSetPointInTimeQuery(
+      String className,
       FeatureSetQueryInfo featureSetInfo,
       String leftTableName,
       String minTimestamp,
       String maxTimestamp)
       throws IOException {
-
-    PebbleTemplate template = engine.getTemplate(FEATURESET_TEMPLATE_NAME);
+    PebbleTemplate template;
+    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+      template = engine.getTemplate(FEATURESET_TEMPLATE_NAME_SNOWFLAKE);
+    } else {
+      template = engine.getTemplate(FEATURESET_TEMPLATE_NAME_POSTGRES);
+    }
     Map<String, Object> context = new HashMap<>();
     context.put("featureSet", featureSetInfo);
 
@@ -145,10 +172,17 @@ public class QueryTemplater {
    * @return query to join temporary feature set tables to the entity table
    */
   public static String createJoinQuery(
+      String className,
       List<FeatureSetQueryInfo> featureSetInfos,
       List<String> entityTableColumnNames,
       String leftTableName) {
-    PebbleTemplate template = engine.getTemplate(JOIN_TEMPLATE_NAME);
+
+    PebbleTemplate template;
+    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+      template = engine.getTemplate(JOIN_TEMPLATE_NAME_SNOWFLAKE);
+    } else {
+      template = engine.getTemplate(JOIN_TEMPLATE_NAME_POSTGRES);
+    }
     Map<String, Object> context = new HashMap<>();
     context.put("entities", entityTableColumnNames);
     context.put("featureSets", featureSetInfos);
@@ -167,21 +201,45 @@ public class QueryTemplater {
     return writer.toString();
   }
 
-  public static String createLoadEntityQuery(
-      String destinationTable, String temporaryTable, File filePath) {
-    return String.format(
-        "CREATE TEMP TABLE %s AS (SELECT * FROM %s);"
-            + "ALTER TABLE %s DROP COLUMN row_number;"
-            + "COPY %s FROM '%s' DELIMITER E'\t' CSV HEADER;"
-            + "INSERT INTO %s SELECT * FROM %s;"
-            + "DROP TABLE %s;",
-        temporaryTable,
-        destinationTable,
-        temporaryTable,
-        temporaryTable,
-        filePath,
-        destinationTable,
-        temporaryTable,
-        temporaryTable);
+  public static List<String> createLoadEntityQuery(
+      String className, String destinationTable, String temporaryTable, File filePath) {
+    List<String> queries = new ArrayList<>();
+    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+      queries.add(
+          String.format(
+              "CREATE TABLE %s AS (SELECT * FROM %s);", temporaryTable, destinationTable));
+      queries.add(
+          String.format(
+              "create or replace file format CSV_format type = 'CSV' field_delimiter = ',' skip_header=1;"));
+      queries.add(String.format("create or replace stage my_stage file_format = CSV_format;"));
+      queries.add(String.format("put file://%s @my_stage auto_compress=false;", filePath));
+      // TODO: generic staging snowflake_proj_entity_rows.csv
+      queries.add(
+          String.format(
+              "COPY INTO %s FROM '@my_stage/snowflake_proj_entity_rows.csv' FILE_FORMAT = CSV_format on_error = 'skip_file';",
+              temporaryTable));
+      queries.add(
+          String.format("INSERT INTO %s SELECT * FROM %s;", destinationTable, temporaryTable));
+
+      queries.add(String.format("DROP TABLE %s;", temporaryTable));
+      queries.add(
+          String.format(
+              "CREATE OR REPLACE TABLE %s as SELECT *, ROW_NUMBER() OVER (ORDER BY 1) AS row_number FROM %s;",
+              destinationTable, destinationTable));
+
+    } else {
+      queries.add(
+          String.format(
+              "CREATE TABLE %s AS (SELECT * FROM %s);", temporaryTable, destinationTable));
+      //      queries.add(String.format("ALTER TABLE %s DROP COLUMN row_number;",temporaryTable));
+      queries.add(
+          String.format("COPY %s FROM '%s' DELIMITER ',' CSV HEADER;", temporaryTable, filePath));
+      queries.add(
+          String.format("INSERT INTO %s SELECT * FROM %s;", destinationTable, temporaryTable));
+      queries.add(String.format("DROP TABLE %s;", temporaryTable));
+      queries.add(
+          String.format("ALTER TABLE \"%s\" ADD COLUMN row_number SERIAL;", destinationTable));
+    }
+    return queries;
   }
 }
