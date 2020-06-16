@@ -106,6 +106,10 @@ class Client:
             project: Sets the active project. This field is optional.
             core_secure: Use client-side SSL/TLS for Core gRPC API
             serving_secure: Use client-side SSL/TLS for Serving gRPC API
+            core_enable_auth: Enable authentication and authorization
+            core_auth_provider: Authentication provider – "google" or "oauth"
+            if core_auth_provider is "oauth", the following fields are mandatory –
+            oauth_grant_type, oauth_client_id, oauth_client_secret, oauth_audience, oauth_token_request_url
 
         Args:
             options: Configuration options to initialize client with
@@ -494,7 +498,7 @@ class Client:
         self,
         feature_refs: List[str],
         entity_rows: Union[pd.DataFrame, str],
-        default_project: str = None,
+        project: str = None,
     ) -> RetrievalJob:
         """
         Retrieves historical features from a Feast Serving deployment.
@@ -510,7 +514,8 @@ class Client:
                 Each entity in a feature set must be present as a column in this
                 dataframe. The datetime column must contain timestamps in
                 datetime64 format.
-            default_project: Default project where feature values will be found.
+            project: Specifies the project which contain the FeatureSets
+                which the requested features belong to.
 
         Returns:
             feast.job.RetrievalJob:
@@ -521,8 +526,26 @@ class Client:
         Examples:
             >>> from feast import Client
             >>> from datetime import datetime
-            >>>
+            >>> # Initialize the client with desired properties
+            >>> # Client with insecure core
             >>> feast_client = Client(core_url="localhost:6565", serving_url="localhost:6566")
+            >>> # Client with secure core (Auth provider: Google OpenID)
+            >>> feast_client = Client(
+            >>>     core_url="localhost:6565",
+            >>>     serving_url="localhost:6566",
+            >>>     core_enable_auth=True,
+            >>>     core_auth_provider="google")
+            >>> # Client with secure core (Auth provider: OAuth)
+            >>> feast_client = Client(
+            >>>     core_url="localhost:6565",
+            >>>     serving_url="localhost:6566",
+            >>>     core_enable_auth=True,
+            >>>     core_auth_provider="oauth",
+            >>>     oauth_grant_type="client_credentials",
+            >>>     oauth_client_id="fakeID",
+            >>>     oauth_client_secret="fakeSecret",
+            >>>     oauth_audience="https://testaudience.io/",
+            >>>     oauth_token_request_url="https://test.auth.com/v2/token")
             >>> feature_refs = ["my_project/bookings_7d", "booking_14d"]
             >>> entity_rows = pd.DataFrame(
             >>>         {
@@ -531,13 +554,13 @@ class Client:
             >>>         }
             >>>     )
             >>> feature_retrieval_job = feast_client.get_batch_features(
-            >>>     feature_refs, entity_rows, default_project="my_project")
+            >>>     feature_refs, entity_rows, project="my_project")
             >>> df = feature_retrieval_job.to_dataframe()
             >>> print(df)
         """
 
         feature_references = _build_feature_references(
-            feature_ref_strs=feature_refs, project=default_project
+            feature_ref_strs=feature_refs, project=project
         )
 
         # Retrieve serving information to determine store type and

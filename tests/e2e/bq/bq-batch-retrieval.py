@@ -190,7 +190,7 @@ def test_batch_get_batch_features_with_file(client):
         feature_retrieval_job = client.get_batch_features(
             entity_rows="file://file_feature_set.avro",
             feature_refs=["feature_value1"],
-            default_project=PROJECT_NAME,
+            project=PROJECT_NAME,
         )
 
         output = feature_retrieval_job.to_dataframe(timeout_sec=180)
@@ -247,7 +247,7 @@ def test_batch_get_batch_features_with_gs_path(client, gcs_path):
         feature_retrieval_job = client.get_batch_features(
             entity_rows=f"{gcs_path}{ts}/*",
             feature_refs=["feature_value2"],
-            default_project=PROJECT_NAME,
+            project=PROJECT_NAME,
         )
 
         output = feature_retrieval_job.to_dataframe(timeout_sec=180)
@@ -291,7 +291,7 @@ def test_batch_order_by_creation_time(client):
         feature_retrieval_job = client.get_batch_features(
             entity_rows=incorrect_df[["datetime", "entity_id"]],
             feature_refs=["feature_value3"],
-            default_project=PROJECT_NAME,
+            project=PROJECT_NAME,
         )
         output = feature_retrieval_job.to_dataframe(timeout_sec=180)
         print(output.head())
@@ -332,7 +332,7 @@ def test_batch_additional_columns_in_entity_table(client):
         feature_retrieval_job = client.get_batch_features(
             entity_rows=entity_df,
             feature_refs=["feature_value4"],
-            default_project=PROJECT_NAME,
+            project=PROJECT_NAME,
         )
         output = feature_retrieval_job.to_dataframe(timeout_sec=180).sort_values(by=["entity_id"])
         print(output.head(10))
@@ -382,7 +382,7 @@ def test_batch_point_in_time_correctness_join(client):
         feature_retrieval_job = client.get_batch_features(
             entity_rows=entity_df,
             feature_refs=["feature_value5"],
-            default_project=PROJECT_NAME,
+            project=PROJECT_NAME,
         )
         output = feature_retrieval_job.to_dataframe(timeout_sec=180)
         print(output.head())
@@ -436,7 +436,7 @@ def test_batch_multiple_featureset_joins(client):
                 "feature_value6",
                 "feature_set_2:other_feature_value7",
             ],
-            default_project=PROJECT_NAME,
+            project=PROJECT_NAME,
         )
         output = feature_retrieval_job.to_dataframe(timeout_sec=180)
         print(output.head())
@@ -472,7 +472,7 @@ def test_batch_no_max_age(client):
         feature_retrieval_job = client.get_batch_features(
             entity_rows=features_8_df[["datetime", "entity_id"]],
             feature_refs=["feature_value8"],
-            default_project=PROJECT_NAME,
+            project=PROJECT_NAME,
         )
 
         output = feature_retrieval_job.to_dataframe(timeout_sec=180)
