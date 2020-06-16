@@ -68,11 +68,14 @@ public class QueryTemplater {
     entityColumns.sort(Comparator.comparing(entity -> entity.split("\\.")[0]));
     entityColumns.forEach(featureSetTableSelectJoiner::add);
 
-//    TODO: fix row_number SERIAL for snowflake
+    //    TODO: fix row_number SERIAL for snowflake
     List<String> createEntityTableRowCountQueries = new ArrayList<>();
-    createEntityTableRowCountQueries.add(String.format(
-            "CREATE TABLE \"%s\" AS (SELECT %s FROM %s WHERE 1 = 2);", destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
-    createEntityTableRowCountQueries.add(String.format(
+    createEntityTableRowCountQueries.add(
+        String.format(
+            "CREATE TABLE \"%s\" AS (SELECT %s FROM %s WHERE 1 = 2);",
+            destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
+    createEntityTableRowCountQueries.add(
+        String.format(
             "ALTER TABLE \"%s\" ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
 
     return createEntityTableRowCountQueries;
