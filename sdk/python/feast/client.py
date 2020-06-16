@@ -496,7 +496,7 @@ class Client:
         self,
         feature_refs: List[str],
         entity_rows: Union[pd.DataFrame, str],
-        default_project: str = None,
+        project: str = None,
     ) -> RetrievalJob:
         """
         Retrieves historical features from a Feast Serving deployment.
@@ -512,7 +512,8 @@ class Client:
                 Each entity in a feature set must be present as a column in this
                 dataframe. The datetime column must contain timestamps in
                 datetime64 format.
-            default_project: Default project where feature values will be found.
+            project: Specifies the project which contain the FeatureSets
+                which the requested features belong to.
 
         Returns:
             feast.job.RetrievalJob:
@@ -551,13 +552,13 @@ class Client:
             >>>         }
             >>>     )
             >>> feature_retrieval_job = feast_client.get_batch_features(
-            >>>     feature_refs, entity_rows, default_project="my_project")
+            >>>     feature_refs, entity_rows, project="my_project")
             >>> df = feature_retrieval_job.to_dataframe()
             >>> print(df)
         """
 
         feature_references = _build_feature_references(
-            feature_ref_strs=feature_refs, project=default_project
+            feature_ref_strs=feature_refs, project=project
         )
 
         # Retrieve serving information to determine store type and

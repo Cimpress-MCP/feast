@@ -130,6 +130,7 @@ def test_get_auth_metadata_plugin_oauth_should_pass(post, config_oauth):
     assert isinstance(auth_metadata_plugin, OAuthMetadataPlugin)
     assert post.call_count == 1
     assert post.call_args == call(AUTH_URL, headers=HEADERS, data=DATA)
+    assert auth_metadata_plugin.get_signed_meta() == (("authorization", "Bearer mock_token"),)
 
 
 @patch(
