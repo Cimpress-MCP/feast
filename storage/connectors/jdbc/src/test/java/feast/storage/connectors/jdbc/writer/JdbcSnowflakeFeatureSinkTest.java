@@ -191,10 +191,10 @@ public class JdbcSnowflakeFeatureSinkTest {
     // TODO: Remove this assert, add SQL query
     DatabaseMetaData dbm = this.conn.getMetaData();
     ResultSet rs = dbm.getTables(null, "DEMO_DB.PUBLIC", "snowflake_proj_feature_set_1", null);
-    System.out.println("rs---"+rs);
-    System.out.println("rows--"+rs.getRow());
+    System.out.println("rs---" + rs);
+    System.out.println("rows--" + rs.getRow());
     //      rs.last();
-  
+
     System.out.println("dbm---" + dbm);
 
     System.out.println(

@@ -31,6 +31,8 @@ import java.util.concurrent.*;
 
 public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
+  private final String database;
+  private final String schema;
   private final String password;
   private final String username;
   private final String url;
@@ -45,6 +47,8 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
   Connection connection;
 
   private JdbcHistoricalRetriever(Map<String, String> config) {
+    this.database = config.get("database");
+    this.schema = config.get("schema");
     this.className = config.getOrDefault("class_name", "");
     this.url = config.get("url");
     this.username = config.get("username");
@@ -65,7 +69,18 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       Class.forName(className);
       // Username and password are provided
       if (!username.isEmpty() && !password.isEmpty()) {
-        this.connection = DriverManager.getConnection(url, username, password);
+        // snowflake database must config database and schema
+        if (className == "net.snowflake.client.jdbc.SnowflakeDriver"){
+          Properties props = new Properties();
+          props.put("user", username);
+          props.put("password", password);
+          props.put("db", database);
+          props.put("schema", schema);
+          Class.forName(className);
+          this.connection = DriverManager.getConnection(url, props);
+        } else {
+          this.connection = DriverManager.getConnection(url, username, password);
+        }
       }
       // Only username provided
       else if (!username.isEmpty()) {
@@ -240,7 +255,7 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     }
   }
 
-//  TODO: fix for snowflake database
+  //  TODO: fix for snowflake database
   private String createStagedEntityTable(
       Connection conn, List<FeatureSetQueryInfo> featureSetQueryInfos) {
     String entityTableWithRowCountName = createTempTableName();
@@ -251,7 +266,7 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     try {
       statement = conn.createStatement();
       System.out.println(entityTableRowCountQueries);
-      for(String queries: entityTableRowCountQueries){
+      for (String queries : entityTableRowCountQueries) {
         statement.executeUpdate(queries);
       }
       return entityTableWithRowCountName;

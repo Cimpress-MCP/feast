@@ -151,22 +151,22 @@ public class JdbcFeatureSink implements FeatureSink {
     String url = config.getUrl();
     try {
 
-    	if (!username.isEmpty()) {
-    		if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
-    	        String database = config.getDatabase();
-    	        String schema = config.getSchema();
-    	        Properties props = new Properties();
-    	        props.put("user", username);
-    	        props.put("password", password);
-    	        props.put("db", database);
-    	        props.put("schema", schema);
-    	        Class.forName(className);
-    	        return DriverManager.getConnection(url, props);
-    	      } else {
-    	        Class.forName(className);
-    	        return DriverManager.getConnection(url, username, password);
-    	      }
-    	}
+      if (!username.isEmpty()) {
+        if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+          String database = config.getDatabase();
+          String schema = config.getSchema();
+          Properties props = new Properties();
+          props.put("user", username);
+          props.put("password", password);
+          props.put("db", database);
+          props.put("schema", schema);
+          Class.forName(className);
+          return DriverManager.getConnection(url, props);
+        } else {
+          Class.forName(className);
+          return DriverManager.getConnection(url, username, password);
+        }
+      }
       return DriverManager.getConnection(url);
     } catch (ClassNotFoundException | SQLException e) {
       throw new RuntimeException(
@@ -177,7 +177,9 @@ public class JdbcFeatureSink implements FeatureSink {
   }
 
   private static boolean tableExists(
-      Connection conn, FeatureSetProto.FeatureSetSpec featureSetSpec, StoreProto.Store.JdbcConfig config) {
+      Connection conn,
+      FeatureSetProto.FeatureSetSpec featureSetSpec,
+      StoreProto.Store.JdbcConfig config) {
     String tableName = JdbcTemplater.getTableName(featureSetSpec);
 
     String featureSetRef = getFeatureSetRef(featureSetSpec);
@@ -189,11 +191,11 @@ public class JdbcFeatureSink implements FeatureSink {
             String.format("Table name could not be determined for %s", featureSetRef));
       }
       DatabaseMetaData md = conn.getMetaData();
-      if (config.getClassName()== "") {
-    	  database = config.getDatabase();
-    	  schema = config.getSchema();	  
+      if (config.getClassName() == "") {
+        database = config.getDatabase();
+        schema = config.getSchema();
       }
-      ResultSet rs = md.getTables(null, database+"."+schema, tableName, null);
+      ResultSet rs = md.getTables(null, database + "." + schema, tableName, null);
       //      rs.last();
       return rs.getRow() > 0;
     } catch (SQLException e) {
