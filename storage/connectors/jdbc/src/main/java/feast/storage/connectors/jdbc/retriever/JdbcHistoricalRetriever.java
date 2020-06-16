@@ -70,7 +70,7 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       // Username and password are provided
       if (!username.isEmpty() && !password.isEmpty()) {
         // snowflake database must config database and schema
-        if (className == "net.snowflake.client.jdbc.SnowflakeDriver"){
+        if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
           Properties props = new Properties();
           props.put("user", username);
           props.put("password", password);
@@ -240,12 +240,13 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
       Statement statement;
       String tempTableForLoad = createTempTableName();
-      //TODO: fix table not found error
+      // TODO: fix table not found error
       List<String> loadEntitiesQueries =
-          QueryTemplater.createLoadEntityQuery(this.className, tableName, tempTableForLoad, filePath);
+          QueryTemplater.createLoadEntityQuery(
+              this.className, tableName, tempTableForLoad, filePath);
       try {
         statement = conn.createStatement();
-        for(String query: loadEntitiesQueries) {
+        for (String query : loadEntitiesQueries) {
           statement.executeUpdate(query);
         }
       } catch (SQLException e) {
@@ -263,8 +264,8 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       Connection conn, List<FeatureSetQueryInfo> featureSetQueryInfos) {
     String entityTableWithRowCountName = createTempTableName();
     List<String> entityTableRowCountQueries =
-        QueryTemplater.createEntityTableRowCountQuery(this.className,
-            entityTableWithRowCountName, featureSetQueryInfos);
+        QueryTemplater.createEntityTableRowCountQuery(
+            this.className, entityTableWithRowCountName, featureSetQueryInfos);
     Statement statement;
     try {
       statement = conn.createStatement();
