@@ -147,11 +147,6 @@
       <artifactId>spring-security-oauth2-core</artifactId>
       <version>5.3.0.RELEASE</version>
     </dependency>
-
-    <dependency>
-        <groupId>io.github.lognet</groupId>
-        <artifactId>grpc-spring-boot-starter</artifactId>
-    </dependency>
     <!--compile "org.springframework.boot:spring-boot-starter-data-jpa:${springBootVersion}"-->
     <dependency>
       <groupId>org.springframework.boot</groupId>
