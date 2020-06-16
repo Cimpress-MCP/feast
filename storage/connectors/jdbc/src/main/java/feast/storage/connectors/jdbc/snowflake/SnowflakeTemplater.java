@@ -73,13 +73,18 @@ public class SnowflakeTemplater implements JdbcTemplater {
       FeatureSetProto.FeatureSetSpec featureSetSpec, Map<String, String> existingColumns) {
     Map<String, String> requiredColumns = getRequiredColumns(featureSetSpec);
     String tableName = JdbcTemplater.getTableName(featureSetSpec);
-
+    String tableMigrationSql = "";
     // Filter required columns down to only the ones that don't exist
     for (String existingColumn : existingColumns.keySet()) {
       if (!requiredColumns.containsKey(existingColumn.toLowerCase())) {
-        throw new RuntimeException(
-            String.format(
-                "Found column %s in table %s that should not exist", existingColumn, tableName));
+        //        throw new RuntimeException(
+        //            String.format(
+        //                "Found column %s in table %s that should not exist", existingColumn,
+        // tableName));
+        tableMigrationSql =
+            String.format("ALTER TABLE %s DROP COLUMN %s;", tableName, existingColumn);
+        tableMigrationSql = tableMigrationSql + "\n";
+        System.out.println("tableMigrationSql-----" + tableMigrationSql);
       }
       requiredColumns.remove(existingColumn.toLowerCase());
     }
@@ -87,7 +92,7 @@ public class SnowflakeTemplater implements JdbcTemplater {
     if (requiredColumns.size() == 0) {
       log.info(
           String.format("All columns already exist for table %s, no update necessary.", tableName));
-      return "";
+      return tableMigrationSql;
     }
 
     StringJoiner addColumnSql = new StringJoiner(", ");
@@ -97,7 +102,8 @@ public class SnowflakeTemplater implements JdbcTemplater {
       addColumnSql.add(String.format("ADD COLUMN %s %s", requiredColumn, requiredColumnType));
     }
 
-    String tableMigrationSql = String.format("ALTER TABLE %s %s", tableName, addColumnSql);
+    tableMigrationSql =
+        tableMigrationSql + String.format("ALTER TABLE %s %s;", tableName, addColumnSql);
     log.debug(tableMigrationSql);
     return tableMigrationSql;
   }
