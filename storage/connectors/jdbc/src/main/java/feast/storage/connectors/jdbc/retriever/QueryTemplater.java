@@ -48,7 +48,7 @@ public class QueryTemplater {
         "SELECT max(event_timestamp) as max, min(event_timestamp) as min from %s", leftTableName);
   }
 
-  public static List<String> createEntityTableRowCountQuery(
+  public static List<String> createEntityTableRowCountQuery(String className,
       String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos) {
     StringJoiner featureSetTableSelectJoiner = new StringJoiner(", ");
     StringJoiner featureSetTableFromJoiner = new StringJoiner(" CROSS JOIN ");
@@ -74,9 +74,22 @@ public class QueryTemplater {
         String.format(
             "CREATE TABLE \"%s\" AS (SELECT %s FROM %s WHERE 1 = 2);",
             destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
-    createEntityTableRowCountQueries.add(
-        String.format(
-            "ALTER TABLE \"%s\" ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
+    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+      // 1st create a sequence
+      createEntityTableRowCountQueries.add("create or replace sequence row_seq start = 1 increment = 1;");
+      // 2nd insert sequence as the row num
+      createEntityTableRowCountQueries.add(
+              String.format(
+                      "ALTER TABLE \"%s\" ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
+      createEntityTableRowCountQueries.add(
+              String.format(
+                      "ALTER TABLE \"%s\" ADD COLUMN row_number INT DEFAULT row_seq.nextval;", destinationTable));
+    } else{
+      createEntityTableRowCountQueries.add(
+              String.format(
+                      "ALTER TABLE \"%s\" ADD COLUMN event_timestamp TIMESTAMP, ADD COLUMN row_number SERIAL;", destinationTable));
+    }
+
 
     return createEntityTableRowCountQueries;
   }
@@ -167,21 +180,22 @@ public class QueryTemplater {
     return writer.toString();
   }
 
-  public static String createLoadEntityQuery(
+  public static List<String> createLoadEntityQuery(String className,
       String destinationTable, String temporaryTable, File filePath) {
-    return String.format(
-        "CREATE TEMP TABLE %s AS (SELECT * FROM %s);"
-            + "ALTER TABLE %s DROP COLUMN row_number;"
-            + "COPY %s FROM '%s' DELIMITER E'\t' CSV HEADER;"
-            + "INSERT INTO %s SELECT * FROM %s;"
-            + "DROP TABLE %s;",
-        temporaryTable,
-        destinationTable,
-        temporaryTable,
-        temporaryTable,
-        filePath,
-        destinationTable,
-        temporaryTable,
-        temporaryTable);
+    List<String> queries = new ArrayList<>();
+    if (className =="net.snowflake.client.jdbc.SnowflakeDriver") {
+      queries.add(String.format("CREATE TEMP TABLE %s AS (SELECT * FROM \"%s\");",temporaryTable,destinationTable));
+      queries.add(String.format("ALTER TABLE %s DROP COLUMN row_number;",temporaryTable));
+      queries.add(String.format("COPY INTO %s FROM '%s' FILE_FORMAT = (TYPE=CSV);",temporaryTable, filePath));
+      queries.add(String.format("INSERT INTO \"%s\" SELECT * FROM %s;",destinationTable, temporaryTable));
+      queries.add(String.format("DROP TABLE %s;", temporaryTable));
+    } else{
+      queries.add(String.format("CREATE TEMP TABLE %s AS (SELECT * FROM %s);",temporaryTable,destinationTable));
+      queries.add(String.format("ALTER TABLE %s DROP COLUMN row_number;",temporaryTable));
+      queries.add(String.format("COPY %s FROM '%s' DELIMITER ',' CSV HEADER;",temporaryTable, filePath));
+      queries.add(String.format("INSERT INTO %s SELECT * FROM %s;",destinationTable, temporaryTable));
+      queries.add(String.format("DROP TABLE %s;", temporaryTable));
+    }
+    return queries;
   }
 }

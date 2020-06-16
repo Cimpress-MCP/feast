@@ -45,81 +45,81 @@ import org.junit.Rule;
 import org.junit.Test;
 
 public class SnowflakeHistoricalRetrieverTest {
-  private HistoricalRetriever snowflakeFeatureRetriever;
-  //  Snowflake account
-  private String staging_location = System.getenv("staging_location");
-  private Map<String, String> snowflakeConfig = new HashMap<>();
-  private String SFUrl = "jdbc:snowflake://ry42518.us-east-2.aws.snowflakecomputing.com";
-  private String SFClassName = "net.snowflake.client.jdbc.SnowflakeDriver";
-  private String SFusername = "CHIZHANG";
-  private String SFpw = "123456Pw";
-  private String SFDatabase = "DEMO_DB";
-  private String SFSchema = "PUBLIC";
+    private HistoricalRetriever snowflakeFeatureRetriever;
+    //  Snowflake account
+    private String staging_location = System.getenv("staging_location");
+    private Map<String, String> snowflakeConfig = new HashMap<>();
+    private String SFUrl = "jdbc:snowflake://ry42518.us-east-2.aws.snowflakecomputing.com";
+    private String SFClassName = "net.snowflake.client.jdbc.SnowflakeDriver";
+    private String SFusername = "CHIZHANG";
+    private String SFpw = "123456Pw";
+    private String SFDatabase = "DEMO_DB";
+    private String SFSchema = "PUBLIC";
 
-  @Before
-  public void setUp() {
+    @Before
+    public void setUp() {
 
-    snowflakeConfig.put("database", SFDatabase);
-    snowflakeConfig.put("schema", SFSchema);
-    snowflakeConfig.put("class_name", SFClassName);
-    snowflakeConfig.put("username", SFusername);
-    snowflakeConfig.put("password", SFpw);
-    snowflakeConfig.put("url", SFUrl);
-    snowflakeConfig.put("staging_location", staging_location);
+        snowflakeConfig.put("database", SFDatabase);
+        snowflakeConfig.put("schema", SFSchema);
+        snowflakeConfig.put("class_name", SFClassName);
+        snowflakeConfig.put("username", SFusername);
+        snowflakeConfig.put("password", SFpw);
+        snowflakeConfig.put("url", SFUrl);
+        snowflakeConfig.put("staging_location", staging_location);
 
-    snowflakeFeatureRetriever = JdbcHistoricalRetriever.create(snowflakeConfig);
+        snowflakeFeatureRetriever = JdbcHistoricalRetriever.create(snowflakeConfig);
 
-  }
+    }
 
 
-  @Test
-  public void shouldRetrieveFromSnowflake() {
-    //      Set CSV format DATA_FORMAT_CSV = 2; where the first column of the csv file must be
-    // entity_id
-    //      file_uri is under
-    // src/test/java/feast/storage/connectors/jdbc/retriever/snowflake_proj_entity_rows.csv
-    String file_uris = System.getenv("snowflake_file_uri");
-    ServingAPIProto.DatasetSource.FileSource fileSource =
-        ServingAPIProto.DatasetSource.FileSource.newBuilder()
-            .setDataFormatValue(2)
-            .addFileUris(file_uris)
-            .build();
+    @Test
+    public void shouldRetrieveFromSnowflake() {
+        //      Set CSV format DATA_FORMAT_CSV = 2; where the first column of the csv file must be
+        // entity_id
+        //      file_uri is under
+        // src/test/java/feast/storage/connectors/jdbc/retriever/snowflake_proj_entity_rows.csv
+        String file_uris = System.getenv("snowflake_file_uri");
+        ServingAPIProto.DatasetSource.FileSource fileSource =
+                ServingAPIProto.DatasetSource.FileSource.newBuilder()
+                        .setDataFormatValue(2)
+                        .addFileUris(file_uris)
+                        .build();
 
-    ServingAPIProto.DatasetSource datasetSource =
-        ServingAPIProto.DatasetSource.newBuilder().setFileSource(fileSource).build();
+        ServingAPIProto.DatasetSource datasetSource =
+                ServingAPIProto.DatasetSource.newBuilder().setFileSource(fileSource).build();
 
-    String retrievalId = "1234";
-    FeatureSetRequest featureSetRequest =
-        FeatureSetRequest.newBuilder()
-            .setSpec(getFeatureSetSpec())
-            .addFeatureReference(
-                ServingAPIProto.FeatureReference.newBuilder()
-                    .setName("FEATURE")
-                    .setProject("SNOWFLAKE_PROJ")
-                    .setFeatureSet("FEATURE_SET_1")
-                    .build())
-            .build();
-    List<FeatureSetRequest> featureSetRequests = new ArrayList<>();
-    featureSetRequests.add(featureSetRequest);
+        String retrievalId = "1234";
+        FeatureSetRequest featureSetRequest =
+                FeatureSetRequest.newBuilder()
+                        .setSpec(getFeatureSetSpec())
+                        .addFeatureReference(
+                                ServingAPIProto.FeatureReference.newBuilder()
+                                        .setName("FEATURE")
+                                        .setProject("SNOWFLAKE_PROJ")
+                                        .setFeatureSet("FEATURE_SET_1")
+                                        .build())
+                        .build();
+        List<FeatureSetRequest> featureSetRequests = new ArrayList<>();
+        featureSetRequests.add(featureSetRequest);
 
-    HistoricalRetrievalResult postgresHisRetrievalResult =
-        snowflakeFeatureRetriever.getHistoricalFeatures(
-            retrievalId, datasetSource, featureSetRequests);
+        HistoricalRetrievalResult postgresHisRetrievalResult =
+                snowflakeFeatureRetriever.getHistoricalFeatures(
+                        retrievalId, datasetSource, featureSetRequests);
 
-    List<String> files = postgresHisRetrievalResult.getFileUris();
-    File testFile = new File(files.get(0));
-    // Check if file exist in staging location
-    Assert.assertTrue(testFile.exists() && !testFile.isDirectory());
-    Assert.assertTrue(files.get(0).indexOf(staging_location) != -1);
-  }
+        List<String> files = postgresHisRetrievalResult.getFileUris();
+        File testFile = new File(files.get(0));
+        // Check if file exist in staging location
+        Assert.assertTrue(testFile.exists() && !testFile.isDirectory());
+        Assert.assertTrue(files.get(0).indexOf(staging_location) != -1);
+    }
 
-  private FeatureSetProto.FeatureSetSpec getFeatureSetSpec() {
-    return FeatureSetProto.FeatureSetSpec.newBuilder()
-        .setProject("SNOWFLAKE_PROJ")
-        .setName("FEATURE_SET_1")
-        .addEntities(FeatureSetProto.EntitySpec.newBuilder().setName("ENTITY"))
-        .addFeatures(FeatureSetProto.FeatureSpec.newBuilder().setName("FEATURE"))
-        .setMaxAge(Duration.newBuilder().setSeconds(30)) // default
-        .build();
-  }
+    private FeatureSetProto.FeatureSetSpec getFeatureSetSpec() {
+        return FeatureSetProto.FeatureSetSpec.newBuilder()
+                .setProject("SNOWFLAKE_PROJ")
+                .setName("FEATURE_SET_1")
+                .addEntities(FeatureSetProto.EntitySpec.newBuilder().setName("ENTITY"))
+                .addFeatures(FeatureSetProto.FeatureSpec.newBuilder().setName("FEATURE"))
+                .setMaxAge(Duration.newBuilder().setSeconds(30)) // default
+                .build();
+    }
 }

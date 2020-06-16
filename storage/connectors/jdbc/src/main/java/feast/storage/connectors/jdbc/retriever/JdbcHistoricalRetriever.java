@@ -240,16 +240,19 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
       Statement statement;
       String tempTableForLoad = createTempTableName();
-      String loadEntitiesQuery =
-          QueryTemplater.createLoadEntityQuery(tableName, tempTableForLoad, filePath);
+      //TODO: fix table not found error
+      List<String> loadEntitiesQueries =
+          QueryTemplater.createLoadEntityQuery(this.className, tableName, tempTableForLoad, filePath);
       try {
         statement = conn.createStatement();
-        statement.executeUpdate(loadEntitiesQuery);
+        for(String query: loadEntitiesQueries) {
+          statement.executeUpdate(query);
+        }
       } catch (SQLException e) {
         throw new RuntimeException(
             String.format(
                 "Could not load entity data from %s into table %s using query: \n%s",
-                filePath, tableName, loadEntitiesQuery),
+                filePath, tableName, loadEntitiesQueries),
             e);
       }
     }
@@ -260,14 +263,14 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       Connection conn, List<FeatureSetQueryInfo> featureSetQueryInfos) {
     String entityTableWithRowCountName = createTempTableName();
     List<String> entityTableRowCountQueries =
-        QueryTemplater.createEntityTableRowCountQuery(
+        QueryTemplater.createEntityTableRowCountQuery(this.className,
             entityTableWithRowCountName, featureSetQueryInfos);
     Statement statement;
     try {
       statement = conn.createStatement();
       System.out.println(entityTableRowCountQueries);
-      for (String queries : entityTableRowCountQueries) {
-        statement.executeUpdate(queries);
+      for (String query : entityTableRowCountQueries) {
+        statement.executeUpdate(query);
       }
       return entityTableWithRowCountName;
     } catch (SQLException e) {
