@@ -45,10 +45,9 @@ import org.junit.Test;
 public class JdbcSnowflakeFeatureSinkTest {
   @Rule public transient TestPipeline p = TestPipeline.create();
 
-  
   private FeatureSink snowflakeFeatureSinkObj;
-  
-//TODO: Update the variables to match your snowflake account
+
+  // TODO: Update the variables to match your snowflake account
   private String userName = "SWATIARORA";
   private String password = "Vistaprint1@";
   private String database = "DEMO_DB";
