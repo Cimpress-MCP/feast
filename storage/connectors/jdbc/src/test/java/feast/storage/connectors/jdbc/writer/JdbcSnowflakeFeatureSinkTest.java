@@ -50,7 +50,7 @@ public class JdbcSnowflakeFeatureSinkTest {
   // TODO: Update the variables to match your snowflake account
   private String userName = System.getenv("SNOWFLAKE_USERNAME");
   private String password = System.getenv("SNOWFLAKE_PASSWORD");
-  
+
   private String database = "DEMO_DB";
   private String schema = "PUBLIC";
   private String warehouse = "COMPUTE_WH";
