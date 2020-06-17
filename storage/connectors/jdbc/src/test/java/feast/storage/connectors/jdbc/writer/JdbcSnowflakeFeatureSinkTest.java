@@ -45,9 +45,10 @@ import org.junit.Test;
 public class JdbcSnowflakeFeatureSinkTest {
   @Rule public transient TestPipeline p = TestPipeline.create();
 
+  
   private FeatureSink snowflakeFeatureSinkObj;
-  // TODO: Clean up url
-
+  
+//TODO: Update the variables to match your snowflake account
   private String userName = "SWATIARORA";
   private String password = "Vistaprint1@";
   private String database = "DEMO_DB";
@@ -188,10 +189,6 @@ public class JdbcSnowflakeFeatureSinkTest {
 
     p.apply(Create.of(featureRows)).apply(this.snowflakeFeatureSinkObj.writer());
     p.run();
-    // TODO: Remove this assert, add SQL query
-
-    //    System.out.println(
-    //        dbm.getTables(null, this.schema, "snowflake_proj_feature_set_1", null).next());
     DatabaseMetaData meta = conn.getMetaData();
     Assert.assertEquals(
         true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_1", null).next());
