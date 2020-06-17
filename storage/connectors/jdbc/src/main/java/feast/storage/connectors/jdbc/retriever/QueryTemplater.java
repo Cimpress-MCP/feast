@@ -72,7 +72,7 @@ public class QueryTemplater {
     List<String> createEntityTableRowCountQueries = new ArrayList<>();
     createEntityTableRowCountQueries.add(
         String.format(
-            "CREATE TABLE \"%s\" AS (SELECT %s FROM %s WHERE 1 = 2);",
+            "CREATE TABLE %s AS (SELECT %s FROM %s WHERE 1 = 2);",
             destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
     if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
       // 1st create a sequence
@@ -80,8 +80,7 @@ public class QueryTemplater {
       // increment = 1;");
       // 2nd insert sequence as the row num
       createEntityTableRowCountQueries.add(
-          String.format(
-              "ALTER TABLE \"%s\" ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
+          String.format("ALTER TABLE %s ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
       //      createEntityTableRowCountQueries.add(
       //              String.format(
       //                      "ALTER TABLE \"%s\" ADD COLUMN row_number INT DEFAULT
@@ -191,17 +190,17 @@ public class QueryTemplater {
     if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
       queries.add(
           String.format(
-              "CREATE TABLE %s AS (SELECT * FROM \"%s\");", temporaryTable, destinationTable));
-//      queries.add(String.format("ALTER TABLE %s DROP COLUMN row_number;", temporaryTable));
+              "CREATE TABLE %s AS (SELECT * FROM %s);", temporaryTable, destinationTable));
+      //      queries.add(String.format("ALTER TABLE %s DROP COLUMN row_number;", temporaryTable));
       queries.add(
           String.format(
               "COPY INTO %s FROM '@%s' FILE_FORMAT = (TYPE=CSV);", temporaryTable, filePath));
       queries.add(
-          String.format("INSERT INTO \"%s\" SELECT * FROM %s;", destinationTable, temporaryTable));
+          String.format("INSERT INTO %s SELECT * FROM %s;", destinationTable, temporaryTable));
       queries.add(String.format("DROP TABLE %s;", temporaryTable));
       queries.add(
           String.format(
-              "CREATE OR REPLACE TABLE \"%s\" as SELECT *, ROW_NUMBER() OVER (ORDER BY 1) AS row_number_1 FROM \"%s\";",
+              "CREATE OR REPLACE TABLE %s as SELECT *, ROW_NUMBER() OVER (ORDER BY 1) AS row_number FROM %s;",
               destinationTable, destinationTable));
 
     } else {

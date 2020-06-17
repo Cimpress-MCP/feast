@@ -340,6 +340,7 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     }
   }
 
+  //  TODO: fix timestamp bounds for snowflake
   private Map<String, Timestamp> getTimestampLimits(Connection conn, String entityTableName) {
     String timestampLimitSqlQuery = QueryTemplater.createTimestampLimitQuery(entityTableName);
     Map<String, Timestamp> timestampLimits = new HashMap<>();

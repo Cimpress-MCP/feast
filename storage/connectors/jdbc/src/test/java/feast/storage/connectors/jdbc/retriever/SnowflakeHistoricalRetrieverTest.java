@@ -16,7 +16,6 @@
  */
 package feast.storage.connectors.jdbc.retriever;
 
-
 import com.google.protobuf.Duration;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.serving.ServingAPIProto;
@@ -80,9 +79,9 @@ public class SnowflakeHistoricalRetrieverTest {
             .setSpec(getFeatureSetSpec())
             .addFeatureReference(
                 ServingAPIProto.FeatureReference.newBuilder()
-                    .setName("FEATURE")
-                    .setProject("SNOWFLAKE_PROJ")
-                    .setFeatureSet("FEATURE_SET_1")
+                    .setName("feature_1")
+                    .setProject("myproject2")
+                    .setFeatureSet("feature_set")
                     .build())
             .build();
     List<FeatureSetRequest> featureSetRequests = new ArrayList<>();
@@ -101,10 +100,10 @@ public class SnowflakeHistoricalRetrieverTest {
 
   private FeatureSetProto.FeatureSetSpec getFeatureSetSpec() {
     return FeatureSetProto.FeatureSetSpec.newBuilder()
-        .setProject("SNOWFLAKE_PROJ")
-        .setName("FEATURE_SET_1")
-        .addEntities(FeatureSetProto.EntitySpec.newBuilder().setName("ENTITY"))
-        .addFeatures(FeatureSetProto.FeatureSpec.newBuilder().setName("FEATURE"))
+        .setProject("myproject2")
+        .setName("feature_set")
+        .addEntities(FeatureSetProto.EntitySpec.newBuilder().setName("entity_id_primary"))
+        .addFeatures(FeatureSetProto.FeatureSpec.newBuilder().setName("feature_1"))
         .setMaxAge(Duration.newBuilder().setSeconds(30)) // default
         .build();
   }
