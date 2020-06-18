@@ -192,11 +192,25 @@ public class QueryTemplater {
           String.format(
               "CREATE TABLE %s AS (SELECT * FROM %s);", temporaryTable, destinationTable));
       //      queries.add(String.format("ALTER TABLE %s DROP COLUMN row_number;", temporaryTable));
+      // TODO: copy into temporaryTable should add rows with entity, timestamp
+      //      queries.add(
+      //          String.format(
+      //              "COPY INTO %s FROM '@%s' FILE_FORMAT = (TYPE=CSV);", temporaryTable,
+      // filePath));
+
       queries.add(
           String.format(
-              "COPY INTO %s FROM '@%s' FILE_FORMAT = (TYPE=CSV);", temporaryTable, filePath));
+              "create or replace file format CSV_format type = 'CSV' field_delimiter = ',' skip_header=1;"));
+      queries.add(String.format("create or replace stage my_stage file_format = CSV_format;"));
+      queries.add(String.format("put file://%s @my_stage auto_compress=false;", filePath));
+      // TODO: generic staging snowflake_proj_entity_rows.csv
+      queries.add(
+          String.format(
+              "COPY INTO %s FROM '@my_stage/snowflake_proj_entity_rows.csv' FILE_FORMAT = CSV_format on_error = 'skip_file';",
+              temporaryTable));
       queries.add(
           String.format("INSERT INTO %s SELECT * FROM %s;", destinationTable, temporaryTable));
+
       queries.add(String.format("DROP TABLE %s;", temporaryTable));
       queries.add(
           String.format(

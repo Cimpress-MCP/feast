@@ -247,7 +247,11 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       try {
         statement = conn.createStatement();
         for (String query : loadEntitiesQueries) {
-          statement.executeUpdate(query);
+          if (this.className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+            statement.execute(query);
+          } else {
+            statement.executeUpdate(query);
+          }
         }
       } catch (SQLException e) {
         throw new RuntimeException(
@@ -259,7 +263,6 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     }
   }
 
-  //  TODO: fix for snowflake database
   private String createStagedEntityTable(
       Connection conn, List<FeatureSetQueryInfo> featureSetQueryInfos) {
     String entityTableWithRowCountName = createTempTableName();
