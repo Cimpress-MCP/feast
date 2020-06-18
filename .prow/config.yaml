@@ -161,7 +161,7 @@ presubmits:
     spec:
       containers:
       - image: maven:3.6-jdk-11
-        command: ["infra/scripts/test-end-to-end.sh", "-m", "auth"]
+        command: ["infra/scripts/test-end-to-end.sh", "True"]
         resources:
           requests:
             cpu: "6"

@@ -526,26 +526,7 @@ class Client:
         Examples:
             >>> from feast import Client
             >>> from datetime import datetime
-            >>> # Initialize the client with desired properties
-            >>> # Client with insecure core
             >>> feast_client = Client(core_url="localhost:6565", serving_url="localhost:6566")
-            >>> # Client with secure core (Auth provider: Google OpenID)
-            >>> feast_client = Client(
-            >>>     core_url="localhost:6565",
-            >>>     serving_url="localhost:6566",
-            >>>     core_enable_auth=True,
-            >>>     core_auth_provider="google")
-            >>> # Client with secure core (Auth provider: OAuth)
-            >>> feast_client = Client(
-            >>>     core_url="localhost:6565",
-            >>>     serving_url="localhost:6566",
-            >>>     core_enable_auth=True,
-            >>>     core_auth_provider="oauth",
-            >>>     oauth_grant_type="client_credentials",
-            >>>     oauth_client_id="fakeID",
-            >>>     oauth_client_secret="fakeSecret",
-            >>>     oauth_audience="https://testaudience.io/",
-            >>>     oauth_token_request_url="https://test.auth.com/v2/token")
             >>> feature_refs = ["my_project/bookings_7d", "booking_14d"]
             >>> entity_rows = pd.DataFrame(
             >>>         {
@@ -558,10 +539,6 @@ class Client:
             >>> df = feature_retrieval_job.to_dataframe()
             >>> print(df)
         """
-
-        feature_references = _build_feature_references(
-            feature_ref_strs=feature_refs, project=project
-        )
 
         # Retrieve serving information to determine store type and
         # staging location
@@ -604,7 +581,10 @@ class Client:
             entity_rows, serving_info.job_staging_location
         )  # type: List[str]
         request = GetBatchFeaturesRequest(
-            features=feature_references,
+            features=_build_feature_references(
+                feature_ref_strs=feature_refs,
+                project=project if project is not None else self.project,
+            ),
             dataset_source=DatasetSource(
                 file_source=DatasetSource.FileSource(
                     file_uris=staged_files, data_format=DataFormat.DATA_FORMAT_AVRO

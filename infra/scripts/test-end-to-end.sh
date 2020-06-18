@@ -3,17 +3,11 @@
 set -e
 set -o pipefail
 
-print_usage() {
-  printf "Usage: ./test-end-to-end -m pytest_mark"
-}
-PYTEST_MARK=''
-while getopts 'm:' flag; do
-  case "${flag}" in
-    m) PYTEST_MARK="${OPTARG}" ;;
-    *) print_usage
-       exit 1 ;;
-  esac
-done
+ENABLE_AUTH="False"
+if [[ -n $1 ]]; then
+  ENABLE_AUTH=$1
+fi
+echo "Authenication enabled : ${ENABLE_AUTH}"
 
 test -z ${GOOGLE_APPLICATION_CREDENTIALS} && GOOGLE_APPLICATION_CREDENTIALS="/etc/service-account/service-account.json"
 test -z ${SKIP_BUILD_JARS} && SKIP_BUILD_JARS="false"
@@ -61,18 +55,12 @@ Starting Feast Core
 cat <<EOF > /tmp/core.warehouse.application.yml
 feast:
   jobs:
-    polling_interval_milliseconds: 30000
-    job_update_timeout_seconds: 240
+    polling_interval_milliseconds: 10000
     active_runner: direct
     runners:
       - name: direct
         type: DirectRunner
-        options: {}
-  stream:
-    type: kafka
-    options:
-      topic: feast-features
-      bootstrapServers: "kafka:9092,localhost:9094"
+        options:{}
 
   security:
     authentication:
@@ -83,7 +71,7 @@ feast:
       provider: none
 EOF
 
-if [[ ${PYTEST_MARK} = "auth" ]]; 
+if [[ ${ENABLE_AUTH} = "True" ]]; 
   then
     print_banner "Starting 'Feast core with auth'."
     start_feast_core /tmp/core.warehouse.application.yml
@@ -104,12 +92,8 @@ ORIGINAL_DIR=$(pwd)
 cd tests/e2e
 
 set +e
-if [[ ${PYTEST_MARK} = "auth" ]]; 
-then
-	pytest redis/* -m ${PYTEST_MARK} --enable_auth=True --junitxml=${LOGS_ARTIFACT_PATH}/python-sdk-test-report.xml
-else
-	pytest redis/* --junitxml=${LOGS_ARTIFACT_PATH}/python-sdk-test-report.xml
-fi
+pytest redis/* --enable_auth=${ENABLE_AUTH} --junitxml=${LOGS_ARTIFACT_PATH}/python-sdk-test-report.xml
+
 TEST_EXIT_CODE=$?
 
 if [[ ${TEST_EXIT_CODE} != 0 ]]; then
