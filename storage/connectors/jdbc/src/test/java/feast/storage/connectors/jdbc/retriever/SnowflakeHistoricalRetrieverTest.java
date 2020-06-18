@@ -22,8 +22,7 @@ import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
 import feast.storage.api.retriever.HistoricalRetrievalResult;
 import java.io.File;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -121,9 +120,17 @@ public class SnowflakeHistoricalRetrieverTest {
         "COPY INTO _1ae2a3da84284b41b0fad7b551f23423 FROM '@my_stage/snowflake_proj_entity_rows.csv' FILE_FORMAT = myformat on_error = 'skip_file';";
     Statement statement = snowflakeFeatureRetriever.getConnection().createStatement();
     //    System.out.println(putQuery);
-    statement.execute(createFileFormatQuery);
-    statement.execute(createStageQueery);
-    statement.execute(putQuery);
-    statement.execute(copyQuery);
+    //    statement.execute(createFileFormatQuery);
+    //    statement.execute(createStageQueery);
+    //    statement.execute(putQuery);
+    //    statement.execute(copyQuery);
+    String timestampLimitSqlQuery =
+        "SELECT max(event_timestamp) as max, min(event_timestamp) as min from _1a7c09ab32cb40938ba71eb383aa929b";
+    ResultSet rs = statement.executeQuery(timestampLimitSqlQuery);
+    while (rs.next()) {
+      Timestamp min_ts = rs.getTimestamp(2);
+      System.out.println(min_ts);
+    }
+    ResultSetMetaData data = rs.getMetaData();
   }
 }

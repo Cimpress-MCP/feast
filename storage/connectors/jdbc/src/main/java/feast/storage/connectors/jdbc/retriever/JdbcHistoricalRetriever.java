@@ -240,7 +240,6 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
       Statement statement;
       String tempTableForLoad = createTempTableName();
-      // TODO: fix table not found error
       List<String> loadEntitiesQueries =
           QueryTemplater.createLoadEntityQuery(
               this.className, tableName, tempTableForLoad, filePath);
@@ -272,7 +271,6 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     Statement statement;
     try {
       statement = conn.createStatement();
-      System.out.println(entityTableRowCountQueries);
       for (String query : entityTableRowCountQueries) {
         statement.executeUpdate(query);
       }
@@ -343,7 +341,6 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     }
   }
 
-  //  TODO: fix timestamp bounds for snowflake
   private Map<String, Timestamp> getTimestampLimits(Connection conn, String entityTableName) {
     String timestampLimitSqlQuery = QueryTemplater.createTimestampLimitQuery(entityTableName);
     Map<String, Timestamp> timestampLimits = new HashMap<>();
@@ -353,8 +350,8 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       ResultSet rs = statement.executeQuery(timestampLimitSqlQuery);
 
       while (rs.next()) {
-        Timestamp min_ts = rs.getTimestamp("min"); // Get minimum timestamp
-        Timestamp max_ts = rs.getTimestamp("max"); // Get maximum timestamp
+        Timestamp min_ts = rs.getTimestamp(2); // Get minimum timestamp
+        Timestamp max_ts = rs.getTimestamp(1); // Get maximum timestamp
         timestampLimits.putIfAbsent("min", min_ts);
         timestampLimits.putIfAbsent("max", max_ts);
       }

@@ -68,7 +68,6 @@ public class QueryTemplater {
     entityColumns.sort(Comparator.comparing(entity -> entity.split("\\.")[0]));
     entityColumns.forEach(featureSetTableSelectJoiner::add);
 
-    //    TODO: fix row_number SERIAL for snowflake
     List<String> createEntityTableRowCountQueries = new ArrayList<>();
     createEntityTableRowCountQueries.add(
         String.format(
@@ -191,13 +190,6 @@ public class QueryTemplater {
       queries.add(
           String.format(
               "CREATE TABLE %s AS (SELECT * FROM %s);", temporaryTable, destinationTable));
-      //      queries.add(String.format("ALTER TABLE %s DROP COLUMN row_number;", temporaryTable));
-      // TODO: copy into temporaryTable should add rows with entity, timestamp
-      //      queries.add(
-      //          String.format(
-      //              "COPY INTO %s FROM '@%s' FILE_FORMAT = (TYPE=CSV);", temporaryTable,
-      // filePath));
-
       queries.add(
           String.format(
               "create or replace file format CSV_format type = 'CSV' field_delimiter = ',' skip_header=1;"));
