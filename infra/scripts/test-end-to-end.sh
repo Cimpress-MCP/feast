@@ -3,6 +3,18 @@
 set -e
 set -o pipefail
 
+print_usage() {
+  printf "Usage: ./test-end-to-end -m pytest_mark"
+}
+PYTEST_MARK=''
+while getopts 'm:' flag; do
+  case "${flag}" in
+    m) PYTEST_MARK="${OPTARG}" ;;
+    *) print_usage
+       exit 1 ;;
+  esac
+done
+
 test -z ${GOOGLE_APPLICATION_CREDENTIALS} && GOOGLE_APPLICATION_CREDENTIALS="/etc/service-account/service-account.json"
 test -z ${SKIP_BUILD_JARS} && SKIP_BUILD_JARS="false"
 test -z ${GOOGLE_CLOUD_PROJECT} && GOOGLE_CLOUD_PROJECT="kf-feast"
@@ -40,8 +52,47 @@ else
   echo "[DEBUG] Skipping building jars"
 fi
 
-start_feast_core
-start_feast_serving
+echo "
+============================================================
+Starting Feast Core
+============================================================
+"
+# Start Feast Core with auth if enabled
+cat <<EOF > /tmp/core.warehouse.application.yml
+feast:
+  jobs:
+    polling_interval_milliseconds: 30000
+    job_update_timeout_seconds: 240
+    active_runner: direct
+    runners:
+      - name: direct
+        type: DirectRunner
+        options: {}
+  stream:
+    type: kafka
+    options:
+      topic: feast-features
+      bootstrapServers: "kafka:9092,localhost:9094"
+
+  security:
+    authentication:
+      enabled: true
+      provider: jwt
+    authorization:
+      enabled: false
+      provider: none
+EOF
+
+if [[ ${PYTEST_MARK} = "auth" ]]; 
+  then
+    print_banner "Starting 'Feast core with auth'."
+    start_feast_core /tmp/core.warehouse.application.yml
+  else
+    print_banner "Starting 'Feast core without auth'."
+    start_feast_core
+fi
+
+start_feast_serving 
 install_python_with_miniconda_and_feast_sdk
 
 print_banner "Running end-to-end tests with pytest at 'tests/e2e'"
@@ -53,7 +104,12 @@ ORIGINAL_DIR=$(pwd)
 cd tests/e2e
 
 set +e
-pytest redis/* --junitxml=${LOGS_ARTIFACT_PATH}/python-sdk-test-report.xml
+if [[ ${PYTEST_MARK} = "auth" ]]; 
+then
+	pytest redis/* -m ${PYTEST_MARK} --enable_auth=True --junitxml=${LOGS_ARTIFACT_PATH}/python-sdk-test-report.xml
+else
+	pytest redis/* --junitxml=${LOGS_ARTIFACT_PATH}/python-sdk-test-report.xml
+fi
 TEST_EXIT_CODE=$?
 
 if [[ ${TEST_EXIT_CODE} != 0 ]]; then

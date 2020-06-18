@@ -48,9 +48,19 @@ def allow_dirty(pytestconfig):
 
 
 @pytest.fixture(scope='module')
-def client(core_url, serving_url, allow_dirty):
-    # Get client for core and serving
-    client = Client(core_url=core_url, serving_url=serving_url)
+def enable_auth(pytestconfig):
+    return True if pytestconfig.getoption(
+        "enable_auth").lower() == "true" else False
+
+
+@pytest.fixture(scope='module')
+def client(core_url, serving_url, allow_dirty, enable_auth):
+#     Get client for core and serving
+#     if enable_auth is True, a secure client it created. 
+    client = Client(core_url=core_url, 
+                serving_url=serving_url,
+                core_enable_auth=enable_auth, 
+                core_auth_provider="google")
     client.create_project(PROJECT_NAME)
 
     # Ensure Feast core is active, but empty
