@@ -33,9 +33,14 @@ import java.util.stream.Collectors;
 public class QueryTemplater {
 
   private static final PebbleEngine engine = new PebbleEngine.Builder().build();
-  private static final String FEATURESET_TEMPLATE_NAME =
+  private static final String FEATURESET_TEMPLATE_NAME_POSTGRES =
       "templates/single_featureset_pit_join_postgres.sql";
-  private static final String JOIN_TEMPLATE_NAME = "templates/join_featuresets_postgres.sql";
+  private static final String JOIN_TEMPLATE_NAME_POSTGRES =
+      "templates/join_featuresets_postgres.sql";
+  private static final String FEATURESET_TEMPLATE_NAME_SNOWFLAKE =
+      "templates/single_featureset_pit_join_snowflake.sql";
+  private static final String JOIN_TEMPLATE_NAME_SNOWFLAKE =
+      "templates/join_featuresets_snowflake.sql";
 
   /**
    * Get the query for retrieving the earliest and latest timestamps in the entity dataset.
@@ -122,6 +127,7 @@ public class QueryTemplater {
     return featureSetInfos;
   }
 
+  // TODO: double-check functionality in snowflake
   /**
    * Generate the query for point in time correctness join of data for a single feature set to the
    * entity dataset.
@@ -133,13 +139,18 @@ public class QueryTemplater {
    * @return point in time correctness join BQ SQL query
    */
   public static String createFeatureSetPointInTimeQuery(
+      String className,
       FeatureSetQueryInfo featureSetInfo,
       String leftTableName,
       String minTimestamp,
       String maxTimestamp)
       throws IOException {
-
-    PebbleTemplate template = engine.getTemplate(FEATURESET_TEMPLATE_NAME);
+    PebbleTemplate template;
+    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+      template = engine.getTemplate(FEATURESET_TEMPLATE_NAME_SNOWFLAKE);
+    } else {
+      template = engine.getTemplate(FEATURESET_TEMPLATE_NAME_POSTGRES);
+    }
     Map<String, Object> context = new HashMap<>();
     context.put("featureSet", featureSetInfo);
 
@@ -161,10 +172,17 @@ public class QueryTemplater {
    * @return query to join temporary feature set tables to the entity table
    */
   public static String createJoinQuery(
+      String className,
       List<FeatureSetQueryInfo> featureSetInfos,
       List<String> entityTableColumnNames,
       String leftTableName) {
-    PebbleTemplate template = engine.getTemplate(JOIN_TEMPLATE_NAME);
+
+    PebbleTemplate template;
+    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+      template = engine.getTemplate(JOIN_TEMPLATE_NAME_SNOWFLAKE);
+    } else {
+      template = engine.getTemplate(JOIN_TEMPLATE_NAME_POSTGRES);
+    }
     Map<String, Object> context = new HashMap<>();
     context.put("entities", entityTableColumnNames);
     context.put("featureSets", featureSetInfos);

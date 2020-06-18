@@ -132,7 +132,7 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     String resultTable =
         this.runBatchQuery(
             conn, entityTableWithRowCountName, featureSetQueryInfos, featureSetQueries);
-
+    // 7. export the result feature as a csv file to staging location
     String fileUri = exportResultsToDisk(conn, resultTable, stagingLocation);
     List<String> fileUris = new ArrayList<>();
     fileUris.add(fileUri);
@@ -199,6 +199,7 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       for (FeatureSetQueryInfo featureSetInfo : featureSetQueryInfos) {
         String query =
             QueryTemplater.createFeatureSetPointInTimeQuery(
+                this.className,
                 featureSetInfo,
                 entityTableName,
                 timestampLimits.get("min").toString(),
@@ -289,6 +290,7 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       String entityTableName,
       List<FeatureSetQueryInfo> featureSetQueryInfos,
       List<String> featureSetQueries) {
+    //    TODO:  Never used???
     ExecutorService executorService = Executors.newFixedThreadPool(featureSetQueries.size());
     ExecutorCompletionService<FeatureSetQueryInfo> executorCompletionService =
         new ExecutorCompletionService<>(executorService);
@@ -304,8 +306,9 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       Statement statement;
       try {
         statement = conn.createStatement();
-        statement.executeUpdate(
-            String.format("CREATE TABLE \"%s\" AS (%s)", featureSetTempTable, featureSetQuery));
+        String query =
+            String.format("CREATE TABLE %s AS (%s)", featureSetTempTable, featureSetQuery);
+        statement.executeUpdate(query);
         featureSetQueryInfos.get(i).setJoinedTable(featureSetTempTable);
       } catch (SQLException e) {
         throw new RuntimeException(
@@ -321,16 +324,18 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
     List<String> entityTableColumnNames = getEntityTableColumns(conn, entityTableName);
 
+    // TODO: fix snowflake table with quotation mark
     String joinQuery =
         QueryTemplater.createJoinQuery(
-            featureSetQueryInfos, entityTableColumnNames, entityTableName);
+            this.className, featureSetQueryInfos, entityTableColumnNames, entityTableName);
 
     String resultTable = createTempTableName();
 
     Statement statement;
     try {
       statement = conn.createStatement();
-      statement.executeUpdate(String.format("CREATE TABLE \"%s\" AS (%s)", resultTable, joinQuery));
+      String resultTableQuery = String.format("CREATE TABLE %s AS (%s)", resultTable, joinQuery);
+      statement.executeUpdate(resultTableQuery);
       return resultTable;
     } catch (SQLException e) {
       throw new RuntimeException(
