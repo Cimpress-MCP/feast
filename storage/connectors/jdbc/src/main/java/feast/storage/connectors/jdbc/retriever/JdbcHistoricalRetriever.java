@@ -135,11 +135,13 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     // 7. export the result feature as a csv file to staging location
     String fileUri = exportResultsToDisk(conn, resultTable, stagingLocation);
     List<String> fileUris = new ArrayList<>();
+    // TODO: always return a single csv file?
     fileUris.add(fileUri);
     return HistoricalRetrievalResult.success(
         retrievalId, fileUris, ServingAPIProto.DataFormat.DATA_FORMAT_AVRO);
   }
 
+  // TODO: next step apply snowflake config
   private String exportResultsToDisk(Connection conn, String resultTable, String stagingLocation) {
     URI stagingUri;
     try {
@@ -153,11 +155,33 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     String exportTableSqlQuery = null;
     try {
       Statement statement = conn.createStatement();
-      exportTableSqlQuery =
-          String.format(
-              "COPY %s TO '%s' WITH (DELIMITER E'\t', FORMAT CSV, HEADER);",
-              resultTable, exportPath);
-      statement.executeUpdate(exportTableSqlQuery);
+      if (this.className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+        String fileFormatQuery =
+            String.format(
+                "create or replace file format CSV_format type = 'CSV' field_delimiter = ',' skip_header=0;");
+        String createStageQuery =
+            String.format("create or replace stage my_stage file_format = CSV_format;");
+        String copyIntoStageQuery =
+            String.format(
+                "COPY INTO '@my_stage/%s.csv' FROM %s OVERWRITE = TRUE SINGLE = TRUE HEADER = TRUE;",
+                resultTable, resultTable);
+        exportPath = String.format("%s/", stagingPath.replaceAll("/$", ""));
+        System.out.println(resultTable);
+        System.out.println(exportPath);
+        String downloadTableQuery =
+            String.format("get @my_stage/%s.csv file://%s;", resultTable, exportPath);
+        statement.executeQuery(fileFormatQuery);
+        statement.executeQuery(createStageQuery);
+        statement.executeQuery(copyIntoStageQuery);
+        statement.executeQuery(downloadTableQuery);
+
+      } else {
+        exportTableSqlQuery =
+            String.format(
+                "COPY %s TO '%s' WITH (DELIMITER E'\t', FORMAT CSV, HEADER);",
+                resultTable, exportPath);
+        statement.executeUpdate(exportTableSqlQuery);
+      }
       return exportPath;
     } catch (SQLException e) {
       throw new RuntimeException(
