@@ -63,15 +63,14 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     }
     try {
       Class.forName(className);
-      // Username and password is provided
+      // Username and password are provided
       if (!username.isEmpty() && !password.isEmpty()) {
-        this.connection = DriverManager.getConnection(url);
+        this.connection = DriverManager.getConnection(url, username, password);
       }
       // Only username provided
-      if (!username.isEmpty()) {
+      else if (!username.isEmpty()) {
         this.connection = DriverManager.getConnection(url, username, null);
       }
-      this.connection = DriverManager.getConnection(url, username, password);
     } catch (ClassNotFoundException | SQLException e) {
       throw new RuntimeException(
           String.format(
@@ -104,19 +103,20 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
     // 3. Load entity rows into database
     Iterator<String> fileList = datasetSource.getFileSource().getFileUrisList().iterator();
-    String entityTableWithRowCountName = loadEntities(conn, featureSetQueryInfos, fileList);
+    String entityTableWithRowCountName = this.loadEntities(conn, featureSetQueryInfos, fileList);
 
-    // 2. Retrieve the temporal bounds of the entity dataset provided
+    // 4. Retrieve the temporal bounds of the entity dataset provided
     Map<String, Timestamp> timestampLimits =
         this.getTimestampLimits(conn, entityTableWithRowCountName);
 
-    // 3. Generate the subqueries
+    // 5. Generate the subqueries
     List<String> featureSetQueries =
-        generateQueries(entityTableWithRowCountName, timestampLimits, featureSetQueryInfos);
+        this.generateQueries(entityTableWithRowCountName, timestampLimits, featureSetQueryInfos);
 
-    // 4. Run the subqueries and collect outputs
+    // 6. Run the subqueries and collect outputs
     String resultTable =
-        runBatchQuery(conn, entityTableWithRowCountName, featureSetQueryInfos, featureSetQueries);
+        this.runBatchQuery(
+            conn, entityTableWithRowCountName, featureSetQueryInfos, featureSetQueries);
 
     String fileUri = exportResultsToDisk(conn, resultTable, stagingLocation);
     List<String> fileUris = new ArrayList<>();
@@ -217,7 +217,8 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       File filePath;
       String fileString = fileList.next();
       try {
-        filePath = new File(new URI(fileString));
+        URI fileURI = new URI(fileString);
+        filePath = new File(fileString);
       } catch (URISyntaxException e) {
         throw new RuntimeException(String.format("Could not parse file string %s", fileString), e);
       }

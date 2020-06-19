@@ -22,10 +22,12 @@ import feast.proto.core.StoreProto.Store.JdbcConfig;
 import feast.storage.api.writer.FeatureSink;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
 import feast.storage.connectors.jdbc.postgres.PostgresqlTemplater;
+import feast.storage.connectors.jdbc.snowflake.SnowflakeTemplater;
 import feast.storage.connectors.jdbc.sqlite.SqliteTemplater;
 import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import org.slf4j.Logger;
 
 public class JdbcFeatureSink implements FeatureSink {
@@ -51,6 +53,8 @@ public class JdbcFeatureSink implements FeatureSink {
         return new SqliteTemplater();
       case "org.postgresql.Driver":
         return new PostgresqlTemplater();
+      case "net.snowflake.client.jdbc.SnowflakeDriver":
+        return new SnowflakeTemplater();
       default:
         throw new RuntimeException(
             "JDBC class name was not specified, was incorrect, or had no implementation for templating.");
@@ -73,7 +77,7 @@ public class JdbcFeatureSink implements FeatureSink {
     this.subscribedFeatureSets.put(featureSetKey, featureSet);
 
     Connection conn = connect(this.getConfig());
-    if (tableExists(conn, featureSetSpec)) {
+    if (tableExists(conn, featureSetSpec, this.getConfig())) {
       updateTable(conn, this.getJdbcTemplater(), featureSetSpec);
     } else {
       createTable(conn, this.getJdbcTemplater(), featureSetSpec);
@@ -83,7 +87,6 @@ public class JdbcFeatureSink implements FeatureSink {
   private void createTable(
       Connection conn, JdbcTemplater jdbcTemplater, FeatureSetProto.FeatureSetSpec featureSetSpec) {
     String featureSetName = getFeatureSetRef(featureSetSpec);
-
     String createSqlTableCreationQuery = jdbcTemplater.getTableCreationSql(featureSetSpec);
 
     try {
@@ -144,11 +147,23 @@ public class JdbcFeatureSink implements FeatureSink {
     String password = config.getPassword();
     String className = config.getClassName();
     String url = config.getUrl();
-
     try {
-      Class.forName(className);
+
       if (!username.isEmpty()) {
-        return DriverManager.getConnection(url, username, password);
+        if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+          String database = config.getDatabase();
+          String schema = config.getSchema();
+          Properties props = new Properties();
+          props.put("user", username);
+          props.put("password", password);
+          props.put("db", database);
+          props.put("schema", schema);
+          Class.forName(className);
+          return DriverManager.getConnection(url, props);
+        } else {
+          Class.forName(className);
+          return DriverManager.getConnection(url, username, password);
+        }
       }
       return DriverManager.getConnection(url);
     } catch (ClassNotFoundException | SQLException e) {
@@ -160,8 +175,11 @@ public class JdbcFeatureSink implements FeatureSink {
   }
 
   private static boolean tableExists(
-      Connection conn, FeatureSetProto.FeatureSetSpec featureSetSpec) {
+      Connection conn,
+      FeatureSetProto.FeatureSetSpec featureSetSpec,
+      StoreProto.Store.JdbcConfig config) {
     String tableName = JdbcTemplater.getTableName(featureSetSpec);
+
     String featureSetRef = getFeatureSetRef(featureSetSpec);
     try {
       if (tableName.isEmpty()) {
@@ -169,9 +187,12 @@ public class JdbcFeatureSink implements FeatureSink {
             String.format("Table name could not be determined for %s", featureSetRef));
       }
       DatabaseMetaData md = conn.getMetaData();
+      if (config.getClassName() == "net.snowflake.client.jdbc.SnowflakeDriver") {
+        tableName = tableName.toUpperCase();
+      }
       ResultSet rs = md.getTables(null, null, tableName, null);
-      rs.last();
-      return rs.getRow() > 0;
+      return rs.next();
+
     } catch (SQLException e) {
       throw new RuntimeException(
           String.format("Could not determine if table %s exists", tableName), e);

@@ -22,6 +22,12 @@ import java.util.Map;
 
 public interface JdbcTemplater extends Serializable {
   static String getTableName(FeatureSetProto.FeatureSetSpec featureSetSpec) {
+    System.out.println(
+        "featureSetSpec.getProject()"
+            + featureSetSpec.getProject()
+            + "featureSetSpec.getName()"
+            + featureSetSpec.getName());
+
     return String.format("%s_%s", featureSetSpec.getProject(), featureSetSpec.getName())
         .replaceAll("-", "_");
   }

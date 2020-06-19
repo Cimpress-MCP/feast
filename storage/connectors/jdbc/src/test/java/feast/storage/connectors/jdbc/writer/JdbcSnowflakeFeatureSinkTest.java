@@ -34,6 +34,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
 import org.junit.Assert;
@@ -41,34 +42,30 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-public class JdbcFeatureSinkTest {
+public class JdbcSnowflakeFeatureSinkTest {
   @Rule public transient TestPipeline p = TestPipeline.create();
 
-  private FeatureSink sqliteFeatureSink;
-  // TODO: Clean up url
-  //  private String url = "jdbc:sqlite:/home/willem/Dump/sqldb/test.db";
-  //  private String className = "org.sqlite.JDBC";
+  private FeatureSink snowflakeFeatureSinkObj;
 
-  //  Postgres account
-  private String url = "jdbc:postgresql://localhost:5432/postgres";
-  private String className = "org.postgresql.Driver";
-  private String userName = "postgres";
-  private String pw = System.getenv("postgres_pw");
+  // TODO: Update the variables to match your snowflake account
+  private String userName = System.getenv("SNOWFLAKE_USERNAME");
+  private String password = System.getenv("SNOWFLAKE_PASSWORD");
+
+  private String database = "DEMO_DB";
+  private String schema = "PUBLIC";
+  private String warehouse = "COMPUTE_WH";
+  private String snowflakeUrl = "jdbc:snowflake://kia19877.snowflakecomputing.com";
+  private String className = "net.snowflake.client.jdbc.SnowflakeDriver";
+
   private Connection conn;
-
-  //  Snowflake account
-  private String SFurl = "jdbc:snowflake://ry42518.us-east-2.aws.snowflakecomputing.com";
-  private String SFclassName = "com.snowflake.client.jdbc.SnowflakeDriver";
-  private String SFusername = "";
-  private String SFpw = "123456Pw";
 
   @Before
   public void setUp() {
 
     FeatureSetProto.FeatureSetSpec spec1 =
         FeatureSetProto.FeatureSetSpec.newBuilder()
-            .setName("fs")
-            .setProject("myproject2")
+            .setName("feature_set_1")
+            .setProject("snowflake_proj")
             .addEntities(
                 FeatureSetProto.EntitySpec.newBuilder()
                     .setName("entity")
@@ -83,8 +80,9 @@ public class JdbcFeatureSinkTest {
 
     FeatureSetProto.FeatureSetSpec spec2 =
         FeatureSetProto.FeatureSetSpec.newBuilder()
-            .setName("feature_set")
-            .setProject("myproject2")
+            .setName("feature_set_2")
+            .setProject("snowflake_proj")
+            //            .setDatabase()
             .addEntities(
                 FeatureSetProto.EntitySpec.newBuilder()
                     .setName("entity_id_primary")
@@ -108,56 +106,70 @@ public class JdbcFeatureSinkTest {
             .build();
 
     Map<String, FeatureSetProto.FeatureSetSpec> specMap =
-        ImmutableMap.of("myproject2/fs", spec1, "myproject2/feature_set", spec2);
-    sqliteFeatureSink =
+        ImmutableMap.of(
+            "snowflake_proj/feature_set_1", spec1, "snowflake_proj/feature_set_2", spec2);
+
+    this.snowflakeFeatureSinkObj =
         JdbcFeatureSink.fromConfig(
             StoreProto.Store.JdbcConfig.newBuilder()
-                .setUrl(this.url)
+                .setUrl(this.snowflakeUrl)
                 .setClassName(this.className)
                 .setUsername(this.userName)
-                .setPassword(pw)
+                .setPassword(this.password)
+                .setDatabase(this.database)
+                .setSchema(this.schema)
+                .setWarehouse(this.warehouse)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
-    sqliteFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec1).build());
-    sqliteFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec2).build());
 
+    this.snowflakeFeatureSinkObj.prepareWrite(
+        FeatureSetProto.FeatureSet.newBuilder().setSpec(spec1).build());
+    this.snowflakeFeatureSinkObj.prepareWrite(
+        FeatureSetProto.FeatureSet.newBuilder().setSpec(spec2).build());
     this.connect();
   }
 
   private void connect() {
-    if (conn != null) {
+    if (this.conn != null) {
       return;
     }
     try {
+
       Class.forName(this.className);
-      conn = DriverManager.getConnection(this.url, userName, this.pw);
+      Properties props = new Properties();
+      props.put("user", this.userName);
+      props.put("password", this.password);
+      props.put("db", this.database);
+      props.put("schema", this.schema);
+      DriverManager.getConnection(this.snowflakeUrl, props);
+      this.conn = DriverManager.getConnection(this.snowflakeUrl, props);
     } catch (ClassNotFoundException | SQLException e) {
       System.err.println(e.getClass().getName() + ": " + e.getMessage());
     }
   }
 
   @Test
-  public void shouldWriteToSqlite() throws SQLException {
+  public void shouldWriteToSnowflake() throws SQLException {
 
     List<FeatureRow> featureRows =
         ImmutableList.of(
             FeatureRow.newBuilder()
-                .setFeatureSet("myproject2/fs")
+                .setFeatureSet("snowflake_proj/feature_set_1")
                 .addFields(field("entity", 1, Enum.INT64))
                 .addFields(field("feature", "one", Enum.STRING))
                 .build(),
             FeatureRow.newBuilder()
-                .setFeatureSet("myproject2/fs")
+                .setFeatureSet("snowflake_proj/feature_set_1")
                 .addFields(field("entity", 2, Enum.INT64))
                 .addFields(field("feature", "two", Enum.STRING))
                 .build(),
             FeatureRow.newBuilder()
-                .setFeatureSet("myproject2/fs")
+                .setFeatureSet("snowflake_proj/feature_set_1")
                 .addFields(field("entity", 3, Enum.INT64))
                 .addFields(field("feature", "two", Enum.STRING))
                 .build(),
             FeatureRow.newBuilder()
-                .setFeatureSet("myproject2/feature_set")
+                .setFeatureSet("snowflake_proj/feature_set_2")
                 .addFields(field("entity_id_primary", 4, Enum.INT32))
                 .addFields(field("entity_id_secondary", "asjdh", Enum.STRING))
                 .addFields(
@@ -175,9 +187,12 @@ public class JdbcFeatureSinkTest {
                 .addFields(field("feature_2", 4, Enum.INT64))
                 .build());
 
-    p.apply(Create.of(featureRows)).apply(sqliteFeatureSink.writer());
+    p.apply(Create.of(featureRows)).apply(this.snowflakeFeatureSinkObj.writer());
     p.run();
-    DatabaseMetaData dbm = conn.getMetaData();
-    Assert.assertEquals(true, dbm.getTables(null, null, "myproject2_feature_set", null).next());
+    DatabaseMetaData meta = conn.getMetaData();
+    Assert.assertEquals(
+        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_1", null).next());
+    Assert.assertEquals(
+        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_2", null).next());
   }
 }
