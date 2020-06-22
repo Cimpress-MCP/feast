@@ -34,12 +34,12 @@ import org.junit.Test;
 public class SnowflakeHistoricalRetrieverTest {
   private JdbcHistoricalRetriever snowflakeFeatureRetriever;
   //  Snowflake account
-  private String staging_location = System.getenv("staging_location");
+  private String staging_location = System.getenv("STAGING_LOCATION");
   private Map<String, String> snowflakeConfig = new HashMap<>();
   private String SFUrl = "jdbc:snowflake://ry42518.us-east-2.aws.snowflakecomputing.com";
   private String SFClassName = "net.snowflake.client.jdbc.SnowflakeDriver";
-  private String SFusername = "CHIZHANG";
-  private String SFpw = "123456Pw";
+  private String SFusername = System.getenv("SNOWFLAKE_USERNAME_RETRI");
+  private String SFpw = System.getenv("SNOWFLAKE_PASSWORD_RETRI");
   private String SFDatabase = "DEMO_DB";
   private String SFSchema = "PUBLIC";
 
@@ -64,7 +64,7 @@ public class SnowflakeHistoricalRetrieverTest {
     // entity_id
     //      file_uri is under
     // src/test/java/feast/storage/connectors/jdbc/retriever/snowflake_proj_entity_rows.csv
-    String file_uris = System.getenv("snowflake_file_uri");
+    String file_uris = System.getenv("SNOWFLAKE_FILE_URI");
     ServingAPIProto.DatasetSource.FileSource fileSource =
         ServingAPIProto.DatasetSource.FileSource.newBuilder()
             .setDataFormatValue(2)

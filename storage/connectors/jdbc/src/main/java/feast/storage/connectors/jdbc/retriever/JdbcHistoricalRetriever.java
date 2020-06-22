@@ -166,8 +166,6 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
                 "COPY INTO '@my_stage/%s.csv' FROM %s OVERWRITE = TRUE SINGLE = TRUE HEADER = TRUE;",
                 resultTable, resultTable);
         exportPath = String.format("%s/", stagingPath.replaceAll("/$", ""));
-        System.out.println(resultTable);
-        System.out.println(exportPath);
         String downloadTableQuery =
             String.format("get @my_stage/%s.csv file://%s;", resultTable, exportPath);
         statement.executeQuery(fileFormatQuery);
