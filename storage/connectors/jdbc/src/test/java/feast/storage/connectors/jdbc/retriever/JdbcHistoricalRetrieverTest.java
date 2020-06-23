@@ -39,11 +39,11 @@ public class JdbcHistoricalRetrieverTest {
 
   //    Give postgresql writing permission to your staging_location
   //    run: sudo chmod 777 <staging_location>
-  private String staging_location = System.getenv("staging_location");
+  private String staging_location = System.getenv("STAGING_LOCATION");
   private String url = "jdbc:postgresql://localhost:5432/postgres";
   private String class_name = "org.postgresql.Driver";
   private String username = "postgres";
-  private String pw = System.getenv("postgres_pw");
+  private String pw = System.getenv("POSTGRES_PW");
   private Map<String, String> postgressqlConfig = new HashMap<>();
 
   @Before
@@ -63,7 +63,7 @@ public class JdbcHistoricalRetrieverTest {
     // entity_id
     //      file_uri is under
     // src/test/java/feast/storage/connectors/jdbc/retriever/myproject2_entity_rows.csv
-    String file_uris = System.getenv("file_uri");
+    String file_uris = System.getenv("POSTGRES_FILE_URI");
     ServingAPIProto.DatasetSource.FileSource fileSource =
         ServingAPIProto.DatasetSource.FileSource.newBuilder()
             .setDataFormatValue(2)

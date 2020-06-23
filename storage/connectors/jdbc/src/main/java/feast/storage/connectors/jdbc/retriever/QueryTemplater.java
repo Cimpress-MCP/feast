@@ -50,7 +50,7 @@ public class QueryTemplater {
    */
   public static String createTimestampLimitQuery(String leftTableName) {
     return String.format(
-        "SELECT max(event_timestamp) as max, min(event_timestamp) as min from %s", leftTableName);
+        "SELECT max(event_timestamp) as MAX, min(event_timestamp) as MIN from %s", leftTableName);
   }
 
   public static List<String> createEntityTableRowCountQuery(

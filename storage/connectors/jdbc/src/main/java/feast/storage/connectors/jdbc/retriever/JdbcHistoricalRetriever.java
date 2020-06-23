@@ -375,8 +375,8 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       ResultSet rs = statement.executeQuery(timestampLimitSqlQuery);
 
       while (rs.next()) {
-        Timestamp max_ts = rs.getTimestamp(1); // Get maximum timestamp
-        Timestamp min_ts = rs.getTimestamp(2); // Get minimum timestamp
+        Timestamp min_ts = rs.getTimestamp("MIN"); // Get minimum timestamp
+        Timestamp max_ts = rs.getTimestamp("MAX"); // Get maximum timestamp
         timestampLimits.putIfAbsent("min", min_ts);
         timestampLimits.putIfAbsent("max", max_ts);
       }
