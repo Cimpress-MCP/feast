@@ -141,7 +141,6 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
         retrievalId, fileUris, ServingAPIProto.DataFormat.DATA_FORMAT_AVRO);
   }
 
-  // TODO: next step apply snowflake config
   private String exportResultsToDisk(Connection conn, String resultTable, String stagingLocation) {
     URI stagingUri;
     try {
@@ -346,7 +345,6 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
     List<String> entityTableColumnNames = getEntityTableColumns(conn, entityTableName);
 
-    // TODO: fix snowflake table with quotation mark
     String joinQuery =
         QueryTemplater.createJoinQuery(
             this.className, featureSetQueryInfos, entityTableColumnNames, entityTableName);
@@ -377,8 +375,8 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       ResultSet rs = statement.executeQuery(timestampLimitSqlQuery);
 
       while (rs.next()) {
-        Timestamp min_ts = rs.getTimestamp(2); // Get minimum timestamp
         Timestamp max_ts = rs.getTimestamp(1); // Get maximum timestamp
+        Timestamp min_ts = rs.getTimestamp(2); // Get minimum timestamp
         timestampLimits.putIfAbsent("min", min_ts);
         timestampLimits.putIfAbsent("max", max_ts);
       }
