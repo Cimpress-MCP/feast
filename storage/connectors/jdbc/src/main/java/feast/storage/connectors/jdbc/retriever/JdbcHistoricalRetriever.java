@@ -31,6 +31,8 @@ import java.util.concurrent.*;
 
 public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
+  private final String database;
+  private final String schema;
   private final String password;
   private final String username;
   private final String url;
@@ -45,6 +47,8 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
   Connection connection;
 
   private JdbcHistoricalRetriever(Map<String, String> config) {
+    this.database = config.get("database");
+    this.schema = config.get("schema");
     this.className = config.getOrDefault("class_name", "");
     this.url = config.get("url");
     this.username = config.get("username");
@@ -65,7 +69,18 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       Class.forName(className);
       // Username and password are provided
       if (!username.isEmpty() && !password.isEmpty()) {
-        this.connection = DriverManager.getConnection(url, username, password);
+        // snowflake database must config database and schema
+        if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+          Properties props = new Properties();
+          props.put("user", username);
+          props.put("password", password);
+          props.put("db", database);
+          props.put("schema", schema);
+          Class.forName(className);
+          this.connection = DriverManager.getConnection(url, props);
+        } else {
+          this.connection = DriverManager.getConnection(url, username, password);
+        }
       }
       // Only username provided
       else if (!username.isEmpty()) {
@@ -117,9 +132,10 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     String resultTable =
         this.runBatchQuery(
             conn, entityTableWithRowCountName, featureSetQueryInfos, featureSetQueries);
-
+    // 7. export the result feature as a csv file to staging location
     String fileUri = exportResultsToDisk(conn, resultTable, stagingLocation);
     List<String> fileUris = new ArrayList<>();
+    // TODO: always return a single csv file?
     fileUris.add(fileUri);
     return HistoricalRetrievalResult.success(
         retrievalId, fileUris, ServingAPIProto.DataFormat.DATA_FORMAT_AVRO);
@@ -138,11 +154,31 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     String exportTableSqlQuery = null;
     try {
       Statement statement = conn.createStatement();
-      exportTableSqlQuery =
-          String.format(
-              "COPY %s TO '%s' WITH (DELIMITER E'\t', FORMAT CSV, HEADER);",
-              resultTable, exportPath);
-      statement.executeUpdate(exportTableSqlQuery);
+      if (this.className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+        String fileFormatQuery =
+            String.format(
+                "create or replace file format CSV_format type = 'CSV' field_delimiter = ',' skip_header=0;");
+        String createStageQuery =
+            String.format("create or replace stage my_stage file_format = CSV_format;");
+        String copyIntoStageQuery =
+            String.format(
+                "COPY INTO '@my_stage/%s.csv' FROM %s OVERWRITE = TRUE SINGLE = TRUE HEADER = TRUE;",
+                resultTable, resultTable);
+        exportPath = String.format("%s/", stagingPath.replaceAll("/$", ""));
+        String downloadTableQuery =
+            String.format("get @my_stage/%s.csv file://%s;", resultTable, exportPath);
+        statement.executeQuery(fileFormatQuery);
+        statement.executeQuery(createStageQuery);
+        statement.executeQuery(copyIntoStageQuery);
+        statement.executeQuery(downloadTableQuery);
+
+      } else {
+        exportTableSqlQuery =
+            String.format(
+                "COPY %s TO '%s' WITH (DELIMITER E'\t', FORMAT CSV, HEADER);",
+                resultTable, exportPath);
+        statement.executeUpdate(exportTableSqlQuery);
+      }
       return exportPath;
     } catch (SQLException e) {
       throw new RuntimeException(
@@ -184,6 +220,7 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       for (FeatureSetQueryInfo featureSetInfo : featureSetQueryInfos) {
         String query =
             QueryTemplater.createFeatureSetPointInTimeQuery(
+                this.className,
                 featureSetInfo,
                 entityTableName,
                 timestampLimits.get("min").toString(),
@@ -225,16 +262,23 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
       Statement statement;
       String tempTableForLoad = createTempTableName();
-      String loadEntitiesQuery =
-          QueryTemplater.createLoadEntityQuery(tableName, tempTableForLoad, filePath);
+      List<String> loadEntitiesQueries =
+          QueryTemplater.createLoadEntityQuery(
+              this.className, tableName, tempTableForLoad, filePath);
       try {
         statement = conn.createStatement();
-        statement.executeUpdate(loadEntitiesQuery);
+        for (String query : loadEntitiesQueries) {
+          if (this.className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+            statement.execute(query);
+          } else {
+            statement.executeUpdate(query);
+          }
+        }
       } catch (SQLException e) {
         throw new RuntimeException(
             String.format(
                 "Could not load entity data from %s into table %s using query: \n%s",
-                filePath, tableName, loadEntitiesQuery),
+                filePath, tableName, loadEntitiesQueries),
             e);
       }
     }
@@ -243,13 +287,15 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
   private String createStagedEntityTable(
       Connection conn, List<FeatureSetQueryInfo> featureSetQueryInfos) {
     String entityTableWithRowCountName = createTempTableName();
-    String entityTableRowCountQuery =
+    List<String> entityTableRowCountQueries =
         QueryTemplater.createEntityTableRowCountQuery(
-            entityTableWithRowCountName, featureSetQueryInfos);
+            this.className, entityTableWithRowCountName, featureSetQueryInfos);
     Statement statement;
     try {
       statement = conn.createStatement();
-      statement.executeUpdate(entityTableRowCountQuery);
+      for (String query : entityTableRowCountQueries) {
+        statement.executeUpdate(query);
+      }
       return entityTableWithRowCountName;
     } catch (SQLException e) {
       throw new RuntimeException(
@@ -265,6 +311,7 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       String entityTableName,
       List<FeatureSetQueryInfo> featureSetQueryInfos,
       List<String> featureSetQueries) {
+    //    TODO:  Never used???
     ExecutorService executorService = Executors.newFixedThreadPool(featureSetQueries.size());
     ExecutorCompletionService<FeatureSetQueryInfo> executorCompletionService =
         new ExecutorCompletionService<>(executorService);
@@ -280,8 +327,9 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       Statement statement;
       try {
         statement = conn.createStatement();
-        statement.executeUpdate(
-            String.format("CREATE TABLE \"%s\" AS (%s)", featureSetTempTable, featureSetQuery));
+        String query =
+            String.format("CREATE TABLE %s AS (%s)", featureSetTempTable, featureSetQuery);
+        statement.executeUpdate(query);
         featureSetQueryInfos.get(i).setJoinedTable(featureSetTempTable);
       } catch (SQLException e) {
         throw new RuntimeException(
@@ -299,14 +347,15 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
     String joinQuery =
         QueryTemplater.createJoinQuery(
-            featureSetQueryInfos, entityTableColumnNames, entityTableName);
+            this.className, featureSetQueryInfos, entityTableColumnNames, entityTableName);
 
     String resultTable = createTempTableName();
 
     Statement statement;
     try {
       statement = conn.createStatement();
-      statement.executeUpdate(String.format("CREATE TABLE \"%s\" AS (%s)", resultTable, joinQuery));
+      String resultTableQuery = String.format("CREATE TABLE %s AS (%s)", resultTable, joinQuery);
+      statement.executeUpdate(resultTableQuery);
       return resultTable;
     } catch (SQLException e) {
       throw new RuntimeException(
@@ -326,8 +375,8 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
       ResultSet rs = statement.executeQuery(timestampLimitSqlQuery);
 
       while (rs.next()) {
-        Timestamp min_ts = rs.getTimestamp("min"); // Get minimum timestamp
-        Timestamp max_ts = rs.getTimestamp("max"); // Get maximum timestamp
+        Timestamp min_ts = rs.getTimestamp("MIN"); // Get minimum timestamp
+        Timestamp max_ts = rs.getTimestamp("MAX"); // Get maximum timestamp
         timestampLimits.putIfAbsent("min", min_ts);
         timestampLimits.putIfAbsent("max", max_ts);
       }
