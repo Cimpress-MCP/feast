@@ -127,7 +127,6 @@ public class QueryTemplater {
     return featureSetInfos;
   }
 
-  // TODO: double-check functionality in snowflake
   /**
    * Generate the query for point in time correctness join of data for a single feature set to the
    * entity dataset.
