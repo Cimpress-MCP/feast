@@ -79,24 +79,13 @@ public class QueryTemplater {
             "CREATE TABLE %s AS (SELECT %s FROM %s WHERE 1 = 2);",
             destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
     if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
-      // 1st create a sequence
-      //      createEntityTableRowCountQueries.add("create or replace sequence row_seq start = 1
-      // increment = 1;");
-      // 2nd insert sequence as the row num
       createEntityTableRowCountQueries.add(
           String.format("ALTER TABLE %s ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
-      //      createEntityTableRowCountQueries.add(
-      //              String.format(
-      //                      "ALTER TABLE \"%s\" ADD COLUMN row_number INT DEFAULT
-      // row_seq.nextval;", destinationTable));
+
     } else {
       createEntityTableRowCountQueries.add(
           String.format(
               "ALTER TABLE \"%s\" ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
-      //      createEntityTableRowCountQueries.add(
-      //              String.format(
-      //                      "ALTER TABLE \"%s\" ADD COLUMN row_number SERIAL;",
-      // destinationTable));
     }
 
     return createEntityTableRowCountQueries;

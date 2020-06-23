@@ -90,7 +90,6 @@ public class JdbcHistoricalRetrieverTest {
     HistoricalRetrievalResult postgresHisRetrievalResult =
         postgresqlFeatureRetriever.getHistoricalFeatures(
             retrievalId, datasetSource, featureSetRequests);
-    System.out.println(postgresHisRetrievalResult);
     List<String> files = postgresHisRetrievalResult.getFileUris();
     File testFile = new File(files.get(0));
     // Check if file exist in staging location
