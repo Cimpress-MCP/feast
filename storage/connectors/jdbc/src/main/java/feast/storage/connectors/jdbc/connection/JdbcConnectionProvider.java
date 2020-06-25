@@ -14,12 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package feast.storage.connectors.jdbc.retriever;
+package feast.storage.connectors.jdbc.connection;
 
-import feast.storage.api.retriever.FeatureSetRequest;
-import java.util.List;
+import java.sql.Connection;
 
-public interface JdbcQueryTemplater {
-
-  List<FeatureSetQueryInfo> getFeatureSetInfos(List<FeatureSetRequest> featureSetRequests);
+public interface JdbcConnectionProvider {
+  /** @return a connection to the URL */
+  Connection getConnection();
 }

@@ -81,6 +81,10 @@ public class ServingServiceConfig {
 
     return servingService;
   }
+  // TODO:
+  public JdbcHistoricalRetriever createJdbcHistoricalRetriever(FeastProperties feastProperties) {
+    return null;
+  }
 
   private void validateJobServicePresence(JobService jobService) {
     if (jobService.getClass() == NoopJobService.class) {
