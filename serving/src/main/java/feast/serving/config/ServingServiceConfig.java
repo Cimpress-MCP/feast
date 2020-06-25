@@ -82,6 +82,7 @@ public class ServingServiceConfig {
     return servingService;
   }
   // TODO:
+  @Bean
   public JdbcHistoricalRetriever createJdbcHistoricalRetriever(FeastProperties feastProperties) {
     return null;
   }
