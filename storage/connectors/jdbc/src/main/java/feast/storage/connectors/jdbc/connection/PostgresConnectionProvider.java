@@ -35,12 +35,12 @@ public class PostgresConnectionProvider implements JdbcConnectionProvider {
       throw new IllegalArgumentException(
           "SnowflakeConnectionProvider config missing one or more fields!");
     }
-    this.database = config.getOrDefault("database", null);
-    this.schema = config.getOrDefault("schema", null);
-    this.className = config.getOrDefault("class_name", null);
+    this.database = config.getOrDefault("database", "");
+    this.schema = config.getOrDefault("schema", "");
+    this.className = config.getOrDefault("class_name", "");
     this.url = config.get("url");
     this.username = config.get("username");
-    this.password = config.getOrDefault("password", null);
+    this.password = config.getOrDefault("password", "");
   }
 
   @Override

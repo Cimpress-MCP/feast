@@ -22,6 +22,7 @@ import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
 import feast.storage.api.retriever.HistoricalRetrievalResult;
 import feast.storage.api.retriever.HistoricalRetriever;
+import feast.storage.connectors.jdbc.connection.PostgresConnectionProvider;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,8 +54,12 @@ public class JdbcHistoricalRetrieverTest {
     postgressqlConfig.put("password", pw);
     postgressqlConfig.put("url", url);
     postgressqlConfig.put("staging_location", staging_location);
-
-    postgresqlFeatureRetriever = JdbcHistoricalRetriever.create(postgressqlConfig);
+    PostgresConnectionProvider postgresConnectionProvider =
+        new PostgresConnectionProvider(postgressqlConfig);
+    PostgresQueryTemplater postgresQueryTemplater =
+        new PostgresQueryTemplater(postgresConnectionProvider);
+    postgresqlFeatureRetriever =
+        JdbcHistoricalRetriever.create(postgressqlConfig, postgresQueryTemplater);
   }
 
   @Test

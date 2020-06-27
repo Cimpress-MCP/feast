@@ -21,6 +21,7 @@ import feast.proto.core.FeatureSetProto;
 import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
 import feast.storage.api.retriever.HistoricalRetrievalResult;
+import feast.storage.connectors.jdbc.connection.SnowflakeConnectionProvider;
 import java.io.File;
 import java.util.*;
 import org.junit.Assert;
@@ -49,9 +50,13 @@ public class SnowflakeHistoricalRetrieverTest {
     snowflakeConfig.put("password", SFpw);
     snowflakeConfig.put("url", SFUrl);
     snowflakeConfig.put("staging_location", staging_location);
-
+    SnowflakeConnectionProvider snowflakeConnectionProvider =
+        new SnowflakeConnectionProvider(snowflakeConfig);
+    SnowflakeQueryTemplater snowflakeQueryTemplater =
+        new SnowflakeQueryTemplater(snowflakeConnectionProvider);
     snowflakeFeatureRetriever =
-        (JdbcHistoricalRetriever) JdbcHistoricalRetriever.create(snowflakeConfig);
+        (JdbcHistoricalRetriever)
+            JdbcHistoricalRetriever.create(snowflakeConfig, snowflakeQueryTemplater);
   }
 
   @Test
