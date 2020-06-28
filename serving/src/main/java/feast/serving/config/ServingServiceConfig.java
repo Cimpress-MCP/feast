@@ -24,7 +24,11 @@ import feast.serving.specs.CachedSpecService;
 import feast.storage.api.retriever.HistoricalRetriever;
 import feast.storage.api.retriever.OnlineRetriever;
 import feast.storage.connectors.bigquery.retriever.BigQueryHistoricalRetriever;
+import feast.storage.connectors.jdbc.connection.PostgresConnectionProvider;
+import feast.storage.connectors.jdbc.connection.SnowflakeConnectionProvider;
 import feast.storage.connectors.jdbc.retriever.JdbcHistoricalRetriever;
+import feast.storage.connectors.jdbc.retriever.PostgresQueryTemplater;
+import feast.storage.connectors.jdbc.retriever.SnowflakeQueryTemplater;
 import feast.storage.connectors.redis.retriever.RedisClusterOnlineRetriever;
 import feast.storage.connectors.redis.retriever.RedisOnlineRetriever;
 import io.opentracing.Tracer;
@@ -66,7 +70,8 @@ public class ServingServiceConfig {
         break;
       case JDBC:
         validateJobServicePresence(jobService);
-        HistoricalRetriever jdbcHistoricalRetriever = JdbcHistoricalRetriever.create(config);
+        HistoricalRetriever jdbcHistoricalRetriever =
+            this.createJdbcHistoricalRetriever(feastProperties);
         servingService =
             new HistoricalServingService(jdbcHistoricalRetriever, specService, jobService);
         break;
@@ -81,10 +86,31 @@ public class ServingServiceConfig {
 
     return servingService;
   }
-  // TODO:
+
   @Bean
-  public JdbcHistoricalRetriever createJdbcHistoricalRetriever(FeastProperties feastProperties) {
-    return null;
+  public HistoricalRetriever createJdbcHistoricalRetriever(FeastProperties feastProperties) {
+    FeastProperties.Store store = feastProperties.getActiveStore();
+    Map<String, String> config = store.getConfig();
+    String className = config.get("className");
+    switch (className) {
+      case "net.snowflake.client.jdbc.SnowflakeDriver":
+        SnowflakeConnectionProvider snowflakeConnectionProvider =
+            new SnowflakeConnectionProvider(config);
+        SnowflakeQueryTemplater snowflakeQueryTemplater =
+            new SnowflakeQueryTemplater(snowflakeConnectionProvider);
+        return JdbcHistoricalRetriever.create(config, snowflakeQueryTemplater);
+      case "org.postgresql.Driver":
+        PostgresConnectionProvider postgresConnectionProvider =
+            new PostgresConnectionProvider(config);
+        PostgresQueryTemplater postgresQueryTemplater =
+            new PostgresQueryTemplater(postgresConnectionProvider);
+        return JdbcHistoricalRetriever.create(config, postgresQueryTemplater);
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "Unsupported JDBC store className '%s' for store name '%s'",
+                className, store.getName()));
+    }
   }
 
   private void validateJobServicePresence(JobService jobService) {
