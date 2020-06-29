@@ -91,7 +91,7 @@ public class ServingServiceConfig {
   public HistoricalRetriever createJdbcHistoricalRetriever(FeastProperties feastProperties) {
     FeastProperties.Store store = feastProperties.getActiveStore();
     Map<String, String> config = store.getConfig();
-    String className = config.get("className");
+    String className = config.get("class_name");
     switch (className) {
       case "net.snowflake.client.jdbc.SnowflakeDriver":
         SnowflakeConnectionProvider snowflakeConnectionProvider =
