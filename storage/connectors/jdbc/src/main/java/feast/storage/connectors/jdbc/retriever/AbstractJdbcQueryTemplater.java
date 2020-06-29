@@ -87,30 +87,6 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
     return entityTable;
   }
 
-  /**
-   * Load entity rows from filePath to the destinationTable
-   *
-   * @param destinationTable
-   * @param temporaryTable temporary table for staging
-   * @param filePath csv file contains entity rows, with columns: entity_id and created_timestamp
-   * @return
-   */
-  protected List<String> createLoadEntityQuery(
-      String destinationTable, String temporaryTable, File filePath) {
-    List<String> queries = new ArrayList<>();
-    queries.add(
-        String.format("CREATE TABLE %s AS (SELECT * FROM %s);", temporaryTable, destinationTable));
-    //      queries.add(String.format("ALTER TABLE %s DROP COLUMN row_number;",temporaryTable));
-    queries.add(
-        String.format("COPY %s FROM '%s' DELIMITER ',' CSV HEADER;", temporaryTable, filePath));
-    queries.add(
-        String.format("INSERT INTO %s SELECT * FROM %s;", destinationTable, temporaryTable));
-    queries.add(String.format("DROP TABLE %s;", temporaryTable));
-    queries.add(
-        String.format("ALTER TABLE \"%s\" ADD COLUMN row_number SERIAL;", destinationTable));
-    return queries;
-  }
-
   @Override
   public Map<String, Timestamp> getTimestampLimits(String entityTableWithRowCountName) {
     String timestampLimitSqlQuery = this.createTimestampLimitQuery(entityTableWithRowCountName);
@@ -334,6 +310,29 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
             e);
       }
     }
+  }
+  /**
+   * Load entity rows from filePath to the destinationTable
+   *
+   * @param destinationTable
+   * @param temporaryTable temporary table for staging
+   * @param filePath csv file contains entity rows, with columns: entity_id and created_timestamp
+   * @return
+   */
+  protected List<String> createLoadEntityQuery(
+      String destinationTable, String temporaryTable, File filePath) {
+    List<String> queries = new ArrayList<>();
+    queries.add(
+        String.format("CREATE TABLE %s AS (SELECT * FROM %s);", temporaryTable, destinationTable));
+    //      queries.add(String.format("ALTER TABLE %s DROP COLUMN row_number;",temporaryTable));
+    queries.add(
+        String.format("COPY %s FROM '%s' DELIMITER ',' CSV HEADER;", temporaryTable, filePath));
+    queries.add(
+        String.format("INSERT INTO %s SELECT * FROM %s;", destinationTable, temporaryTable));
+    queries.add(String.format("DROP TABLE %s;", temporaryTable));
+    queries.add(
+        String.format("ALTER TABLE \"%s\" ADD COLUMN row_number SERIAL;", destinationTable));
+    return queries;
   }
   /**
    * Generate the query for point in time correctness join of data for a single feature set to the
