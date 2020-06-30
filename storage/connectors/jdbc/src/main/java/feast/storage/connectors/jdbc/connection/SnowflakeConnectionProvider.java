@@ -38,7 +38,14 @@ public class SnowflakeConnectionProvider implements JdbcConnectionProvider {
         || !config.containsKey("username")
         || !config.containsKey("password")) {
       throw new IllegalArgumentException(
-          "SnowflakeConnectionProvider config missing one or more fields!");
+          String.format(
+              "SnowflakeConnectionProvider config missing one or more fields! "
+                  + "Database: %s Schema: %s ClassName: %s Url: %s Username: %s Password: MASKED ",
+              config.get("database"),
+              config.get("schema"),
+              config.get("class_name"),
+              config.get("url"),
+              config.get("username")));
     }
     this.database = config.get("database");
     this.schema = config.get("schema");

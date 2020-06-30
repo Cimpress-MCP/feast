@@ -26,22 +26,11 @@ import java.util.concurrent.*;
 
 public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
-  private final String database;
-  private final String schema;
-  private final String password;
-  private final String username;
-  private final String url;
-  private final String className;
   private final String stagingLocation;
   private JdbcQueryTemplater queryTemplater;
 
   private JdbcHistoricalRetriever(Map<String, String> config, JdbcQueryTemplater queryTemplater) {
-    this.database = config.get("database");
-    this.schema = config.get("schema");
-    this.className = config.getOrDefault("class_name", "");
-    this.url = config.get("url");
-    this.username = config.get("username");
-    this.password = config.get("password");
+
     this.stagingLocation = config.get("staging_location");
     this.queryTemplater = queryTemplater;
   }
