@@ -86,9 +86,26 @@ public class Feature {
   // retrieved from or written to.
   private boolean archived = false;
 
-  private Feature(String name, ValueType.Enum type) {
+  public Feature(String name, ValueType.Enum type) {
     this.setName(name);
     this.setType(type.toString());
+  }
+
+  /**
+   * Return a boolean to facilitate streaming elements on the basis of given predicate.
+   *
+   * @param labelsFilter contain labels that should be attached to Feature
+   * @return boolean True if Feature contains all labels in the labelsFilter
+   */
+  public boolean hasAllLabels(Map<String, String> labelsFilter) {
+    Map<String, String> featureLabelsMap = this.getLabels();
+    for (String key : labelsFilter.keySet()) {
+      if (!featureLabelsMap.containsKey(key)
+          || !featureLabelsMap.get(key).equals(labelsFilter.get(key))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public static Feature fromProto(FeatureSpec featureSpec) {

@@ -15,11 +15,12 @@
 import json
 import logging
 import sys
+from typing import Dict, List
 
 import click
 import pkg_resources
-
 import yaml
+
 from feast.client import Client
 from feast.config import Config
 from feast.core.IngestionJob_pb2 import IngestionJobStatus
@@ -112,6 +113,65 @@ def config_set(prop, value):
         sys.exit(1)
 
 
+@cli.group(name="features")
+def feature():
+    """
+    Manage feature
+    """
+    pass
+
+
+def _convert_entity_string_to_list(entities_str: str) -> List[str]:
+    """
+    Converts CLI input entities string to list format if provided string is valid.
+    """
+    if entities_str == "":
+        return []
+    return entities_str.split(",")
+
+
+@feature.command(name="list")
+@click.option(
+    "--project",
+    "-p",
+    help="Project that feature belongs to",
+    type=click.STRING,
+    default="*",
+)
+@click.option(
+    "--entities",
+    "-n",
+    help="Entities to filter for features",
+    type=click.STRING,
+    default="",
+)
+@click.option(
+    "--labels",
+    "-l",
+    help="Labels to filter for features",
+    type=click.STRING,
+    default="",
+)
+def feature_list(project: str, entities: str, labels: str):
+    """
+    List all features
+    """
+    feast_client = Client()  # type: Client
+
+    entities_list = _convert_entity_string_to_list(entities)
+    labels_dict: Dict[str, str] = _get_labels_dict(labels)
+
+    table = []
+    for feature_ref, feature in feast_client.list_features_by_ref(
+        project=project, entities=entities_list, labels=labels_dict
+    ).items():
+        table.append([feature.name, feature.dtype, repr(feature_ref)])
+
+    from tabulate import tabulate
+
+    print(tabulate(table, headers=["NAME", "DTYPE", "REFERENCE"], tablefmt="plain"))
+
+
 @cli.group(name="feature-sets")
 def feature_set():
     """
@@ -120,11 +180,11 @@ def feature_set():
     pass
 
 
-def _get_labels_dict(label_str: str):
+def _get_labels_dict(label_str: str) -> Dict[str, str]:
     """
     Converts CLI input labels string to dictionary format if provided string is valid.
     """
-    labels_dict = {}
+    labels_dict: Dict[str, str] = {}
     labels_kv = label_str.split(",")
     if label_str == "":
         return labels_dict

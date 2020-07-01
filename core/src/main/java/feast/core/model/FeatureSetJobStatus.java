@@ -16,10 +16,12 @@
  */
 package feast.core.model;
 
+import com.google.common.base.Objects;
 import feast.proto.core.FeatureSetProto.FeatureSetJobDeliveryStatus;
 import java.io.Serializable;
 import javax.persistence.*;
 import javax.persistence.Entity;
+import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -36,6 +38,7 @@ import lombok.Setter;
 public class FeatureSetJobStatus {
   @Embeddable
   @EqualsAndHashCode
+  @AllArgsConstructor
   public static class FeatureSetJobStatusKey implements Serializable {
     public FeatureSetJobStatusKey() {}
 
@@ -61,4 +64,23 @@ public class FeatureSetJobStatus {
   @Enumerated(EnumType.STRING)
   @Column(name = "delivery_status")
   private FeatureSetJobDeliveryStatus deliveryStatus;
+
+  @Column(name = "version", columnDefinition = "integer default 0")
+  private int version;
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    FeatureSetJobStatus that = (FeatureSetJobStatus) o;
+    return version == that.version
+        && Objects.equal(job.getId(), that.job.getId())
+        && Objects.equal(featureSet.getReference(), that.featureSet.getReference())
+        && deliveryStatus == that.deliveryStatus;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(job, featureSet);
+  }
 }

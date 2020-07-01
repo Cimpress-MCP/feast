@@ -2,7 +2,7 @@
 
 Data is a first-class citizen in machine learning projects, it is critical to have tests and validations around data. To that end, Feast avails various feature statistics to users in order to give users visibility into the data that has been ingested into the system.
 
-![overview](../.gitbook/assets/statistics-sources.png)
+![overview](../.gitbook/assets/statistics-sources%20%281%29.png)
 
 Feast exposes feature statistics at two points in the Feast system: 1. Inflight feature statistics from the population job 2. Historical feature statistics from the warehouse stores
 
@@ -160,4 +160,5 @@ The metrics are tagged with and can be aggregated by the following keys:
 | feast\_featureSet\_name | feature set name |
 | feast\_feature\_name | feature name |
 | ingestion\_job\_name | id of the population job writing the feature values. |
+| metrics\_namespace | either `Inflight` or `WriteToStoreSuccess` |
 

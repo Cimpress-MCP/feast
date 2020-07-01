@@ -19,11 +19,13 @@ package feast.ingestion;
 import static feast.ingestion.utils.StoreUtil.getFeatureSink;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import feast.common.models.FeatureSetReference;
 import feast.ingestion.options.ImportOptions;
 import feast.ingestion.transform.FeatureRowToStoreAllocator;
 import feast.ingestion.transform.ProcessAndValidateFeatureRows;
 import feast.ingestion.transform.ReadFromSource;
 import feast.ingestion.transform.metrics.WriteFailureMetricsTransform;
+import feast.ingestion.transform.metrics.WriteInflightMetricsTransform;
 import feast.ingestion.transform.metrics.WriteSuccessMetricsTransform;
 import feast.ingestion.transform.specs.ReadFeatureSetSpecs;
 import feast.ingestion.transform.specs.WriteFeatureSetSpecAck;
@@ -44,6 +46,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
+import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.options.PipelineOptionsValidator;
 import org.apache.beam.sdk.transforms.*;
@@ -89,13 +92,13 @@ public class ImportJob {
 
     log.info("Starting import job with settings: \n{}", options.toString());
 
-    List<Store> stores = SpecUtil.parseStoreJsonList(options.getStoreJson());
+    List<Store> stores = SpecUtil.parseStoreJsonList(options.getStoresJson());
     Source source = SpecUtil.parseSourceJson(options.getSourceJson());
     SpecsStreamingUpdateConfig specsStreamingUpdateConfig =
         SpecUtil.parseSpecsStreamingUpdateConfig(options.getSpecsStreamingUpdateConfigJson());
 
     // Step 1. Read FeatureSetSpecs from Spec source
-    PCollection<KV<String, FeatureSetSpec>> featureSetSpecs =
+    PCollection<KV<FeatureSetReference, FeatureSetSpec>> featureSetSpecs =
         pipeline.apply(
             "ReadFeatureSetSpecs",
             ReadFeatureSetSpecs.newBuilder()
@@ -105,7 +108,9 @@ public class ImportJob {
                 .build());
 
     PCollectionView<Map<String, Iterable<FeatureSetSpec>>> globalSpecView =
-        featureSetSpecs.apply("GlobalSpecView", View.asMultimap());
+        featureSetSpecs
+            .apply(MapElements.via(new ReferenceToString()))
+            .apply("GlobalSpecView", View.asMultimap());
 
     // Step 2. Read messages from Feast Source as FeatureRow.
     PCollectionTuple convertedFeatureRows =
@@ -144,16 +149,24 @@ public class ImportJob {
                     .setStoreTags(storeTags)
                     .build());
 
+    PCollectionList<FeatureSetReference> sinkReadiness = PCollectionList.empty(pipeline);
+
     for (Store store : stores) {
-      FeatureSink featureSink = getFeatureSink(store, featureSetSpecs);
+      FeatureSink featureSink = getFeatureSink(store);
 
-      // Step 5. Write FeatureRow to the corresponding Store.
+      sinkReadiness = sinkReadiness.and(featureSink.prepareWrite(featureSetSpecs));
+      PCollection<FeatureRow> rowsForStore =
+          storeAllocatedRows.get(storeTags.get(store)).setCoder(ProtoCoder.of(FeatureRow.class));
+
+      // Step 5. Write metrics of successfully validated rows
+      rowsForStore.apply(
+          "WriteInflightMetrics", WriteInflightMetricsTransform.create(store.getName()));
+
+      // Step 6. Write FeatureRow to the corresponding Store.
       WriteResult writeFeatureRows =
-          storeAllocatedRows
-              .get(storeTags.get(store))
-              .apply("WriteFeatureRowToStore", featureSink.writer());
+          rowsForStore.apply("WriteFeatureRowToStore", featureSink.writer());
 
-      // Step 6. Write FailedElements to a dead letter table in BigQuery.
+      // Step 7. Write FailedElements to a dead letter table in BigQuery.
       if (options.getDeadLetterTableSpec() != null) {
         // TODO: make deadletter destination type configurable
         DeadletterSink deadletterSink =
@@ -172,7 +185,7 @@ public class ImportJob {
             .apply("WriteFailedElements_WriteFeatureRowToStore", deadletterSink.write());
       }
 
-      // Step 7. Write metrics to a metrics sink.
+      // Step 8. Write metrics to a metrics sink.
       writeFeatureRows
           .getSuccessfulInserts()
           .apply("WriteSuccessMetrics", WriteSuccessMetricsTransform.create(store.getName()));
@@ -182,13 +195,22 @@ public class ImportJob {
           .apply("WriteFailureMetrics", WriteFailureMetricsTransform.create(store.getName()));
     }
 
-    // Step 8. Send ack that FeatureSetSpec state is updated
-    featureSetSpecs.apply(
-        "WriteAck",
-        WriteFeatureSetSpecAck.newBuilder()
-            .setSpecsStreamingUpdateConfig(specsStreamingUpdateConfig)
-            .build());
+    sinkReadiness
+        .apply(Flatten.pCollections())
+        .apply(
+            "WriteAck",
+            WriteFeatureSetSpecAck.newBuilder()
+                .setSinksCount(stores.size())
+                .setSpecsStreamingUpdateConfig(specsStreamingUpdateConfig)
+                .build());
 
     return pipeline.run();
+  }
+
+  private static class ReferenceToString
+      extends SimpleFunction<KV<FeatureSetReference, FeatureSetSpec>, KV<String, FeatureSetSpec>> {
+    public KV<String, FeatureSetSpec> apply(KV<FeatureSetReference, FeatureSetSpec> input) {
+      return KV.of(input.getKey().getReference(), input.getValue());
+    }
   }
 }

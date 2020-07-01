@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
- * Copyright 2018-2019 The Feast Authors
+ * Copyright 2018-2020 The Feast Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package feast.core.config;
+package feast.core.dao;
 
-import io.grpc.ServerBuilder;
-import io.grpc.protobuf.services.ProtoReflectionService;
-import org.lognet.springboot.grpc.GRpcServerBuilderConfigurer;
-import org.springframework.stereotype.Component;
+import feast.core.model.FeatureSetJobStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-@Component
-public class CoreGRpcServerBuilderConfig extends GRpcServerBuilderConfigurer {
-  @Override
-  public void configure(ServerBuilder<?> serverBuilder) {
-    serverBuilder.addService(ProtoReflectionService.newInstance());
-  }
+public interface FeatureSetJobStatusRepository
+    extends JpaRepository<FeatureSetJobStatus, FeatureSetJobStatus.FeatureSetJobStatusKey> {
+  long count();
 }

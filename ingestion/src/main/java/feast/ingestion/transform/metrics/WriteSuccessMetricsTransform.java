@@ -92,6 +92,7 @@ public abstract class WriteSuccessMetricsTransform
                     .setStatsdHost(options.getStatsdHost())
                     .setStatsdPort(options.getStatsdPort())
                     .setStoreName(getStoreName())
+                    .setMetricsNamespace(METRIC_NAMESPACE)
                     .build()));
 
         validRowsGroupedByRef.apply(
@@ -101,6 +102,7 @@ public abstract class WriteSuccessMetricsTransform
                     .setStatsdHost(options.getStatsdHost())
                     .setStatsdPort(options.getStatsdPort())
                     .setStoreName(getStoreName())
+                    .setMetricsNamespace(METRIC_NAMESPACE)
                     .build()));
 
         return PDone.in(input.getPipeline());

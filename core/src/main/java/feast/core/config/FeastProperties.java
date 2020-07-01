@@ -20,9 +20,17 @@ import feast.core.config.FeastProperties.StreamProperties.FeatureStreamOptions;
 import feast.core.validators.OneOfStrings;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import javax.annotation.PostConstruct;
-import javax.validation.*;
+import javax.validation.ConstraintViolation;
+import javax.validation.ConstraintViolationException;
+import javax.validation.Validation;
+import javax.validation.Validator;
+import javax.validation.ValidatorFactory;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Positive;
@@ -31,9 +39,11 @@ import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.info.BuildProperties;
+import org.springframework.stereotype.Component;
 
 @Getter
 @Setter
+@Component
 @ConfigurationProperties(prefix = "feast", ignoreInvalidFields = true)
 public class FeastProperties {
 
@@ -60,14 +70,21 @@ public class FeastProperties {
   /* Feast Kafka stream properties */
   private StreamProperties stream;
 
+  private SecurityProperties security;
+
   /** Feast job properties. These properties are used for ingestion jobs. */
   @Getter
   @Setter
   public static class JobProperties {
+    /* Toggle for enabling/disabling job management */
+    private Boolean enabled = true;
 
     @NotBlank
     /* The active Apache Beam runner name. This name references one instance of the Runner class */
     private String activeRunner;
+
+    /* If true only one IngestionJob would be created per source with all subscribed stores in it */
+    private Boolean consolidateJobsPerSource = false;
 
     /** List of configured job runners. */
     private List<Runner> runners = new ArrayList<>();
@@ -172,6 +189,10 @@ public class FeastProperties {
 
       /* Kafka topic to receive acknowledgment from ingestion job on successful processing of new specs */
       @NotBlank private String specsAckTopic = "feast-feature-set-specs-ack";
+
+      /* Notify jobs interval in millisecond.
+      How frequently Feast will check on Pending FeatureSets and publish them to kafka. */
+      @Positive private long notifyIntervalMilliseconds;
     }
   }
 
@@ -249,6 +270,44 @@ public class FeastProperties {
                 + ". Make sure it is a valid IP address or DNS hostname e.g. localhost or 10.128.10.40. Error detail: "
                 + e.getMessage());
       }
+    }
+  }
+
+  @Getter
+  @Setter
+  public static class SecurityProperties {
+
+    private AuthenticationProperties authentication;
+    private AuthorizationProperties authorization;
+
+    @Getter
+    @Setter
+    public static class AuthenticationProperties {
+
+      // Enable authentication
+      private boolean enabled;
+
+      // Named authentication provider to use
+      @OneOfStrings({"jwt"})
+      private String provider;
+
+      // K/V options to initialize the provider with
+      private Map<String, String> options;
+    }
+
+    @Getter
+    @Setter
+    public static class AuthorizationProperties {
+
+      // Enable authorization. Authentication must be enabled if authorization is enabled.
+      private boolean enabled;
+
+      // Named authorization provider to use.
+      @OneOfStrings({"none", "keto"})
+      private String provider;
+
+      // K/V options to initialize the provider with
+      private Map<String, String> options;
     }
   }
 }

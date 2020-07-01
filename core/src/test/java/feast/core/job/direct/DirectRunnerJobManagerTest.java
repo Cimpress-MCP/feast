@@ -16,7 +16,7 @@
  */
 package feast.core.job.direct;
 
-import static feast.core.util.ModelHelpers.makeFeatureSetJobStatus;
+import static feast.core.util.TestUtil.makeFeatureSetJobStatus;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.protobuf.Duration;
 import com.google.protobuf.util.JsonFormat;
@@ -132,7 +133,7 @@ public class DirectRunnerJobManagerTest {
     expectedPipelineOptions.setRunner(DirectRunner.class);
     expectedPipelineOptions.setBlockOnRun(false);
     expectedPipelineOptions.setTargetParallelism(1);
-    expectedPipelineOptions.setStoreJson(Lists.newArrayList(printer.print(store)));
+    expectedPipelineOptions.setStoresJson(Lists.newArrayList(printer.print(store)));
     expectedPipelineOptions.setProject("");
     expectedPipelineOptions.setSourceJson(printer.print(source));
 
@@ -144,17 +145,20 @@ public class DirectRunnerJobManagerTest {
     doReturn(mockPipelineResult).when(drJobManager).runPipeline(any());
 
     Job job =
-        new Job(
-            expectedJobId,
-            "",
-            Runner.DIRECT,
-            Source.fromProto(source),
-            Store.fromProto(store),
-            makeFeatureSetJobStatus(FeatureSet.fromProto(featureSet)),
-            JobStatus.PENDING);
+        Job.builder()
+            .setId(expectedJobId)
+            .setExtId("")
+            .setRunner(Runner.DIRECT)
+            .setSource(Source.fromProto(source))
+            .setFeatureSetJobStatuses(makeFeatureSetJobStatus(FeatureSet.fromProto(featureSet)))
+            .setStatus(JobStatus.PENDING)
+            .build();
+    job.setStores(ImmutableSet.of(Store.fromProto(store)));
     Job actual = drJobManager.startJob(job);
+
     verify(drJobManager, times(1)).runPipeline(pipelineOptionsCaptor.capture());
     verify(directJobRegistry, times(1)).add(directJobCaptor.capture());
+    assertThat(actual.getStatus(), equalTo(JobStatus.RUNNING));
 
     ImportOptions actualPipelineOptions = pipelineOptionsCaptor.getValue();
     DirectJob jobStarted = directJobCaptor.getValue();
@@ -170,7 +174,7 @@ public class DirectRunnerJobManagerTest {
         actualPipelineOptions.getMetricsExporterType(),
         equalTo(expectedPipelineOptions.getMetricsExporterType()));
     assertThat(
-        actualPipelineOptions.getStoreJson(), equalTo(expectedPipelineOptions.getStoreJson()));
+        actualPipelineOptions.getStoresJson(), equalTo(expectedPipelineOptions.getStoresJson()));
     assertThat(
         actualPipelineOptions.getSourceJson(), equalTo(expectedPipelineOptions.getSourceJson()));
     assertThat(
@@ -184,10 +188,19 @@ public class DirectRunnerJobManagerTest {
 
   @Test
   public void shouldAbortJobThenRemoveFromRegistry() throws IOException {
-    DirectJob job = Mockito.mock(DirectJob.class);
-    when(directJobRegistry.get("job")).thenReturn(job);
-    drJobManager.abortJob("job");
-    verify(job, times(1)).abort();
-    verify(directJobRegistry, times(1)).remove("job");
+    Job job =
+        Job.builder()
+            .setId("id")
+            .setExtId("ext1")
+            .setRunner(Runner.DIRECT)
+            .setStatus(JobStatus.RUNNING)
+            .build();
+
+    DirectJob directJob = Mockito.mock(DirectJob.class);
+    when(directJobRegistry.get("ext1")).thenReturn(directJob);
+    job = drJobManager.abortJob(job);
+    verify(directJob, times(1)).abort();
+    verify(directJobRegistry, times(1)).remove("ext1");
+    assertThat(job.getStatus(), equalTo(JobStatus.ABORTING));
   }
 }

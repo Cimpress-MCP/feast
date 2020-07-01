@@ -1,27 +1,30 @@
+import os
+import time
+import uuid
+from datetime import datetime, timedelta
+
 import pandas as pd
 import pytest
 import pytz
-import uuid
-import time
-import os
-from datetime import datetime, timedelta
+import tensorflow_data_validation as tfdv
+from bq.testutils import (
+    assert_stats_equal,
+    clear_unsupported_agg_fields,
+    clear_unsupported_fields,
+)
+from google.protobuf.duration_pb2 import Duration
 
 from feast.client import Client
 from feast.entity import Entity
 from feast.feature import Feature
 from feast.feature_set import FeatureSet
 from feast.type_map import ValueType
-from google.protobuf.duration_pb2 import Duration
-import tensorflow_data_validation as tfdv
-from deepdiff import DeepDiff
-from google.protobuf.json_format import MessageToDict
-
 
 pd.set_option("display.max_columns", None)
 
 PROJECT_NAME = "batch_" + uuid.uuid4().hex.upper()[0:6]
 STORE_NAME = "historical"
-os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 @pytest.fixture(scope="module")
@@ -49,6 +52,7 @@ def client(core_url, allow_dirty):
     # Get client for core and serving
     client = Client(core_url=core_url)
     client.create_project(PROJECT_NAME)
+    client.set_project(PROJECT_NAME)
 
     # Ensure Feast core is active, but empty
     if not allow_dirty:
@@ -80,16 +84,16 @@ def feature_stats_feature_set(client):
 @pytest.fixture(scope="module")
 def feature_stats_dataset_basic(client, feature_stats_feature_set):
 
-    N_ROWS = 20
+    n_rows = 20
 
     time_offset = datetime.utcnow().replace(tzinfo=pytz.utc)
     df = pd.DataFrame(
         {
-            "datetime": [time_offset] * N_ROWS,
-            "entity_id": [i for i in range(N_ROWS)],
-            "strings": ["a", "b"] * int(N_ROWS / 2),
-            "ints": [int(i) for i in range(N_ROWS)],
-            "floats": [10.5 - i for i in range(N_ROWS)],
+            "datetime": [time_offset] * n_rows,
+            "entity_id": [i for i in range(n_rows)],
+            "strings": ["a", "b"] * int(n_rows / 2),
+            "ints": [int(i) for i in range(n_rows)],
+            "floats": [10.5 - i for i in range(n_rows)],
         }
     )
 
@@ -102,7 +106,7 @@ def feature_stats_dataset_basic(client, feature_stats_feature_set):
     for feature in expected_stats.datasets[0].features:
         if feature.HasField("num_stats"):
             name = feature.path.step[0]
-            std = combined_df[name].std()
+            std = df[name].std()
             feature.num_stats.std_dev = std
 
     ingestion_id = client.ingest(feature_stats_feature_set, df)
@@ -170,7 +174,7 @@ def feature_stats_dataset_agg(client, feature_stats_feature_set):
 
 def test_feature_stats_retrieval_by_single_dataset(client, feature_stats_dataset_basic):
     stats = client.get_statistics(
-        f"feature_stats",
+        "feature_stats",
         features=["strings", "ints", "floats"],
         store=STORE_NAME,
         ingestion_ids=[feature_stats_dataset_basic["id"]],
@@ -250,55 +254,3 @@ def test_feature_stats_force_refresh(
             feature.num_stats.std_dev = std
 
     assert_stats_equal(expected_stats, actual_stats)
-
-
-def clear_unsupported_fields(datasets):
-    dataset = datasets.datasets[0]
-    for feature in dataset.features:
-        if feature.HasField("num_stats"):
-            feature.num_stats.common_stats.ClearField("num_values_histogram")
-            for hist in feature.num_stats.histograms:
-                sorted_buckets = sorted(hist.buckets, key=lambda k: k["highValue"])
-                del hist.buckets[:]
-                hist.buckets.extend(sorted_buckets)
-        elif feature.HasField("string_stats"):
-            feature.string_stats.common_stats.ClearField("num_values_histogram")
-            for bucket in feature.string_stats.rank_histogram.buckets:
-                bucket.ClearField("low_rank")
-                bucket.ClearField("high_rank")
-        elif feature.HasField("struct_stats"):
-            feature.string_stats.struct_stats.ClearField("num_values_histogram")
-        elif feature.HasField("bytes_stats"):
-            feature.string_stats.bytes_stats.ClearField("num_values_histogram")
-
-
-def clear_unsupported_agg_fields(datasets):
-    dataset = datasets.datasets[0]
-    for feature in dataset.features:
-        if feature.HasField("num_stats"):
-            feature.num_stats.common_stats.ClearField("num_values_histogram")
-            feature.num_stats.ClearField("histograms")
-            feature.num_stats.ClearField("median")
-        elif feature.HasField("string_stats"):
-            feature.string_stats.common_stats.ClearField("num_values_histogram")
-            feature.string_stats.ClearField("rank_histogram")
-            feature.string_stats.ClearField("top_values")
-            feature.string_stats.ClearField("unique")
-        elif feature.HasField("struct_stats"):
-            feature.struct_stats.ClearField("num_values_histogram")
-        elif feature.HasField("bytes_stats"):
-            feature.bytes_stats.ClearField("num_values_histogram")
-            feature.bytes_stats.ClearField("unique")
-
-
-def assert_stats_equal(left, right):
-    left_stats = MessageToDict(left)["datasets"][0]
-    right_stats = MessageToDict(right)["datasets"][0]
-    assert (
-        left_stats["numExamples"] == right_stats["numExamples"]
-    ), f"Number of examples do not match. Expected {left_stats['numExamples']}, got {right_stats['numExamples']}"
-
-    left_features = sorted(left_stats["features"], key=lambda k: k["path"]["step"][0])
-    right_features = sorted(right_stats["features"], key=lambda k: k["path"]["step"][0])
-    diff = DeepDiff(left_features, right_features, significant_digits=4)
-    assert len(diff) == 0, f"Feature statistics do not match: \nwanted: {left_features}\n got: {right_features}"

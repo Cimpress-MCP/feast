@@ -18,18 +18,28 @@ package feast.core.dao;
 
 import feast.core.model.FeatureSetJobStatus;
 import feast.core.model.Job;
+import feast.core.model.JobStatus;
+import feast.proto.core.SourceProto;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 /** JPA repository supplying Job objects keyed by ID. */
 @Repository
 public interface JobRepository extends JpaRepository<Job, String> {
-  List<Job> findBySourceIdAndStoreNameOrderByLastUpdatedDesc(String sourceId, String storeName);
+  Optional<Job>
+      findFirstBySourceTypeAndSourceConfigAndStoreNameAndStatusNotInOrderByLastUpdatedDesc(
+          SourceProto.SourceType sourceType,
+          String sourceConfig,
+          String storeName,
+          Collection<JobStatus> statuses);
 
-  // find jobs by feast store name
-  List<Job> findByStoreName(String storeName);
+  List<Job> findByStatus(JobStatus status);
 
-  // find jobs by featureset
   List<Job> findByFeatureSetJobStatusesIn(List<FeatureSetJobStatus> featureSetsJobStatuses);
+
+  // find jobs that have at least one store with given name
+  List<Job> findByJobStoresIdStoreName(String storeName);
 }

@@ -35,6 +35,7 @@
 ## Administration
 
 * [Troubleshooting](administration/troubleshooting.md)
+* [Upgrading Feast](administration/upgrading.md)
 
 ## Reference
 
@@ -46,6 +47,8 @@
   * [Go SDK](https://godoc.org/github.com/feast-dev/feast/sdk/go)
   * [Java SDK](https://javadoc.io/doc/dev.feast/feast-sdk)
   * [Python SDK](https://api.docs.feast.dev/python/)
+* [Limitations](reference/limitations.md)
+* [Design Decisions](reference/design-decisions.md)
 
 ## Contributing
 

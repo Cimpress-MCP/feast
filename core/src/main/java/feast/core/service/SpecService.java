@@ -16,7 +16,6 @@
  */
 package feast.core.service;
 
-import static feast.core.model.FeatureSet.parseReference;
 import static feast.core.validators.Matchers.checkValidCharacters;
 import static feast.core.validators.Matchers.checkValidCharactersAllowAsterisk;
 
@@ -33,6 +32,8 @@ import feast.proto.core.CoreServiceProto.GetFeatureSetRequest;
 import feast.proto.core.CoreServiceProto.GetFeatureSetResponse;
 import feast.proto.core.CoreServiceProto.ListFeatureSetsRequest;
 import feast.proto.core.CoreServiceProto.ListFeatureSetsResponse;
+import feast.proto.core.CoreServiceProto.ListFeaturesRequest;
+import feast.proto.core.CoreServiceProto.ListFeaturesResponse;
 import feast.proto.core.CoreServiceProto.ListStoresRequest;
 import feast.proto.core.CoreServiceProto.ListStoresResponse;
 import feast.proto.core.CoreServiceProto.ListStoresResponse.Builder;
@@ -40,21 +41,15 @@ import feast.proto.core.CoreServiceProto.UpdateStoreRequest;
 import feast.proto.core.CoreServiceProto.UpdateStoreResponse;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.FeatureSetProto.FeatureSetStatus;
-import feast.proto.core.IngestionJobProto;
 import feast.proto.core.SourceProto;
 import feast.proto.core.StoreProto;
 import feast.proto.core.StoreProto.Store.Subscription;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.util.Pair;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -66,26 +61,21 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SpecService {
 
-  private final int SPEC_PUBLISHING_TIMEOUT_SECONDS = 5;
-
   private final FeatureSetRepository featureSetRepository;
   private final ProjectRepository projectRepository;
   private final StoreRepository storeRepository;
   private final Source defaultSource;
-  private final KafkaTemplate<String, FeatureSetProto.FeatureSetSpec> specPublisher;
 
   @Autowired
   public SpecService(
       FeatureSetRepository featureSetRepository,
       StoreRepository storeRepository,
       ProjectRepository projectRepository,
-      Source defaultSource,
-      KafkaTemplate<String, FeatureSetProto.FeatureSetSpec> specPublisher) {
+      Source defaultSource) {
     this.featureSetRepository = featureSetRepository;
     this.storeRepository = storeRepository;
     this.projectRepository = projectRepository;
     this.defaultSource = defaultSource;
-    this.specPublisher = specPublisher;
   }
 
   /**
@@ -216,6 +206,65 @@ public class SpecService {
   }
 
   /**
+   * Return a map of feature references and features matching the project, labels and entities
+   * provided in the filter. All fields are required.
+   *
+   * <p>Project name must be explicitly provided or if the project name is omitted, the default
+   * project would be used. A combination of asterisks/wildcards and text is not allowed.
+   *
+   * <p>The entities in the filter accepts a list. All matching features will be returned. Regex is
+   * not supported. If no entities are provided, features will not be filtered by entities.
+   *
+   * <p>The labels in the filter accepts a map. All matching features will be returned. Regex is not
+   * supported. If no labels are provided, features will not be filtered by labels.
+   *
+   * @param filter filter containing the desired project name, entities and labels
+   * @return ListEntitiesResponse with map of feature references and features found matching the
+   *     filter
+   */
+  public ListFeaturesResponse listFeatures(ListFeaturesRequest.Filter filter) {
+    try {
+      String project = filter.getProject();
+      List<String> entities = filter.getEntitiesList();
+      Map<String, String> labels = filter.getLabelsMap();
+
+      checkValidCharactersAllowAsterisk(project, "projectName");
+
+      // Autofill default project if project not specified
+      if (project.isEmpty()) {
+        project = Project.DEFAULT_NAME;
+      }
+
+      // Currently defaults to all FeatureSets
+      List<FeatureSet> featureSets =
+          featureSetRepository.findAllByNameLikeAndProject_NameOrderByNameAsc("%", project);
+
+      ListFeaturesResponse.Builder response = ListFeaturesResponse.newBuilder();
+      if (entities.size() > 0) {
+        featureSets =
+            featureSets.stream()
+                .filter(featureSet -> featureSet.hasAllEntities(entities))
+                .collect(Collectors.toList());
+      }
+
+      Map<String, Feature> featuresMap;
+      for (FeatureSet featureSet : featureSets) {
+        featuresMap = featureSet.getFeaturesByRef(labels);
+        for (Map.Entry<String, Feature> entry : featuresMap.entrySet()) {
+          response.putFeatures(entry.getKey(), entry.getValue().toProto());
+        }
+      }
+
+      return response.build();
+    } catch (InvalidProtocolBufferException e) {
+      throw io.grpc.Status.NOT_FOUND
+          .withDescription("Unable to retrieve features")
+          .withCause(e)
+          .asRuntimeException();
+    }
+  }
+
+  /**
    * Get stores matching the store name provided in the filter. If the store name is not provided,
    * the method will return all stores currently registered to Feast.
    *
@@ -242,6 +291,7 @@ public class SpecService {
                           String.format("Store with name '%s' not found", name)));
       return ListStoresResponse.newBuilder().addStore(store.toProto()).build();
     } catch (InvalidProtocolBufferException e) {
+
       throw io.grpc.Status.NOT_FOUND
           .withDescription("Unable to retrieve stores")
           .withCause(e)
@@ -321,37 +371,6 @@ public class SpecService {
 
     featureSet.incVersion();
 
-    // Sending latest version of FeatureSet to all currently running IngestionJobs (there's one
-    // topic for all sets).
-    // All related jobs would apply new FeatureSet on the fly.
-    // We wait for Kafka broker to ack that the message was added to topic before actually
-    // committing this FeatureSet.
-    // In case kafka doesn't respond within SPEC_PUBLISHING_TIMEOUT_SECONDS we abort current
-    // transaction and return error to client.
-    try {
-      specPublisher
-          .sendDefault(featureSet.getReference(), featureSet.toProto().getSpec())
-          .get(SPEC_PUBLISHING_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-    } catch (Exception e) {
-      throw io.grpc.Status.UNAVAILABLE
-          .withDescription(
-              String.format(
-                  "Unable to publish FeatureSet to Kafka. Cause: %s",
-                  e.getCause() != null ? e.getCause().getMessage() : "unknown"))
-          .withCause(e)
-          .asRuntimeException();
-    }
-
-    // Updating delivery status for related jobs (that are currently using this FeatureSet).
-    // We now set status to IN_PROGRESS, so listenAckFromJobs would be able to
-    // monitor delivery progress for each new version.
-    featureSet.getJobStatuses().stream()
-        .filter(s -> s.getJob().isRunning())
-        .forEach(
-            s ->
-                s.setDeliveryStatus(
-                    FeatureSetProto.FeatureSetJobDeliveryStatus.STATUS_IN_PROGRESS));
-
     // Persist the FeatureSet object
     featureSet.setStatus(FeatureSetStatus.STATUS_PENDING);
     project.addFeatureSet(featureSet);
@@ -399,61 +418,5 @@ public class SpecService {
         .setStatus(UpdateStoreResponse.Status.UPDATED)
         .setStore(updateStoreRequest.getStore())
         .build();
-  }
-
-  /**
-   * Listener for ACK messages coming from IngestionJob when FeatureSetSpec is installed (in
-   * pipeline).
-   *
-   * <p>Updates FeatureSetJobStatus for respected FeatureSet (selected by reference) and Job (select
-   * by Id).
-   *
-   * <p>When all related (running) to FeatureSet jobs are updated - FeatureSet receives READY status
-   *
-   * @param record ConsumerRecord with key: FeatureSet reference and value: Ack message
-   */
-  @KafkaListener(topics = {"${feast.stream.specsOptions.specsAckTopic}"})
-  @Transactional
-  public void listenAckFromJobs(
-      ConsumerRecord<String, IngestionJobProto.FeatureSetSpecAck> record) {
-    String setReference = record.key();
-    Pair<String, String> projectAndSetName = parseReference(setReference);
-    FeatureSet featureSet =
-        featureSetRepository.findFeatureSetByNameAndProject_Name(
-            projectAndSetName.getSecond(), projectAndSetName.getFirst());
-    if (featureSet == null) {
-      log.warn(
-          String.format("ACKListener received message for unknown FeatureSet %s", setReference));
-      return;
-    }
-
-    if (featureSet.getVersion() != record.value().getFeatureSetVersion()) {
-      log.warn(
-          String.format(
-              "ACKListener received outdated ack for %s. Current %d, Received %d",
-              setReference, featureSet.getVersion(), record.value().getFeatureSetVersion()));
-      return;
-    }
-
-    featureSet.getJobStatuses().stream()
-        .filter(js -> js.getJob().getId().equals(record.value().getJobName()))
-        .findFirst()
-        .ifPresent(
-            featureSetJobStatus ->
-                featureSetJobStatus.setDeliveryStatus(
-                    FeatureSetProto.FeatureSetJobDeliveryStatus.STATUS_DELIVERED));
-
-    boolean allDelivered =
-        featureSet.getJobStatuses().stream()
-            .filter(js -> js.getJob().isRunning())
-            .allMatch(
-                js ->
-                    js.getDeliveryStatus()
-                        .equals(FeatureSetProto.FeatureSetJobDeliveryStatus.STATUS_DELIVERED));
-
-    if (allDelivered) {
-      featureSet.setStatus(FeatureSetStatus.STATUS_READY);
-      featureSetRepository.saveAndFlush(featureSet);
-    }
   }
 }

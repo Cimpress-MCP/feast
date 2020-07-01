@@ -3,14 +3,20 @@ import os
 import random
 import time
 import uuid
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from urllib.parse import urlparse
 
 import numpy as np
 import pandas as pd
 import pytest
 import pytz
+import tensorflow_data_validation as tfdv
+from bq.testutils import assert_stats_equal, clear_unsupported_fields
+from google.cloud import bigquery, storage
+from google.cloud.storage import Blob
+from google.protobuf.duration_pb2 import Duration
+from pandavro import to_avro
+
 from feast.client import Client
 from feast.core.CoreService_pb2 import ListStoresRequest
 from feast.core.IngestionJob_pb2 import IngestionJobStatus
@@ -18,14 +24,11 @@ from feast.entity import Entity
 from feast.feature import Feature
 from feast.feature_set import FeatureSet
 from feast.type_map import ValueType
-from google.cloud import storage, bigquery
-from google.cloud.storage import Blob
-from google.protobuf.duration_pb2 import Duration
-from pandavro import to_avro
 
 pd.set_option("display.max_columns", None)
 
 PROJECT_NAME = "batch_" + uuid.uuid4().hex.upper()[0:6]
+
 
 @pytest.fixture(scope="module")
 def core_url(pytestconfig):
@@ -52,6 +55,7 @@ def client(core_url, serving_url, allow_dirty):
     # Get client for core and serving
     client = Client(core_url=core_url, serving_url=serving_url)
     client.create_project(PROJECT_NAME)
+    client.set_project(PROJECT_NAME)
 
     # Ensure Feast core is active, but empty
     if not allow_dirty:
@@ -66,7 +70,7 @@ def client(core_url, serving_url, allow_dirty):
 
 def wait_for(fn, timeout: timedelta, sleep=5):
     until = datetime.now() + timeout
-    last_exc = None
+    last_exc = BaseException()
 
     while datetime.now() <= until:
         try:
@@ -155,7 +159,7 @@ def test_batch_apply_all_featuresets(client):
 @pytest.mark.direct_runner
 @pytest.mark.dataflow_runner
 @pytest.mark.run(order=10)
-def test_batch_get_batch_features_with_file(client):
+def test_batch_get_historical_features_with_file(client):
     file_fs1 = client.get_feature_set(name="file_feature_set")
 
     N_ROWS = 10
@@ -176,7 +180,9 @@ def test_batch_get_batch_features_with_file(client):
     client.ingest(file_fs1, features_1_df, timeout=480)
 
     # Rename column (datetime -> event_timestamp)
-    features_1_df['datetime'] + pd.Timedelta(seconds=1)  # adds buffer to avoid rounding errors
+    features_1_df["datetime"] + pd.Timedelta(
+        seconds=1
+    )  # adds buffer to avoid rounding errors
     features_1_df = features_1_df.rename(columns={"datetime": "event_timestamp"})
 
     to_avro(
@@ -187,7 +193,7 @@ def test_batch_get_batch_features_with_file(client):
     time.sleep(10)
 
     def check():
-        feature_retrieval_job = client.get_batch_features(
+        feature_retrieval_job = client.get_historical_features(
             entity_rows="file://file_feature_set.avro",
             feature_refs=["feature_value1"],
             project=PROJECT_NAME,
@@ -207,7 +213,7 @@ def test_batch_get_batch_features_with_file(client):
 @pytest.mark.direct_runner
 @pytest.mark.dataflow_runner
 @pytest.mark.run(order=11)
-def test_batch_get_batch_features_with_gs_path(client, gcs_path):
+def test_batch_get_historical_features_with_gs_path(client, gcs_path):
     gcs_fs1 = client.get_feature_set(name="gcs_feature_set")
 
     N_ROWS = 10
@@ -222,7 +228,9 @@ def test_batch_get_batch_features_with_gs_path(client, gcs_path):
     client.ingest(gcs_fs1, features_1_df, timeout=360)
 
     # Rename column (datetime -> event_timestamp)
-    features_1_df['datetime'] + pd.Timedelta(seconds=1)  # adds buffer to avoid rounding errors
+    features_1_df["datetime"] + pd.Timedelta(
+        seconds=1
+    )  # adds buffer to avoid rounding errors
     features_1_df = features_1_df.rename(columns={"datetime": "event_timestamp"})
 
     # Output file to local
@@ -244,7 +252,7 @@ def test_batch_get_batch_features_with_gs_path(client, gcs_path):
     blob.upload_from_filename(file_name)
 
     def check():
-        feature_retrieval_job = client.get_batch_features(
+        feature_retrieval_job = client.get_historical_features(
             entity_rows=f"{gcs_path}{ts}/*",
             feature_refs=["feature_value2"],
             project=PROJECT_NAME,
@@ -288,7 +296,7 @@ def test_batch_order_by_creation_time(client):
     client.ingest(proc_time_fs, correct_df)
 
     def check():
-        feature_retrieval_job = client.get_batch_features(
+        feature_retrieval_job = client.get_historical_features(
             entity_rows=incorrect_df[["datetime", "entity_id"]],
             feature_refs=["feature_value3"],
             project=PROJECT_NAME,
@@ -329,12 +337,14 @@ def test_batch_additional_columns_in_entity_table(client):
     )
 
     def check():
-        feature_retrieval_job = client.get_batch_features(
+        feature_retrieval_job = client.get_historical_features(
             entity_rows=entity_df,
             feature_refs=["feature_value4"],
             project=PROJECT_NAME,
         )
-        output = feature_retrieval_job.to_dataframe(timeout_sec=180).sort_values(by=["entity_id"])
+        output = feature_retrieval_job.to_dataframe(timeout_sec=180).sort_values(
+            by=["entity_id"]
+        )
         print(output.head(10))
 
         assert np.allclose(
@@ -344,7 +354,10 @@ def test_batch_additional_columns_in_entity_table(client):
             output["additional_string_col"].to_list()
             == entity_df["additional_string_col"].to_list()
         )
-        assert output["feature_value4"].to_list() == features_df["feature_value4"].to_list()
+        assert (
+            output["feature_value4"].to_list()
+            == features_df["feature_value4"].to_list()
+        )
         clean_up_remote_files(feature_retrieval_job.get_avro_files())
 
     wait_for(check, timedelta(minutes=5))
@@ -379,7 +392,7 @@ def test_batch_point_in_time_correctness_join(client):
     client.ingest(historical_fs, historical_df)
 
     def check():
-        feature_retrieval_job = client.get_batch_features(
+        feature_retrieval_job = client.get_historical_features(
             entity_rows=entity_df,
             feature_refs=["feature_value5"],
             project=PROJECT_NAME,
@@ -430,12 +443,9 @@ def test_batch_multiple_featureset_joins(client):
     # Test retrieve with different variations of the string feature refs
     # ie feature set inference for feature refs without specified feature set
     def check():
-        feature_retrieval_job = client.get_batch_features(
+        feature_retrieval_job = client.get_historical_features(
             entity_rows=entity_df,
-            feature_refs=[
-                "feature_value6",
-                "feature_set_2:other_feature_value7",
-            ],
+            feature_refs=["feature_value6", "feature_set_2:other_feature_value7"],
             project=PROJECT_NAME,
         )
         output = feature_retrieval_job.to_dataframe(timeout_sec=180)
@@ -445,7 +455,8 @@ def test_batch_multiple_featureset_joins(client):
             int(i) for i in output["feature_value6"].to_list()
         ]
         assert (
-            output["other_entity_id"].to_list() == output["feature_set_2__other_feature_value7"].to_list()
+            output["other_entity_id"].to_list()
+            == output["feature_set_2__other_feature_value7"].to_list()
         )
         clean_up_remote_files(feature_retrieval_job.get_avro_files())
 
@@ -469,7 +480,7 @@ def test_batch_no_max_age(client):
     client.ingest(no_max_age_fs, features_8_df)
 
     def check():
-        feature_retrieval_job = client.get_batch_features(
+        feature_retrieval_job = client.get_historical_features(
             entity_rows=features_8_df[["datetime", "entity_id"]],
             feature_refs=["feature_value8"],
             project=PROJECT_NAME,
@@ -508,16 +519,16 @@ def infra_teardown(pytestconfig, core_url, serving_url):
         print("Cleaning up not required")
 
 
-
-'''
-This suite of tests tests the apply feature set - update feature set - retrieve  
-event sequence. It ensures that when a feature set is updated, tombstoned features 
+"""
+This suite of tests tests the apply feature set - update feature set - retrieve
+event sequence. It ensures that when a feature set is updated, tombstoned features
 are no longer retrieved, and added features are null for previously ingested
 rows.
 
 It is marked separately because of the length of time required
 to perform this test, due to bigquery schema caching for streaming writes.
-'''
+"""
+
 
 @pytest.fixture(scope="module")
 def update_featureset_dataframe():
@@ -553,20 +564,25 @@ def test_update_featureset_apply_featureset_and_ingest_first_subset(
     client.ingest(feature_set=update_fs, source=subset_df)
 
     def check():
-        feature_retrieval_job = client.get_batch_features(
+        feature_retrieval_job = client.get_historical_features(
             entity_rows=update_featureset_dataframe[["datetime", "entity_id"]].iloc[:5],
-            feature_refs=[
-                "update_feature1",
-                "update_feature2",
-            ],
-            project=PROJECT_NAME
+            feature_refs=["update_feature1", "update_feature2"],
+            project=PROJECT_NAME,
         )
 
-        output = feature_retrieval_job.to_dataframe(timeout_sec=180).sort_values(by=["entity_id"])
+        output = feature_retrieval_job.to_dataframe(timeout_sec=180).sort_values(
+            by=["entity_id"]
+        )
         print(output.head())
 
-        assert output["update_feature1"].to_list() == subset_df["update_feature1"].to_list()
-        assert output["update_feature2"].to_list() == subset_df["update_feature2"].to_list()
+        assert (
+            output["update_feature1"].to_list()
+            == subset_df["update_feature1"].to_list()
+        )
+        assert (
+            output["update_feature2"].to_list()
+            == subset_df["update_feature2"].to_list()
+        )
 
         clean_up_remote_files(feature_retrieval_job.get_avro_files())
 
@@ -611,22 +627,29 @@ def test_update_featureset_update_featureset_and_ingest_second_subset(
         time.sleep(30)
 
     def check():
-        feature_retrieval_job = client.get_batch_features(
+        feature_retrieval_job = client.get_historical_features(
             entity_rows=update_featureset_dataframe[["datetime", "entity_id"]].iloc[5:],
-            feature_refs=[
-                "update_feature1",
-                "update_feature3",
-                "update_feature4",
-            ],
+            feature_refs=["update_feature1", "update_feature3", "update_feature4"],
             project=PROJECT_NAME,
         )
 
-        output = feature_retrieval_job.to_dataframe(timeout_sec=180).sort_values(by=["entity_id"])
+        output = feature_retrieval_job.to_dataframe(timeout_sec=180).sort_values(
+            by=["entity_id"]
+        )
         print(output.head())
 
-        assert output["update_feature1"].to_list() == subset_df["update_feature1"].to_list()
-        assert output["update_feature3"].to_list() == subset_df["update_feature3"].to_list()
-        assert output["update_feature4"].to_list() == subset_df["update_feature4"].to_list()
+        assert (
+            output["update_feature1"].to_list()
+            == subset_df["update_feature1"].to_list()
+        )
+        assert (
+            output["update_feature3"].to_list()
+            == subset_df["update_feature3"].to_list()
+        )
+        assert (
+            output["update_feature4"].to_list()
+            == subset_df["update_feature4"].to_list()
+        )
         clean_up_remote_files(feature_retrieval_job.get_avro_files())
 
     wait_for(check, timedelta(minutes=5))
@@ -636,7 +659,7 @@ def test_update_featureset_update_featureset_and_ingest_second_subset(
 @pytest.mark.run(order=22)
 def test_update_featureset_retrieve_all_fields(client, update_featureset_dataframe):
     with pytest.raises(Exception):
-        feature_retrieval_job = client.get_batch_features(
+        feature_retrieval_job = client.get_historical_features(
             entity_rows=update_featureset_dataframe[["datetime", "entity_id"]],
             feature_refs=[
                 "update_feature1",
@@ -652,16 +675,14 @@ def test_update_featureset_retrieve_all_fields(client, update_featureset_datafra
 @pytest.mark.fs_update
 @pytest.mark.run(order=23)
 def test_update_featureset_retrieve_valid_fields(client, update_featureset_dataframe):
-    feature_retrieval_job = client.get_batch_features(
+    feature_retrieval_job = client.get_historical_features(
         entity_rows=update_featureset_dataframe[["datetime", "entity_id"]],
-        feature_refs=[
-            "update_feature1",
-            "update_feature3",
-            "update_feature4",
-        ],
+        feature_refs=["update_feature1", "update_feature3", "update_feature4"],
         project=PROJECT_NAME,
     )
-    output = feature_retrieval_job.to_dataframe(timeout_sec=180).sort_values(by=["entity_id"])
+    output = feature_retrieval_job.to_dataframe(timeout_sec=180).sort_values(
+        by=["entity_id"]
+    )
     clean_up_remote_files(feature_retrieval_job.get_avro_files())
     print(output.head(10))
     assert (
@@ -681,10 +702,86 @@ def test_update_featureset_retrieve_valid_fields(client, update_featureset_dataf
     )
 
 
+@pytest.mark.direct_runner
+@pytest.mark.run(order=31)
+@pytest.mark.timeout(600)
+def test_batch_dataset_statistics(client):
+    fs1 = client.get_feature_set(name="feature_set_1")
+    fs2 = client.get_feature_set(name="feature_set_2")
+    id_offset = 20
+
+    n_rows = 21
+    time_offset = datetime.utcnow().replace(tzinfo=pytz.utc)
+    features_1_df = pd.DataFrame(
+        {
+            "datetime": [time_offset] * n_rows,
+            "entity_id": [id_offset + i for i in range(n_rows)],
+            "feature_value6": ["a" for i in range(n_rows)],
+        }
+    )
+    ingestion_id1 = client.ingest(fs1, features_1_df)
+
+    features_2_df = pd.DataFrame(
+        {
+            "datetime": [time_offset] * n_rows,
+            "other_entity_id": [id_offset + i for i in range(n_rows)],
+            "other_feature_value7": [int(i) % 10 for i in range(0, n_rows)],
+        }
+    )
+    ingestion_id2 = client.ingest(fs2, features_2_df)
+
+    entity_df = pd.DataFrame(
+        {
+            "datetime": [time_offset] * n_rows,
+            "entity_id": [id_offset + i for i in range(n_rows)],
+            "other_entity_id": [id_offset + i for i in range(n_rows)],
+        }
+    )
+
+    time.sleep(15)  # wait for rows to get written to bq
+    while True:
+        rows_ingested1 = get_rows_ingested(client, fs1, ingestion_id1)
+        rows_ingested2 = get_rows_ingested(client, fs2, ingestion_id2)
+        if rows_ingested1 == len(features_1_df) and rows_ingested2 == len(
+            features_2_df
+        ):
+            print(
+                f"Number of rows successfully ingested: {rows_ingested1}, {rows_ingested2}. Continuing."
+            )
+            break
+        time.sleep(30)
+
+    feature_retrieval_job = client.get_historical_features(
+        entity_rows=entity_df,
+        feature_refs=["feature_value6", "feature_set_2:other_feature_value7"],
+        project=PROJECT_NAME,
+        compute_statistics=True,
+    )
+    output = feature_retrieval_job.to_dataframe(timeout_sec=180)
+    print(output.head(10))
+    stats = feature_retrieval_job.statistics(timeout_sec=180)
+    clear_unsupported_fields(stats)
+
+    expected_stats = tfdv.generate_statistics_from_dataframe(
+        output[["feature_value6", "feature_set_2__other_feature_value7"]]
+    )
+    clear_unsupported_fields(expected_stats)
+
+    # Since TFDV computes population std dev
+    for feature in expected_stats.datasets[0].features:
+        if feature.HasField("num_stats"):
+            name = feature.path.step[0]
+            std = output[name].std()
+            feature.num_stats.std_dev = std
+
+    assert_stats_equal(expected_stats, stats)
+    clean_up_remote_files(feature_retrieval_job.get_avro_files())
+
+
 def get_rows_ingested(
     client: Client, feature_set: FeatureSet, ingestion_id: str
 ) -> int:
-    response = client._core_service_stub.ListStores(
+    response = client._core_service.ListStores(
         ListStoresRequest(filter=ListStoresRequest.Filter(name="historical"))
     )
     bq_config = response.store[0].bigquery_config
@@ -697,8 +794,7 @@ def get_rows_ingested(
         f'SELECT COUNT(*) as count FROM `{project}.{dataset}.{table}` WHERE ingestion_id = "{ingestion_id}"'
     ).result()
 
-    for row in rows:
-        return row["count"]
+    return list(rows)[0]["count"]
 
 
 def clean_up_remote_files(files):
@@ -707,4 +803,3 @@ def clean_up_remote_files(files):
         if file_uri.scheme == "gs":
             blob = Blob.from_string(file_uri.geturl(), client=storage_client)
             blob.delete()
-

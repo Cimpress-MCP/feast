@@ -29,8 +29,11 @@ import com.google.api.services.bigquery.model.JobConfigurationLoad;
 import com.google.api.services.bigquery.model.TableFieldSchema;
 import com.google.api.services.bigquery.model.TableReference;
 import com.google.cloud.bigquery.*;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import feast.common.models.FeatureSetReference;
 import feast.proto.core.FeatureSetProto.EntitySpec;
 import feast.proto.core.FeatureSetProto.FeatureSetSpec;
 import feast.proto.core.FeatureSetProto.FeatureSpec;
@@ -49,8 +52,8 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.apache.beam.sdk.coders.AvroCoder;
 import org.apache.beam.sdk.coders.KvCoder;
-import org.apache.beam.sdk.coders.StringUtf8Coder;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
 import org.apache.beam.sdk.io.gcp.bigquery.BatchLoadsWithResult;
 import org.apache.beam.sdk.io.gcp.testing.FakeBigQueryServices;
@@ -109,7 +112,6 @@ public class BigQuerySinkTest {
               .setType("STRING")
               .setDescription(BIGQUERY_JOB_ID_FIELD_DESCRIPTION));
   FeatureSetSpec spec;
-  FeatureSink defaultSink;
 
   public static PipelineOptions makePipelineOptions() {
     PipelineOptions options = TestPipeline.testingPipelineOptions();
@@ -121,7 +123,8 @@ public class BigQuerySinkTest {
     FeatureRow.Builder row =
         FeatureRow.newBuilder()
             .setFeatureSet(featureSet)
-            .addFields(field("entity", rd.nextInt(), ValueProto.ValueType.Enum.INT64));
+            .addFields(field("entity", rd.nextInt(), ValueProto.ValueType.Enum.INT64))
+            .addFields(FieldProto.Field.newBuilder().setName("null_value").build());
 
     for (ValueProto.ValueType.Enum type : ValueProto.ValueType.Enum.values()) {
       if (type == ValueProto.ValueType.Enum.INVALID
@@ -165,30 +168,23 @@ public class BigQuerySinkTest {
                     .setValueType(ValueProto.ValueType.Enum.STRING)
                     .build())
             .build();
-
-    defaultSink =
-        makeSink(
-            ValueProvider.StaticValueProvider.of(bigQuery),
-            p.apply(
-                "StaticSpecs",
-                Create.of(
-                    ImmutableMap.of(
-                        String.format("%s/%s", spec.getProject(), spec.getName()), spec))));
   }
 
   private FeatureSink makeSink(
-      ValueProvider<BigQuery> bq, PCollection<KV<String, FeatureSetSpec>> specs) {
-    return BigQueryFeatureSink.builder()
-        .setDatasetId("test_dataset")
-        .setProjectId("test-project")
-        .setFeatureSetSpecs(specs)
-        .setBQTestServices(
-            new FakeBigQueryServices()
-                .withJobService(jobService)
-                .withDatasetService(datasetService))
-        .setBQClient(bq)
-        .setTriggeringFrequency(Duration.standardSeconds(5))
-        .build();
+      ValueProvider<BigQuery> bq, PCollection<KV<FeatureSetReference, FeatureSetSpec>> specs) {
+    BigQueryFeatureSink sink =
+        BigQueryFeatureSink.builder()
+            .setDatasetId("test_dataset")
+            .setProjectId("test-project")
+            .setBQTestServices(
+                new FakeBigQueryServices()
+                    .withJobService(jobService)
+                    .withDatasetService(datasetService))
+            .setBQClient(bq)
+            .setTriggeringFrequency(Duration.standardSeconds(5))
+            .build();
+    sink.prepareWrite(specs);
+    return sink;
   }
 
   @Test
@@ -208,10 +204,12 @@ public class BigQuerySinkTest {
             p.apply(
                 Create.of(
                     ImmutableMap.of(
-                        String.format("%s/%s", spec.getProject(), spec.getName()), spec))));
+                        FeatureSetReference.of(spec.getProject(), spec.getName(), 1), spec))));
     PCollection<FeatureRow> successfulInserts =
         p.apply(featureRowTestStream).apply(sink.writer()).getSuccessfulInserts();
-    PAssert.that(successfulInserts).containsInAnyOrder(row1, row2);
+
+    List<FeatureRow> inputWithoutNulls = dropNullFeature(ImmutableList.of(row1, row2));
+    PAssert.that(successfulInserts).containsInAnyOrder(inputWithoutNulls);
     p.run();
 
     assert jobService.getAllJobs().size() == 1;
@@ -249,7 +247,16 @@ public class BigQuerySinkTest {
             .addElements(generateRow("myproject/fs"))
             .advanceWatermarkToInfinity();
 
-    p.apply(featureRowTestStream).apply(defaultSink.writer());
+    FeatureSink sink =
+        makeSink(
+            ValueProvider.StaticValueProvider.of(bigQuery),
+            p.apply(
+                "StaticSpecs",
+                Create.of(
+                    ImmutableMap.of(
+                        FeatureSetReference.of(spec.getProject(), spec.getName(), 1), spec))));
+
+    p.apply(featureRowTestStream).apply(sink.writer());
     p.run();
 
     assertThat(jobService.getAllJobs().size(), is(2));
@@ -272,12 +279,21 @@ public class BigQuerySinkTest {
 
     jobService.setNumFailuresExpected(3);
 
+    FeatureSink sink =
+        makeSink(
+            ValueProvider.StaticValueProvider.of(bigQuery),
+            p.apply(
+                "StaticSpecs",
+                Create.of(
+                    ImmutableMap.of(
+                        FeatureSetReference.of(spec.getProject(), spec.getName(), 1), spec))));
+
     PTransform<PCollection<FeatureRow>, WriteResult> writer =
-        ((BigQueryWrite) defaultSink.writer()).withExpectingResultTime(Duration.standardSeconds(5));
+        ((BigQueryWrite) sink.writer()).withExpectingResultTime(Duration.standardSeconds(5));
     PCollection<FeatureRow> inserts =
         p.apply(featureRowTestStream).apply(writer).getSuccessfulInserts();
 
-    PAssert.that(inserts).containsInAnyOrder(featureRow);
+    PAssert.that(inserts).containsInAnyOrder(dropNullFeature(ImmutableList.of(featureRow)));
 
     p.run();
   }
@@ -317,7 +333,7 @@ public class BigQuerySinkTest {
             p.apply(
                 Create.of(
                     ImmutableMap.of(
-                        String.format("%s/%s", spec_fs_2.getProject(), spec_fs_2.getName()),
+                        FeatureSetReference.of(spec_fs_2.getProject(), spec_fs_2.getName(), 1),
                         spec_fs_2))));
 
     TestStream<FeatureRow> featureRowTestStream =
@@ -367,13 +383,15 @@ public class BigQuerySinkTest {
                     .build())
             .build();
 
-    TestStream<KV<String, FeatureSetSpec>> specsStream =
-        TestStream.create(KvCoder.of(StringUtf8Coder.of(), ProtoCoder.of(FeatureSetSpec.class)))
+    TestStream<KV<FeatureSetReference, FeatureSetSpec>> specsStream =
+        TestStream.create(
+                KvCoder.of(
+                    AvroCoder.of(FeatureSetReference.class), ProtoCoder.of(FeatureSetSpec.class)))
             .advanceWatermarkTo(Instant.now())
-            .addElements(KV.of("myproject/fs", spec))
+            .addElements(KV.of(FeatureSetReference.of("myproject", "fs", 1), spec))
             .advanceProcessingTime(Duration.standardSeconds(5))
             // .advanceWatermarkTo(Instant.now().plus(Duration.standardSeconds(5)))
-            .addElements(KV.of("myproject/fs", spec_fs_2))
+            .addElements(KV.of(FeatureSetReference.of("myproject", "fs", 1), spec_fs_2))
             .advanceWatermarkToInfinity();
 
     FeatureSink sink =
@@ -381,7 +399,7 @@ public class BigQuerySinkTest {
             ValueProvider.StaticValueProvider.of(bigQuery),
             p.apply("SpecsInput", specsStream)
                 .apply(
-                    Window.<KV<String, FeatureSetSpec>>into(new GlobalWindows())
+                    Window.<KV<FeatureSetReference, FeatureSetSpec>>into(new GlobalWindows())
                         .triggering(Repeatedly.forever(AfterPane.elementCountAtLeast(1)))
                         .withAllowedLateness(Duration.millis(0))
                         .accumulatingFiredPanes()));
@@ -433,14 +451,58 @@ public class BigQuerySinkTest {
 
     List<FeatureRow> input = Stream.concat(stream1, stream2).collect(Collectors.toList());
 
+    FeatureRow rowWithNull =
+        FeatureRow.newBuilder()
+            .setFeatureSet("project/fs")
+            .addAllFields(copyFieldsWithout(generateRow(""), "entity"))
+            .addFields(FieldProto.Field.newBuilder().setName("entity").build())
+            .build();
+
+    List<FeatureRow> inputWithNulls = Lists.newArrayList(input);
+    inputWithNulls.add(rowWithNull);
+
     PCollection<FeatureRow> result =
-        p.apply(Create.of(input))
+        p.apply(Create.of(inputWithNulls))
             .apply("KV", ParDo.of(new ExtractKV()))
             .apply(new CompactFeatureRows(1000))
             .apply("Flat", ParDo.of(new FlatMap()));
 
-    PAssert.that(result).containsInAnyOrder(input);
+    List<FeatureRow> inputWithoutNulls = dropNullFeature(input);
+
+    inputWithoutNulls.add(
+        FeatureRow.newBuilder()
+            .setFeatureSet("project/fs")
+            .addFields(
+                FieldProto.Field.newBuilder()
+                    .setName("entity")
+                    .setValue(ValueProto.Value.newBuilder().setInt64Val(0L).build())
+                    .build())
+            .addAllFields(copyFieldsWithout(rowWithNull, "entity", "null_value"))
+            .build());
+
+    PAssert.that(result).containsInAnyOrder(inputWithoutNulls);
     p.run();
+  }
+
+  private List<FeatureRow> dropNullFeature(List<FeatureRow> input) {
+    return input.stream()
+        .map(
+            r ->
+                FeatureRow.newBuilder()
+                    .setFeatureSet(r.getFeatureSet())
+                    .addAllFields(
+                        r.getFieldsList().stream()
+                            .filter(f -> !f.getName().equals("null_value"))
+                            .collect(Collectors.toList()))
+                    .build())
+        .collect(Collectors.toList());
+  }
+
+  private List<FieldProto.Field> copyFieldsWithout(FeatureRow row, String... except) {
+    ArrayList<String> exclude = Lists.newArrayList(except);
+    return row.getFieldsList().stream()
+        .filter(f -> !exclude.contains(f.getName()))
+        .collect(Collectors.toList());
   }
 
   public static class TableAnswer implements Answer<Table>, Serializable {

@@ -16,6 +16,8 @@
  */
 package feast.core.job.direct;
 
+import static feast.core.util.StreamUtil.wrapException;
+
 import com.google.common.base.Strings;
 import com.google.protobuf.util.JsonFormat;
 import feast.core.config.FeastProperties.MetricsProperties;
@@ -30,7 +32,8 @@ import feast.proto.core.RunnerProto.DirectRunnerConfigOptions;
 import feast.proto.core.SourceProto;
 import feast.proto.core.StoreProto;
 import java.io.IOException;
-import java.util.Collections;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.beam.runners.direct.DirectRunner;
 import org.apache.beam.sdk.PipelineResult;
@@ -71,7 +74,12 @@ public class DirectRunnerJobManager implements JobManager {
   public Job startJob(Job job) {
     try {
       ImportOptions pipelineOptions =
-          getPipelineOptions(job.getId(), job.getSource().toProto(), job.getStore().toProto());
+          getPipelineOptions(
+              job.getId(),
+              job.getSource().toProto(),
+              job.getStores().stream()
+                  .map(wrapException(Store::toProto))
+                  .collect(Collectors.toSet()));
       PipelineResult pipelineResult = runPipeline(pipelineOptions);
       DirectJob directJob = new DirectJob(job.getId(), pipelineResult);
       jobs.add(directJob);
@@ -85,16 +93,17 @@ public class DirectRunnerJobManager implements JobManager {
   }
 
   private ImportOptions getPipelineOptions(
-      String jobName, SourceProto.Source source, StoreProto.Store sink)
+      String jobName, SourceProto.Source source, Set<StoreProto.Store> sinks)
       throws IOException, IllegalAccessException {
     ImportOptions pipelineOptions =
         PipelineOptionsFactory.fromArgs(defaultOptions.toArgs()).as(ImportOptions.class);
 
-    pipelineOptions.setSpecsStreamingUpdateConfigJson(
-        JsonFormat.printer().print(specsStreamingUpdateConfig));
-    pipelineOptions.setSourceJson(JsonFormat.printer().print(source));
+    JsonFormat.Printer printer = JsonFormat.printer();
+    pipelineOptions.setSpecsStreamingUpdateConfigJson(printer.print(specsStreamingUpdateConfig));
+    pipelineOptions.setSourceJson(printer.print(source));
     pipelineOptions.setJobName(jobName);
-    pipelineOptions.setStoreJson(Collections.singletonList(JsonFormat.printer().print(sink)));
+    pipelineOptions.setStoresJson(
+        sinks.stream().map(wrapException(printer::print)).collect(Collectors.toList()));
     pipelineOptions.setRunner(DirectRunner.class);
     pipelineOptions.setDefaultFeastProject(Project.DEFAULT_NAME);
     pipelineOptions.setProject(""); // set to default value to satisfy validation
@@ -121,30 +130,34 @@ public class DirectRunnerJobManager implements JobManager {
    */
   @Override
   public Job updateJob(Job job) {
-    String jobId = job.getExtId();
-    abortJob(jobId);
     try {
-      return startJob(job);
+      return startJob(abortJob(job));
     } catch (JobExecutionException e) {
       throw new JobExecutionException(String.format("Error running ingestion job: %s", e), e);
     }
   }
 
   /**
-   * Abort the direct runner job with the given id, then remove it from the direct jobs registry.
+   * Abort the direct runner job,removing it from the direct jobs registry.
    *
-   * @param extId runner specific job id.
+   * @param job to abort.
+   * @return The aborted Job
    */
   @Override
-  public void abortJob(String extId) {
-    DirectJob job = jobs.get(extId);
-    try {
-      job.abort();
-    } catch (IOException e) {
-      throw new RuntimeException(
-          Strings.lenientFormat("Unable to abort DirectRunner job %s", extId), e);
+  public Job abortJob(Job job) {
+    DirectJob directJob = jobs.get(job.getExtId());
+    if (directJob != null) {
+      try {
+        directJob.abort();
+      } catch (IOException e) {
+        throw new RuntimeException(
+            Strings.lenientFormat("Unable to abort DirectRunner job %s", job.getExtId(), e));
+      }
+      jobs.remove(job.getExtId());
     }
-    jobs.remove(extId);
+
+    job.setStatus(JobStatus.ABORTING);
+    return job;
   }
 
   public PipelineResult runPipeline(ImportOptions pipelineOptions) throws IOException {

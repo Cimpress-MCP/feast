@@ -4,8 +4,8 @@ from multiprocessing import Pool
 from typing import Iterable, List
 
 import pandas as pd
-
 import pyarrow.parquet as pq
+
 from feast.constants import DATETIME_COLUMN
 from feast.feature_set import FeatureSet
 from feast.type_map import (
@@ -74,7 +74,7 @@ def _encode_pa_tables(
     }
 
     # List to store result
-    feature_rows = []
+    feature_rows: List[bytes] = []
 
     # Loop optimization declaration(s)
     field = FieldProto.Field
