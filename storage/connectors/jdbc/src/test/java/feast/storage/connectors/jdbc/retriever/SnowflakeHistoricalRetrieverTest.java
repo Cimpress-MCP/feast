@@ -64,7 +64,7 @@ public class SnowflakeHistoricalRetrieverTest {
     //      Set CSV format DATA_FORMAT_CSV = 2; where the first column of the csv file must be
     // entity_id
     //      file_uri is under
-    // src/test/java/feast/storage/connectors/jdbc/retriever/snowflake_proj_entity_rows.csv
+    // src/test/java/feast/storage/connectors/jdbc/retriever/snowflake_entity_rows_test1.csv
     String file_uris = System.getenv("SNOWFLAKE_FILE_URI");
     ServingAPIProto.DatasetSource.FileSource fileSource =
         ServingAPIProto.DatasetSource.FileSource.newBuilder()
