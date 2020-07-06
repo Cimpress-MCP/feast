@@ -48,10 +48,11 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     queries.add(String.format("create or replace stage my_stage file_format = CSV_format;"));
     queries.add(String.format("put file://%s @my_stage auto_compress=false;", filePath));
     // TODO: generic staging location for snowflake_proj_entity_rows.csv
+    String fileName = filePath.getName();
     queries.add(
         String.format(
-            "COPY INTO %s FROM '@my_stage/snowflake_proj_entity_rows.csv' FILE_FORMAT = CSV_format on_error = 'skip_file';",
-            temporaryTable));
+            "COPY INTO %s FROM '@my_stage/%s' FILE_FORMAT = CSV_format on_error = 'skip_file';",
+            temporaryTable, fileName));
     queries.add(
         String.format("INSERT INTO %s SELECT * FROM %s;", destinationTable, temporaryTable));
 

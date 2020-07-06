@@ -60,12 +60,40 @@ public class SnowflakeHistoricalRetrieverTest {
   }
 
   @Test
-  public void shouldRetrieveFromSnowflake() {
+  public void shouldRetrieveFromSnowflakeTest1() {
     //      Set CSV format DATA_FORMAT_CSV = 2; where the first column of the csv file must be
     // entity_id
     //      file_uri is under
     // src/test/java/feast/storage/connectors/jdbc/retriever/snowflake_entity_rows_test1.csv
-    String file_uris = System.getenv("SNOWFLAKE_FILE_URI");
+    String file_uris = System.getenv("SNOWFLAKE_FILE_URI_1");
+    ServingAPIProto.DatasetSource.FileSource fileSource =
+        ServingAPIProto.DatasetSource.FileSource.newBuilder()
+            .setDataFormatValue(2)
+            .addFileUris(file_uris)
+            .build();
+
+    ServingAPIProto.DatasetSource datasetSource =
+        ServingAPIProto.DatasetSource.newBuilder().setFileSource(fileSource).build();
+    String retrievalId = "1234";
+    List<FeatureSetRequest> featureSetRequests = this.createFeatureSetRequests();
+    HistoricalRetrievalResult postgresHisRetrievalResult =
+        snowflakeFeatureRetriever.getHistoricalFeatures(
+            retrievalId, datasetSource, featureSetRequests);
+
+    List<String> files = postgresHisRetrievalResult.getFileUris();
+    File testFile = new File(files.get(0));
+    /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,400 2,100 3,300 */
+    Assert.assertTrue(testFile.exists());
+    Assert.assertTrue(files.get(0).indexOf(staging_location) != -1);
+  }
+
+  @Test
+  public void shouldRetrieveFromSnowflakeTest2() {
+    //      Set CSV format DATA_FORMAT_CSV = 2; where the first column of the csv file must be
+    // entity_id
+    //      file_uri is under
+    // src/test/java/feast/storage/connectors/jdbc/retriever/snowflake_entity_rows_test1.csv
+    String file_uris = System.getenv("SNOWFLAKE_FILE_URI_2");
     ServingAPIProto.DatasetSource.FileSource fileSource =
         ServingAPIProto.DatasetSource.FileSource.newBuilder()
             .setDataFormatValue(2)
@@ -76,34 +104,66 @@ public class SnowflakeHistoricalRetrieverTest {
         ServingAPIProto.DatasetSource.newBuilder().setFileSource(fileSource).build();
 
     String retrievalId = "1234";
-    FeatureSetRequest featureSetRequest =
-        FeatureSetRequest.newBuilder()
-            .setSpec(getFeatureSetSpec())
-            .addFeatureReference(
-                ServingAPIProto.FeatureReference.newBuilder()
-                    .setName("feature_1")
-                    .setProject("myproject2")
-                    .setFeatureSet("feature_set")
-                    .build())
-            .build();
-    List<FeatureSetRequest> featureSetRequests = new ArrayList<>();
-    featureSetRequests.add(featureSetRequest);
-
+    List<FeatureSetRequest> featureSetRequests = this.createFeatureSetRequests();
     HistoricalRetrievalResult postgresHisRetrievalResult =
         snowflakeFeatureRetriever.getHistoricalFeatures(
             retrievalId, datasetSource, featureSetRequests);
 
     List<String> files = postgresHisRetrievalResult.getFileUris();
     File testFile = new File(files.get(0));
-    // TODO: next step: check is a file
-    //    Assert.assertTrue(!testFile.isDirectory());
+    /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,410 2,220 3,300 */
     Assert.assertTrue(testFile.exists());
     Assert.assertTrue(files.get(0).indexOf(staging_location) != -1);
   }
 
+  @Test
+  public void shouldRetrieveFromSnowflakeTest3() {
+    //      Set CSV format DATA_FORMAT_CSV = 2; where the first column of the csv file must be
+    // entity_id
+    //      file_uri is under
+    // src/test/java/feast/storage/connectors/jdbc/retriever/snowflake_entity_rows_test1.csv
+    String file_uris = System.getenv("SNOWFLAKE_FILE_URI_3");
+    ServingAPIProto.DatasetSource.FileSource fileSource =
+        ServingAPIProto.DatasetSource.FileSource.newBuilder()
+            .setDataFormatValue(2)
+            .addFileUris(file_uris)
+            .build();
+
+    ServingAPIProto.DatasetSource datasetSource =
+        ServingAPIProto.DatasetSource.newBuilder().setFileSource(fileSource).build();
+
+    String retrievalId = "1234";
+    List<FeatureSetRequest> featureSetRequests = this.createFeatureSetRequests();
+    HistoricalRetrievalResult postgresHisRetrievalResult =
+        snowflakeFeatureRetriever.getHistoricalFeatures(
+            retrievalId, datasetSource, featureSetRequests);
+
+    List<String> files = postgresHisRetrievalResult.getFileUris();
+    File testFile = new File(files.get(0));
+    /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,410 2,100 3,null */
+    Assert.assertTrue(testFile.exists());
+    Assert.assertTrue(files.get(0).indexOf(staging_location) != -1);
+  }
+
+  private List<FeatureSetRequest> createFeatureSetRequests() {
+    FeatureSetRequest featureSetRequest =
+        FeatureSetRequest.newBuilder()
+            .setSpec(getFeatureSetSpec())
+            .addFeatureReference(
+                ServingAPIProto.FeatureReference.newBuilder()
+                    .setName("feature_1")
+                    .setProject("myproject3")
+                    .setFeatureSet("feature_set")
+                    .build())
+            .build();
+    List<FeatureSetRequest> featureSetRequests = new ArrayList<>();
+    featureSetRequests.add(featureSetRequest);
+    return featureSetRequests;
+  }
+
   private FeatureSetProto.FeatureSetSpec getFeatureSetSpec() {
     return FeatureSetProto.FeatureSetSpec.newBuilder()
-        .setProject("myproject2")
+        .setProject("myproject3")
         .setName("feature_set")
         .addEntities(FeatureSetProto.EntitySpec.newBuilder().setName("entity_id_primary"))
         .addFeatures(FeatureSetProto.FeatureSpec.newBuilder().setName("feature_1"))
