@@ -60,12 +60,12 @@ public class SnowflakeHistoricalRetrieverTest {
   }
 
   @Test
-  public void shouldRetrieveFromSnowflakeTest1() {
+  public void shouldRetrieveFromSnowflakeTest2Dates() {
     //      Set CSV format DATA_FORMAT_CSV = 2; where the first column of the csv file must be
     // entity_id
     //      file_uri is under
-    // src/test/java/feast/storage/connectors/jdbc/retriever/snowflake_entity_rows_test1.csv
-    String file_uris = System.getenv("SNOWFLAKE_FILE_URI_1");
+    // src/test/java/feast/storage/connectors/jdbc/retriever/entities_2dates.csv
+    String file_uris = System.getenv("ENTITIES_URI_2DATES");
     ServingAPIProto.DatasetSource.FileSource fileSource =
         ServingAPIProto.DatasetSource.FileSource.newBuilder()
             .setDataFormatValue(2)
@@ -88,12 +88,12 @@ public class SnowflakeHistoricalRetrieverTest {
   }
 
   @Test
-  public void shouldRetrieveFromSnowflakeTest2() {
+  public void shouldRetrieveFromSnowflakeTest1Date() {
     //      Set CSV format DATA_FORMAT_CSV = 2; where the first column of the csv file must be
     // entity_id
     //      file_uri is under
-    // src/test/java/feast/storage/connectors/jdbc/retriever/snowflake_entity_rows_test1.csv
-    String file_uris = System.getenv("SNOWFLAKE_FILE_URI_2");
+    // src/test/java/feast/storage/connectors/jdbc/retriever/entities_1date.csv
+    String file_uris = System.getenv("ENTITIES_URI_1DATE");
     ServingAPIProto.DatasetSource.FileSource fileSource =
         ServingAPIProto.DatasetSource.FileSource.newBuilder()
             .setDataFormatValue(2)
@@ -117,12 +117,12 @@ public class SnowflakeHistoricalRetrieverTest {
   }
 
   @Test
-  public void shouldRetrieveFromSnowflakeTest3() {
+  public void shouldRetrieveFromSnowflakeTest1DateWithNull() {
     //      Set CSV format DATA_FORMAT_CSV = 2; where the first column of the csv file must be
     // entity_id
     //      file_uri is under
-    // src/test/java/feast/storage/connectors/jdbc/retriever/snowflake_entity_rows_test1.csv
-    String file_uris = System.getenv("SNOWFLAKE_FILE_URI_3");
+    // src/test/java/feast/storage/connectors/jdbc/retriever/entities_1date_null.csv
+    String file_uris = System.getenv("ENTITIES_URI_1DATE_NULL");
     ServingAPIProto.DatasetSource.FileSource fileSource =
         ServingAPIProto.DatasetSource.FileSource.newBuilder()
             .setDataFormatValue(2)
