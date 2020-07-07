@@ -553,6 +553,7 @@ class Client:
         entity_rows: Union[pd.DataFrame, str],
         compute_statistics: bool = False,
         project: str = None,
+        data_format: DataFormat = DataFormat.DATA_FORMAT_AVRO,
     ) -> RetrievalJob:
         """
         Deprecated. Please see get_historical_features.
