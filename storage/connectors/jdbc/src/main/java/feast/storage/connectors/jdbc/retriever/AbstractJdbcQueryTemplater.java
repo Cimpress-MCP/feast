@@ -190,7 +190,9 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
           String.format("Could not parse staging location: %s", stagingLocation), e);
     }
     String stagingPath = stagingUri.getPath();
-    String exportPath = String.format("%s/%s.csv", stagingPath.replaceAll("/$", ""), resultTable);
+    // TODO: need flexible file type
+    String exportPath =
+        String.format("%s/%s.csv.gz", stagingPath.replaceAll("/$", ""), resultTable);
     List<String> exportTableSqlQueries = this.generateExportTableSqlQuery(resultTable, stagingPath);
     try {
       Statement statement = this.connection.createStatement();

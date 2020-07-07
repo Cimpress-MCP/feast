@@ -122,14 +122,14 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     String fileFormatQuery =
         String.format(
             "create or replace file format CSV_format type = 'CSV' field_delimiter = ',' skip_header=0;");
-    String createStageQuery =
-        String.format("create or replace stage my_stage file_format = CSV_format;");
+    String createStageQuery = String.format("create or replace stage my_stage;");
     String copyIntoStageQuery =
         String.format(
-            "COPY INTO '@my_stage/%s.csv' FROM %s OVERWRITE = TRUE SINGLE = TRUE HEADER = TRUE;",
+            "COPY INTO '@my_stage/%s.csv.gz' FROM %s file_format = (type=csv compression='gzip')\n"
+                + "single=true header = true;",
             resultTable, resultTable);
     String downloadTableQuery =
-        String.format("get @my_stage/%s.csv file://%s;", resultTable, exportPath);
+        String.format("get @my_stage/%s.csv.gz file://%s;", resultTable, exportPath);
     String[] queryArray =
         new String[] {fileFormatQuery, createStageQuery, copyIntoStageQuery, downloadTableQuery};
     exportTableSqlQueries.addAll(Arrays.asList(queryArray));

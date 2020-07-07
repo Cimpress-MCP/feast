@@ -85,7 +85,7 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     // TODO: always return a single csv file?
     fileUris.add(fileUri);
     return HistoricalRetrievalResult.success(
-        retrievalId, fileUris, ServingAPIProto.DataFormat.DATA_FORMAT_AVRO);
+        retrievalId, fileUris, ServingAPIProto.DataFormat.DATA_FORMAT_CSV);
   }
 
   @Override
