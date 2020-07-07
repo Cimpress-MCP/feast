@@ -78,16 +78,8 @@ public class QueryTemplater {
         String.format(
             "CREATE TABLE %s AS (SELECT %s FROM %s WHERE 1 = 2);",
             destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
-    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
-      createEntityTableRowCountQueries.add(
-          String.format("ALTER TABLE %s ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
-
-    } else {
-      createEntityTableRowCountQueries.add(
-          String.format(
-              "ALTER TABLE \"%s\" ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
-    }
-
+    createEntityTableRowCountQueries.add(
+        String.format("ALTER TABLE %s ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
     return createEntityTableRowCountQueries;
   }
 
