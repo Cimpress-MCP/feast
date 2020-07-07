@@ -17,8 +17,6 @@
 package feast.storage.connectors.jdbc.retriever;
 
 import com.google.protobuf.Duration;
-import com.mitchellbosecke.pebble.PebbleEngine;
-import com.mitchellbosecke.pebble.template.PebbleTemplate;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
@@ -26,8 +24,6 @@ import feast.storage.connectors.jdbc.connection.JdbcConnectionProvider;
 import io.grpc.Status;
 import java.io.File;
 import java.io.IOException;
-import java.io.StringWriter;
-import java.io.Writer;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.*;
@@ -36,11 +32,6 @@ import java.util.stream.Collectors;
 
 public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
   private Connection connection;
-  private static final PebbleEngine engine = new PebbleEngine.Builder().build();
-  private static final String FEATURESET_TEMPLATE_NAME_POSTGRES =
-      "templates/single_featureset_pit_join_postgres.sql";
-  private static final String JOIN_TEMPLATE_NAME_POSTGRES =
-      "templates/join_featuresets_postgres.sql";
 
   public AbstractJdbcQueryTemplater(JdbcConnectionProvider connectionProvider) {
     this.connection = connectionProvider.getConnection();
@@ -319,21 +310,9 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
    * @param filePath csv file contains entity rows, with columns: entity_id and created_timestamp
    * @return
    */
-  protected List<String> createLoadEntityQuery(
-      String destinationTable, String temporaryTable, File filePath) {
-    List<String> queries = new ArrayList<>();
-    queries.add(
-        String.format("CREATE TABLE %s AS (SELECT * FROM %s);", temporaryTable, destinationTable));
-    //      queries.add(String.format("ALTER TABLE %s DROP COLUMN row_number;",temporaryTable));
-    queries.add(
-        String.format("COPY %s FROM '%s' DELIMITER ',' CSV HEADER;", temporaryTable, filePath));
-    queries.add(
-        String.format("INSERT INTO %s SELECT * FROM %s;", destinationTable, temporaryTable));
-    queries.add(String.format("DROP TABLE %s;", temporaryTable));
-    queries.add(
-        String.format("ALTER TABLE \"%s\" ADD COLUMN row_number SERIAL;", destinationTable));
-    return queries;
-  }
+  protected abstract List<String> createLoadEntityQuery(
+      String destinationTable, String temporaryTable, File filePath);
+
   /**
    * Generate the query for point in time correctness join of data for a single feature set to the
    * entity dataset.
@@ -344,27 +323,12 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
    * @param maxTimestamp latest allowed timestamp for the historical data in feast
    * @return point in time correctness join BQ SQL query
    */
-  protected String createFeatureSetPointInTimeQuery(
+  protected abstract String createFeatureSetPointInTimeQuery(
       FeatureSetQueryInfo featureSetInfo,
       String leftTableName,
       String minTimestamp,
       String maxTimestamp)
-      throws IOException {
-    PebbleTemplate template;
-    template = engine.getTemplate(FEATURESET_TEMPLATE_NAME_POSTGRES);
-
-    Map<String, Object> context = new HashMap<>();
-    context.put("featureSet", featureSetInfo);
-
-    // TODO: Subtract max age to min timestamp
-    context.put("minTimestamp", minTimestamp);
-    context.put("maxTimestamp", maxTimestamp);
-    context.put("leftTableName", leftTableName);
-
-    Writer writer = new StringWriter();
-    template.evaluate(writer, context);
-    return writer.toString();
-  }
+      throws IOException;
 
   protected List<String> getEntityTableColumns(Connection conn, String entityTableName) {
     List<String> entityTableColumns = new ArrayList<>();
@@ -394,30 +358,11 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
    * @param leftTableName entity dataset name
    * @return query to join temporary feature set tables to the entity table
    */
-  protected String createJoinQuery(
+  protected abstract String createJoinQuery(
       List<FeatureSetQueryInfo> featureSetInfos,
       List<String> entityTableColumnNames,
-      String leftTableName) {
+      String leftTableName);
 
-    PebbleTemplate template;
-    template = engine.getTemplate(JOIN_TEMPLATE_NAME_POSTGRES);
-    Map<String, Object> context = new HashMap<>();
-    context.put("entities", entityTableColumnNames);
-    context.put("featureSets", featureSetInfos);
-    context.put("leftTableName", leftTableName);
-
-    Writer writer = new StringWriter();
-    try {
-      template.evaluate(writer, context);
-    } catch (IOException e) {
-      throw new RuntimeException(
-          String.format(
-              "Could not successfully template a join query to produce the final point-in-time result table. \nContext: %s",
-              context),
-          e);
-    }
-    return writer.toString();
-  }
   /**
    * Generate the SQL queries to Export the result table from database to the staging location with
    * name "{exportPath}/{resultTable}.csv"
@@ -426,13 +371,6 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
    * @param stagingPath staging location
    * @return a list of sql queries for exporting
    */
-  protected List<String> generateExportTableSqlQuery(String resultTable, String stagingPath) {
-    String exportPath = String.format("%s/%s.csv", stagingPath.replaceAll("/$", ""), resultTable);
-    List<String> exportTableSqlQueries = new ArrayList<>();
-    exportTableSqlQueries.add(
-        String.format(
-            "COPY %s TO '%s' WITH (DELIMITER E'\t', FORMAT CSV, HEADER);",
-            resultTable, exportPath));
-    return exportTableSqlQueries;
-  }
+  protected abstract List<String> generateExportTableSqlQuery(
+      String resultTable, String stagingPath);
 }
