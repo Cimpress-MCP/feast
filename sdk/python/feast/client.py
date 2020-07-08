@@ -562,7 +562,7 @@ class Client:
             DeprecationWarning,
         )
         return self.get_historical_features(
-            feature_refs, entity_rows, compute_statistics, project
+            feature_refs, entity_rows, compute_statistics, project, data_format
         )
 
     def get_historical_features(
