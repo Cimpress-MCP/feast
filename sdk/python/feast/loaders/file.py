@@ -30,7 +30,7 @@ from feast.staging.storage_client import get_staging_client
 
 
 def export_source_to_staging_location(
-        source: Union[pd.DataFrame, str], staging_location_uri: str, data_format: DataFormat
+    source: Union[pd.DataFrame, str], staging_location_uri: str, data_format: DataFormat
 ) -> List[str]:
     """
     Uploads a DataFrame as an Avro file to a remote staging location.
@@ -54,7 +54,7 @@ def export_source_to_staging_location(
             Remote staging location where DataFrame should be written.
             Examples:
                 * gs://bucket/path/
-                * file:///data/subfolder/
+                * s3://bucket/path/
                 * file:///data/subfolder/
          data_format (DataFormat): Data format of files that are persisted in staging location during retrieval.
 
@@ -86,7 +86,7 @@ def export_source_to_staging_location(
                 os.path.join(source_uri.netloc, source_uri.path)
             )
         else:
-            # gs, s3 file provided as a source. using storage_client
+            # gs, s3 file provided as a source.
             return get_staging_client(source_uri.scheme).list_files(
                 bucket=source_uri.hostname, path=source_uri.path
             )
@@ -99,7 +99,7 @@ def export_source_to_staging_location(
     # Push data to required staging location
     get_staging_client(uri.scheme).upload_file(
         source_path, uri.hostname, str(uri.path).strip("/") + "/" + file_name,
-                                   )
+    )
 
     # Clean up, remove local staging file
     if dir_path and isinstance(source, pd.DataFrame) and len(dir_path) > 4:
@@ -109,9 +109,9 @@ def export_source_to_staging_location(
 
 
 def export_dataframe_to_local(
-        df: pd.DataFrame,
-        dir_path: Optional[str] = None,
-        data_format: DataFormat = DataFormat.DATA_FORMAT_AVRO,
+    df: pd.DataFrame,
+    dir_path: Optional[str] = None,
+    data_format: DataFormat = DataFormat.DATA_FORMAT_AVRO,
 ) -> Tuple[str, str, str]:
     """
     Exports a pandas DataFrame to the local filesystem.
@@ -172,6 +172,7 @@ def export_dataframe_to_local(
         ]
 
     return dir_path, file_name, dest_path
+
 
 def _get_file_name(data_format: DataFormat = DataFormat.DATA_FORMAT_AVRO) -> str:
     """
