@@ -13,16 +13,14 @@
 # limitations under the License.
 
 import os
-import re
 import shutil
 import tempfile
 import uuid
 from datetime import datetime
 from typing import List, Optional, Tuple, Union
-from urllib.parse import ParseResult, urlparse
+from urllib.parse import urlparse
 
 import pandas as pd
-from google.cloud import storage
 from pandavro import to_avro
 
 from feast.serving.ServingService_pb2 import DataFormat
