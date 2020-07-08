@@ -40,11 +40,13 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
     return new JdbcHistoricalRetriever(config, jdbcQueryTemplater);
   }
 
+  // TODO: implement computeStatistics
   @Override
   public HistoricalRetrievalResult getHistoricalFeatures(
       String retrievalId,
       ServingAPIProto.DatasetSource datasetSource,
-      List<FeatureSetRequest> featureSetRequests) {
+      List<FeatureSetRequest> featureSetRequests,
+      boolean computeStatistics) {
 
     // 1. Ensure correct entity row file format
     ServingAPIProto.DataFormat dataFormat = datasetSource.getFileSource().getDataFormat();

@@ -78,7 +78,7 @@ public class SnowflakeHistoricalRetrieverTest {
     List<FeatureSetRequest> featureSetRequests = this.createFeatureSetRequests();
     HistoricalRetrievalResult postgresHisRetrievalResult =
         snowflakeFeatureRetriever.getHistoricalFeatures(
-            retrievalId, datasetSource, featureSetRequests);
+            retrievalId, datasetSource, featureSetRequests, false);
 
     List<String> files = postgresHisRetrievalResult.getFileUris();
     File testFile = new File(files.get(0));
@@ -107,7 +107,7 @@ public class SnowflakeHistoricalRetrieverTest {
     List<FeatureSetRequest> featureSetRequests = this.createFeatureSetRequests();
     HistoricalRetrievalResult postgresHisRetrievalResult =
         snowflakeFeatureRetriever.getHistoricalFeatures(
-            retrievalId, datasetSource, featureSetRequests);
+            retrievalId, datasetSource, featureSetRequests, false);
 
     List<String> files = postgresHisRetrievalResult.getFileUris();
     File testFile = new File(files.get(0));
@@ -136,7 +136,7 @@ public class SnowflakeHistoricalRetrieverTest {
     List<FeatureSetRequest> featureSetRequests = this.createFeatureSetRequests();
     HistoricalRetrievalResult postgresHisRetrievalResult =
         snowflakeFeatureRetriever.getHistoricalFeatures(
-            retrievalId, datasetSource, featureSetRequests);
+            retrievalId, datasetSource, featureSetRequests, false);
 
     List<String> files = postgresHisRetrievalResult.getFileUris();
     File testFile = new File(files.get(0));

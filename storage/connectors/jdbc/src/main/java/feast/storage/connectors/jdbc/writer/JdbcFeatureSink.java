@@ -16,6 +16,7 @@
  */
 package feast.storage.connectors.jdbc.writer;
 
+import feast.common.models.FeatureSetReference;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.StoreProto;
 import feast.proto.core.StoreProto.Store.JdbcConfig;
@@ -28,6 +29,8 @@ import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import org.apache.beam.sdk.values.KV;
+import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
 
 public class JdbcFeatureSink implements FeatureSink {
@@ -69,8 +72,17 @@ public class JdbcFeatureSink implements FeatureSink {
     return config;
   }
 
-  /** @param featureSet Feature set to be written */
+  // TODO: update prepareWrite with return PCollection<FeatureSetReference>
+  /**
+   * @param featureSetSpecs specs stream
+   * @return
+   */
   @Override
+  public PCollection<FeatureSetReference> prepareWrite(
+      PCollection<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>> featureSetSpecs) {
+    return null;
+  }
+  // TODO: update prepareWrite
   public void prepareWrite(FeatureSetProto.FeatureSet featureSet) {
     FeatureSetProto.FeatureSetSpec featureSetSpec = featureSet.getSpec();
     String featureSetKey = getFeatureSetRef(featureSetSpec);
