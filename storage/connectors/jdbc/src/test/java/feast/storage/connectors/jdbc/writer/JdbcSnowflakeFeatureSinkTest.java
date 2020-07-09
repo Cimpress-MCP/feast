@@ -21,7 +21,6 @@ import static feast.storage.common.testing.TestUtil.field;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import feast.proto.core.FeatureSetProto;
-import feast.proto.core.FeatureSetProto.EntitySpec;
 import feast.proto.core.StoreProto;
 import feast.proto.types.FeatureRowProto.FeatureRow;
 import feast.proto.types.FieldProto;
@@ -66,43 +65,12 @@ public class JdbcSnowflakeFeatureSinkTest {
         FeatureSetProto.FeatureSetSpec.newBuilder()
             .setName("feature_set_1")
             .setProject("snowflake_proj")
-            .addEntities(
-                FeatureSetProto.EntitySpec.newBuilder()
-                    .setName("entity")
-                    .setValueType(Enum.INT64)
-                    .build())
-            .addFeatures(
-                FeatureSetProto.FeatureSpec.newBuilder()
-                    .setName("feature")
-                    .setValueType(Enum.STRING)
-                    .build())
             .build();
 
     FeatureSetProto.FeatureSetSpec spec2 =
         FeatureSetProto.FeatureSetSpec.newBuilder()
             .setName("feature_set_2")
             .setProject("snowflake_proj")
-            //            .setDatabase()
-            .addEntities(
-                FeatureSetProto.EntitySpec.newBuilder()
-                    .setName("entity_id_primary")
-                    .setValueType(Enum.INT32)
-                    .build())
-            .addEntities(
-                EntitySpec.newBuilder()
-                    .setName("entity_id_secondary")
-                    .setValueType(Enum.STRING)
-                    .build())
-            .addFeatures(
-                FeatureSetProto.FeatureSpec.newBuilder()
-                    .setName("feature_1")
-                    .setValueType(Enum.STRING_LIST)
-                    .build())
-            .addFeatures(
-                FeatureSetProto.FeatureSpec.newBuilder()
-                    .setName("feature_2")
-                    .setValueType(Enum.INT64)
-                    .build())
             .build();
 
     Map<String, FeatureSetProto.FeatureSetSpec> specMap =
@@ -156,17 +124,13 @@ public class JdbcSnowflakeFeatureSinkTest {
             FeatureRow.newBuilder()
                 .setFeatureSet("snowflake_proj/feature_set_1")
                 .addFields(field("entity", 1, Enum.INT64))
-                .addFields(field("feature", "one", Enum.STRING))
+                .addFields(field("feature", "two", Enum.STRING))
                 .build(),
             FeatureRow.newBuilder()
                 .setFeatureSet("snowflake_proj/feature_set_1")
                 .addFields(field("entity", 2, Enum.INT64))
                 .addFields(field("feature", "two", Enum.STRING))
-                .build(),
-            FeatureRow.newBuilder()
-                .setFeatureSet("snowflake_proj/feature_set_1")
-                .addFields(field("entity", 3, Enum.INT64))
-                .addFields(field("feature", "two", Enum.STRING))
+                .addFields(field("entity_id_secondary", "asjdh", Enum.STRING))
                 .build(),
             FeatureRow.newBuilder()
                 .setFeatureSet("snowflake_proj/feature_set_2")
