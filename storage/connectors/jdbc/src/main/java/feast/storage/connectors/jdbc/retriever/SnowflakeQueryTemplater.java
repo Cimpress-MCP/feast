@@ -31,7 +31,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
       "templates/single_featureset_pit_join_snowflake.sql";
   private static final String JOIN_TEMPLATE_NAME_SNOWFLAKE =
       "templates/join_featuresets_snowflake.sql";
-
+  private static final String VARIANT_COLUMN_NAME = "feature";
   public SnowflakeQueryTemplater(JdbcConnectionProvider connectionProvider) {
     super(connectionProvider);
   }
@@ -64,6 +64,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     return queries;
   }
 
+  //TODO: adapt JSON variant column
   @Override
   protected String createFeatureSetPointInTimeQuery(
       FeatureSetQueryInfo featureSetInfo,
@@ -75,6 +76,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     template = engine.getTemplate(FEATURESET_TEMPLATE_NAME_SNOWFLAKE);
 
     Map<String, Object> context = new HashMap<>();
+    context.put("variantColumn", VARIANT_COLUMN_NAME);
     context.put("featureSet", featureSetInfo);
 
     // TODO: Subtract max age to min timestamp

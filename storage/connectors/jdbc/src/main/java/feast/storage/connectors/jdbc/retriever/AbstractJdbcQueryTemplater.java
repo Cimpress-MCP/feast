@@ -127,6 +127,7 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
     return featureSetQueries;
   }
 
+  //TODO: adapt JSON variant column
   @Override
   public String runBatchQuery(
       String entityTableName,
@@ -254,7 +255,8 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
       for (String entity : featureSetQueryInfo.getEntities()) {
         if (!entities.contains(entity)) {
           entities.add(entity);
-          entityColumns.add(String.format("%s.%s", table, entity));
+          // parse entities from FEATURE variant column
+          entityColumns.add(String.format("%s.feature:%s AS %s", table, entity, entity));
         }
       }
       featureSetTableFromJoiner.add(table);
@@ -320,7 +322,7 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
    * entity dataset.
    *
    * @param featureSetInfo Information about the feature set necessary for the query templating
-   * @param leftTableName entity dataset name
+   * @param leftTableName entityTableWithRowCountName: entity table name
    * @param minTimestamp earliest allowed timestamp for the historical data in feast
    * @param maxTimestamp latest allowed timestamp for the historical data in feast
    * @return point in time correctness join BQ SQL query

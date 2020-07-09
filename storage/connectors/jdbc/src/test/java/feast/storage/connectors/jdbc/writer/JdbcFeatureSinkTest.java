@@ -112,8 +112,9 @@ public class JdbcFeatureSinkTest {
                 .setPassword(pw)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
-    sqliteFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec1).build());
-    sqliteFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec2).build());
+//TODO: comment out waiting for prepareWrite update
+//    sqliteFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec1).build());
+//    sqliteFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec2).build());
 
     this.connect();
   }
