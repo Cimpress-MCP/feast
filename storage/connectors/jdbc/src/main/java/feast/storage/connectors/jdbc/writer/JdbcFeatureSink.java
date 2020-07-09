@@ -88,7 +88,6 @@ public class JdbcFeatureSink implements FeatureSink {
       Connection conn, JdbcTemplater jdbcTemplater, FeatureSetProto.FeatureSetSpec featureSetSpec) {
     String featureSetName = getFeatureSetRef(featureSetSpec);
     String createSqlTableCreationQuery = jdbcTemplater.getTableCreationSql(featureSetSpec);
-
     try {
       Statement stmt = conn.createStatement();
       stmt.execute(createSqlTableCreationQuery);
