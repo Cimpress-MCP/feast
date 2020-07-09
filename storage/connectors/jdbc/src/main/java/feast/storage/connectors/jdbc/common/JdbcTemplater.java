@@ -42,6 +42,7 @@ public interface JdbcTemplater extends Serializable {
 //  String getFeatureRowInsertSql(FeatureSetProto.FeatureSetSpec featureSetSpec);
   String getFeatureRowInsertSql(String featureSetSpec);
 
+
 //  Map<String, String> getRequiredColumns(FeatureSetProto.FeatureSetSpec featureSet);
 
   Map<String, String> getRequiredColumns();

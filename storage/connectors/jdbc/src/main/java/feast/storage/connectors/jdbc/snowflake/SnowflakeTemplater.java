@@ -17,7 +17,9 @@
 package feast.storage.connectors.jdbc.snowflake;
 
 import feast.proto.core.FeatureSetProto;
+
 import feast.proto.core.FeatureSetProto.FeatureSetSpec;
+
 import feast.proto.types.FeatureRowProto;
 import feast.proto.types.FieldProto;
 import feast.proto.types.ValueProto;
@@ -106,8 +108,10 @@ public class SnowflakeTemplater implements JdbcTemplater {
   public String getFeatureRowInsertSql(String featureSetSpec) {
     StringJoiner columnsSql = new StringJoiner(",");
     StringJoiner valueSql = new StringJoiner(",");
+
 //    Map<String, String> requiredColumns = getRequiredColumns(featureSetSpec);
     Map<String, String> requiredColumns = getRequiredColumns();
+
     for (String column : requiredColumns.keySet()) {
 
       columnsSql.add(column);
@@ -122,11 +126,10 @@ public class SnowflakeTemplater implements JdbcTemplater {
 //        JdbcTemplater.getTableName(featureSetSpec), columnsSql, valueSql);
 //    
     return String.format(
-            "INSERT INTO %s (%s) select %s",
-            featureSetSpec, columnsSql, valueSql);
+
+        "INSERT INTO %s (%s) select %s",
+        featureSetSpec, columnsSql, valueSql);
   }
-  
-  
 
   public void setSinkParameters(
       FeatureRowProto.FeatureRow element,
@@ -245,9 +248,4 @@ public class SnowflakeTemplater implements JdbcTemplater {
     }
   }
 
-//@Override
-//public String getFeatureRowInsertSql(FeatureSetSpec featureSetSpec) {
-//	// TODO Auto-generated method stub
-//	return null;
-//}
 }

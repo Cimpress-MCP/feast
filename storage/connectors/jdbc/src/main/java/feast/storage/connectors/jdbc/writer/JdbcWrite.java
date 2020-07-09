@@ -22,6 +22,7 @@ import feast.proto.core.FeatureSetProto.FeatureSet;
 import feast.proto.core.StoreProto;
 import feast.proto.core.StoreProto.Store.JdbcConfig;
 import feast.proto.types.FeatureRowProto;
+
 import feast.proto.types.FeatureRowProto.FeatureRow;
 import feast.storage.api.writer.FailedElement;
 import feast.storage.api.writer.WriteResult;
@@ -32,9 +33,6 @@ import feast.storage.connectors.jdbc.common.JdbcTemplater;
 import java.io.Serializable;
 import java.sql.PreparedStatement;
 import java.util.*;
-
-import org.apache.beam.sdk.io.gcp.bigquery.DynamicDestinations;
-import org.apache.beam.sdk.io.gcp.bigquery.TableDestination;
 import org.apache.beam.sdk.io.jdbc.JdbcIO;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
@@ -78,21 +76,14 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
 //  }
 
 
-public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater,
-		PCollectionView<Map<String, Iterable<String>>> pCollectionView) {
+public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
 	
 	this.config = config;
 	  this.jdbcTemplater = jdbcTemplater;
-	   this.subscribedFeatureSets = pCollectionView;
-	// TODO Auto-generated constructor stub
+	
 }
 
 
-public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater, PCollection<KV<String, String>> subscribedTables) {
-	this.config = config;
-	  this.jdbcTemplater = jdbcTemplater;
-	   this.subscribedTables = subscribedTables;
-}
 
 
 public StoreProto.Store.JdbcConfig getConfig() {
@@ -110,6 +101,7 @@ public StoreProto.Store.JdbcConfig getConfig() {
     // The incoming feature rows an allow each of them to have a different INSERT statement based on
     // their feature set
     Map<String, Integer> featureSetToPartitionMap = new HashMap<>();
+
 
 //     Check the featureset
     Map<String, String> sqlInsertStatements = new HashMap<>();
@@ -168,6 +160,33 @@ public StoreProto.Store.JdbcConfig getConfig() {
 //          jdbcTemplater);
 //    }
 //
+
+//    PCollectionList<FeatureRowProto.FeatureRow> partitionedInput =
+//        applyPartitioningToPCollectionBasedOnFeatureSet(input, featureSetToPartitionMap);
+//    for (String featureSetRef : subscribedFeatureSets.keySet()) {
+//      // For this feature set reference find its partition number
+//      int partitionNumber = featureSetToPartitionMap.get(featureSetRef);
+//
+//      // Find the PCollection that is associated with a partition number
+//      PCollection<FeatureRowProto.FeatureRow> featureSetInput =
+//          partitionedInput.get(partitionNumber);
+//
+//      // Find the feature set spec associated with this partition
+//      FeatureSetProto.FeatureSetSpec currentFeatureSetSpec =
+//          subscribedFeatureSets.get(featureSetRef).getSpec();
+//      StoreProto.Store.JdbcConfig jdbcConfig = this.getConfig();
+//
+//      // Apply the WriteFeatureRow transformation to this feature set partitioned input
+//      applyWriteFeatureRowToJdbcIo(
+//          jobName,
+//          featureSetRef,
+//          featureSetInput,
+//          currentFeatureSetSpec,
+//          jdbcConfig,
+//          jdbcTemplater);
+//    }
+
+
     PCollection<FeatureRowProto.FeatureRow> successfulInserts =
         input.apply(
             "dummy",
@@ -188,7 +207,7 @@ public StoreProto.Store.JdbcConfig getConfig() {
 
     return WriteResult.in(input.getPipeline(), successfulInserts, failedElements);
   }
-}
+
 
 //  private PCollectionList<FeatureRowProto.FeatureRow>
 //      applyPartitioningToPCollectionBasedOnFeatureSet(
@@ -289,4 +308,55 @@ public StoreProto.Store.JdbcConfig getConfig() {
 //    }
 //  }
 //}
+
+//  private static void applyWriteFeatureRowToJdbcIo(
+//      String jobName,
+//      String featureSetRef,
+//      PCollection<FeatureRowProto.FeatureRow> featureSetInput,
+//      FeatureSetProto.FeatureSetSpec currentFeatureSetSpec,
+//      StoreProto.Store.JdbcConfig jdbcConfig,
+//      JdbcTemplater jdbcTemplater) {
+//
+//    int batchSize = jdbcConfig.getBatchSize() > 0 ? jdbcConfig.getBatchSize() : 1;
+//
+//    featureSetInput.apply(
+//        String.format("WriteFeatureRowToJdbcIO-%s", featureSetRef),
+//        JdbcIO.<FeatureRowProto.FeatureRow>write()
+//            .withDataSourceConfiguration(create_dsconfig(jdbcConfig))
+//            .withStatement(jdbcTemplater.getFeatureRowInsertSql(currentFeatureSetSpec))
+//            .withBatchSize(batchSize)
+//            .withPreparedStatementSetter(
+//                new JdbcIO.PreparedStatementSetter<FeatureRowProto.FeatureRow>() {
+//                  public void setParameters(
+//                      FeatureRowProto.FeatureRow element, PreparedStatement preparedStatement) {
+//                    jdbcTemplater.setSinkParameters(
+//                        element, preparedStatement, jobName, currentFeatureSetSpec);
+//                  }
+//                }));
+//  }
+//
+//  private static JdbcIO.DataSourceConfiguration create_dsconfig(
+//      StoreProto.Store.JdbcConfig jdbcConfig) {
+//    String username = jdbcConfig.getUsername();
+//    String password = jdbcConfig.getPassword();
+//    String className = jdbcConfig.getClassName();
+//    String url = jdbcConfig.getUrl();
+//
+//    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+//      String database = jdbcConfig.getDatabase();
+//      String schema = jdbcConfig.getSchema();
+//      String warehouse = jdbcConfig.getWarehouse();
+//      return JdbcIO.DataSourceConfiguration.create(className, url)
+//          .withUsername(!username.isEmpty() ? username : null)
+//          .withPassword(!password.isEmpty() ? password : null)
+//          .withConnectionProperties(
+//              String.format("warehouse=%s;db=%s;schema=%s", warehouse, database, schema));
+//
+//    } else {
+//      return JdbcIO.DataSourceConfiguration.create(className, url)
+//          .withUsername(!username.isEmpty() ? username : null)
+//          .withPassword(!password.isEmpty() ? password : null);
+//    }
+//  }
+}
 
