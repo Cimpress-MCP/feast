@@ -23,12 +23,15 @@ import feast.storage.api.retriever.FeatureSetRequest;
 import feast.storage.api.retriever.HistoricalRetrievalResult;
 import feast.storage.connectors.jdbc.connection.SnowflakeConnectionProvider;
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class SnowflakeHistoricalRetrieverTest {
+public class SnowflakeHistoricalRetrieverJSONColTest {
   private JdbcHistoricalRetriever snowflakeFeatureRetriever;
   //  Snowflake account
   private String staging_location = System.getenv("STAGING_LOCATION");
@@ -152,7 +155,13 @@ public class SnowflakeHistoricalRetrieverTest {
             .addFeatureReference(
                 ServingAPIProto.FeatureReference.newBuilder()
                     .setName("feature_1")
-                    .setProject("myproject3")
+                    .setProject("myproject4")
+                    .setFeatureSet("feature_set")
+                    .build())
+            .addFeatureReference(
+                ServingAPIProto.FeatureReference.newBuilder()
+                    .setName("feature_2")
+                    .setProject("myproject4")
                     .setFeatureSet("feature_set")
                     .build())
             .build();
@@ -163,10 +172,11 @@ public class SnowflakeHistoricalRetrieverTest {
 
   private FeatureSetProto.FeatureSetSpec getFeatureSetSpec() {
     return FeatureSetProto.FeatureSetSpec.newBuilder()
-        .setProject("myproject3")
+        .setProject("myproject4")
         .setName("feature_set")
         .addEntities(FeatureSetProto.EntitySpec.newBuilder().setName("entity_id_primary"))
         .addFeatures(FeatureSetProto.FeatureSpec.newBuilder().setName("feature_1"))
+        .addFeatures(FeatureSetProto.FeatureSpec.newBuilder().setName("feature_2"))
         .setMaxAge(Duration.newBuilder().setSeconds(30)) // default
         .build();
   }

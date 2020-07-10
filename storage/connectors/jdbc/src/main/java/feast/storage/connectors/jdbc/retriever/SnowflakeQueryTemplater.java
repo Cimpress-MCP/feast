@@ -31,9 +31,43 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
       "templates/single_featureset_pit_join_snowflake.sql";
   private static final String JOIN_TEMPLATE_NAME_SNOWFLAKE =
       "templates/join_featuresets_snowflake.sql";
+  private static final String VARIANT_COLUMN_NAME = "feature";
 
   public SnowflakeQueryTemplater(JdbcConnectionProvider connectionProvider) {
     super(connectionProvider);
+  }
+
+  @Override
+  protected List<String> createEntityTableRowCountQuery(
+      String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos) {
+    StringJoiner featureSetTableSelectJoiner = new StringJoiner(", ");
+    StringJoiner featureSetTableFromJoiner = new StringJoiner(" CROSS JOIN ");
+    Set<String> entities = new HashSet<>();
+    List<String> entityColumns = new ArrayList<>();
+    for (FeatureSetQueryInfo featureSetQueryInfo : featureSetQueryInfos) {
+      String table = featureSetQueryInfo.getFeatureSetTable();
+      for (String entity : featureSetQueryInfo.getEntities()) {
+        if (!entities.contains(entity)) {
+          entities.add(entity);
+          // parse entities from FEATURE variant column
+          entityColumns.add(
+              String.format("%s.%s:%s AS %s", table, VARIANT_COLUMN_NAME, entity, entity));
+        }
+      }
+      featureSetTableFromJoiner.add(table);
+    }
+    // Must preserve alphabetical order because column mapping isn't supported in COPY loads of CSV
+    entityColumns.sort(Comparator.comparing(entity -> entity.split("\\.")[0]));
+    entityColumns.forEach(featureSetTableSelectJoiner::add);
+
+    List<String> createEntityTableRowCountQueries = new ArrayList<>();
+    createEntityTableRowCountQueries.add(
+        String.format(
+            "CREATE TABLE %s AS (SELECT %s FROM %s WHERE 1 = 2);",
+            destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
+    createEntityTableRowCountQueries.add(
+        String.format("ALTER TABLE %s ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
+    return createEntityTableRowCountQueries;
   }
 
   @Override
@@ -47,7 +81,6 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
             "create or replace file format CSV_format type = 'CSV' field_delimiter = ',' skip_header=1;"));
     queries.add(String.format("create or replace stage my_stage file_format = CSV_format;"));
     queries.add(String.format("put file://%s @my_stage auto_compress=false;", filePath));
-    // TODO: generic staging location for snowflake_proj_entity_rows.csv
     String fileName = filePath.getName();
     queries.add(
         String.format(
@@ -75,6 +108,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     template = engine.getTemplate(FEATURESET_TEMPLATE_NAME_SNOWFLAKE);
 
     Map<String, Object> context = new HashMap<>();
+    context.put("variantColumn", VARIANT_COLUMN_NAME);
     context.put("featureSet", featureSetInfo);
 
     // TODO: Subtract max age to min timestamp

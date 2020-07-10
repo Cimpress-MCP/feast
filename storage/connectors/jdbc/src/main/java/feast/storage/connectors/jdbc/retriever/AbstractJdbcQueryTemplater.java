@@ -243,35 +243,13 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
         "SELECT max(event_timestamp) as MAX, min(event_timestamp) as MIN from %s", leftTableName);
   }
 
-  protected List<String> createEntityTableRowCountQuery(
-      String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos) {
-    StringJoiner featureSetTableSelectJoiner = new StringJoiner(", ");
-    StringJoiner featureSetTableFromJoiner = new StringJoiner(" CROSS JOIN ");
-    Set<String> entities = new HashSet<>();
-    List<String> entityColumns = new ArrayList<>();
-    for (FeatureSetQueryInfo featureSetQueryInfo : featureSetQueryInfos) {
-      String table = featureSetQueryInfo.getFeatureSetTable();
-      for (String entity : featureSetQueryInfo.getEntities()) {
-        if (!entities.contains(entity)) {
-          entities.add(entity);
-          entityColumns.add(String.format("%s.%s", table, entity));
-        }
-      }
-      featureSetTableFromJoiner.add(table);
-    }
-    // Must preserve alphabetical order because column mapping isn't supported in COPY loads of CSV
-    entityColumns.sort(Comparator.comparing(entity -> entity.split("\\.")[0]));
-    entityColumns.forEach(featureSetTableSelectJoiner::add);
-
-    List<String> createEntityTableRowCountQueries = new ArrayList<>();
-    createEntityTableRowCountQueries.add(
-        String.format(
-            "CREATE TABLE %s AS (SELECT %s FROM %s WHERE 1 = 2);",
-            destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
-    createEntityTableRowCountQueries.add(
-        String.format("ALTER TABLE %s ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
-    return createEntityTableRowCountQueries;
-  }
+  /**
+   * @param destinationTable
+   * @param featureSetQueryInfos
+   * @return
+   */
+  protected abstract List<String> createEntityTableRowCountQuery(
+      String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos);
 
   protected void loadEntitiesFromFile(String entityTable, Iterator<String> fileList) {
     while (fileList.hasNext()) {
@@ -320,7 +298,7 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
    * entity dataset.
    *
    * @param featureSetInfo Information about the feature set necessary for the query templating
-   * @param leftTableName entity dataset name
+   * @param leftTableName entityTableWithRowCountName: entity table name
    * @param minTimestamp earliest allowed timestamp for the historical data in feast
    * @param maxTimestamp latest allowed timestamp for the historical data in feast
    * @return point in time correctness join BQ SQL query
