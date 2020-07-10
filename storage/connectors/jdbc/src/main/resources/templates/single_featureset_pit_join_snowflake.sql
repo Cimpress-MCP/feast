@@ -17,9 +17,7 @@ SELECT
   -- created timestamp of the feature at the corresponding feature_timestamp
   NULL as created_timestamp,
   -- select only entities belonging to this feature set
-  {% for entity in featureSet.entities %}
-  {{variantColumn}}':'{{entity}} as {{entity}}
-  {{ featureSet.entities as {{featureSet.entities}} | join(', ')}},
+  {{ featureSet.entities | join(', ')}},
   -- boolean for filtering the dataset later
   true AS is_entity_table
 FROM {{ leftTableName }}
@@ -30,7 +28,9 @@ SELECT
   event_timestamp,
   event_timestamp as {{ featureSet.project }}_{{ featureSet.name }}_feature_timestamp,
   created_timestamp,
-  {{ featureSet.entities AS featureSet.entities| join(', ')}},
+  {% for entity in featureSet.entities %}
+  {{variantColumn}}:{{entity}} as {{entity}},
+  {% endfor %}
   false AS is_entity_table
 FROM {{ featureSet.project }}_{{ featureSet.name }} WHERE event_timestamp <= '{{maxTimestamp}}'
 ),
@@ -70,9 +70,11 @@ LEFT JOIN (
 SELECT
   event_timestamp as {{ featureSet.project }}_{{ featureSet.name }}_feature_timestamp,
   created_timestamp,
-  {{ variantColumn:featureSet.entities as featureSet.entities| join(', ')}} ,
+  {% for entity in featureSet.entities %}
+  {{variantColumn}}:{{entity}} as {{entity}},
+  {% endfor %}
   {% for feature in featureSet.features %}
-  {{ variantColumn:feature.name }} as {{ featureSet.project }}__{{ featureSet.name }}__{{ feature.name }}{% if loop.last %}{% else %}, {% endif %}
+  {{variantColumn}}:{{feature.name }} as {{ featureSet.project }}__{{ featureSet.name }}__{{ feature.name }}{% if loop.last %}{% else %}, {% endif %}
   {% endfor %}
 FROM {{ featureSet.project }}_{{ featureSet.name }} WHERE event_timestamp <= '{{maxTimestamp}}'
 ) as l_{{ featureSet.project }}_{{ featureSet.name }} USING ({{ featureSet.project }}_{{ featureSet.name }}_feature_timestamp, created_timestamp, {{ featureSet.entities | join(', ')}})

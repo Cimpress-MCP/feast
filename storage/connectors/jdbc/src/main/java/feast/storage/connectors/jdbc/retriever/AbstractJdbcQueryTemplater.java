@@ -127,7 +127,6 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
     return featureSetQueries;
   }
 
-  //TODO: adapt JSON variant column
   @Override
   public String runBatchQuery(
       String entityTableName,

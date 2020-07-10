@@ -22,15 +22,14 @@ import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
 import feast.storage.api.retriever.HistoricalRetrievalResult;
 import feast.storage.connectors.jdbc.connection.SnowflakeConnectionProvider;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 public class SnowflakeHistoricalRetrieverJSONColTest {
   private JdbcHistoricalRetriever snowflakeFeatureRetriever;
@@ -159,6 +158,12 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
                     .setProject("myproject4")
                     .setFeatureSet("feature_set")
                     .build())
+            .addFeatureReference(
+                ServingAPIProto.FeatureReference.newBuilder()
+                    .setName("feature_2")
+                    .setProject("myproject4")
+                    .setFeatureSet("feature_set")
+                    .build())
             .build();
     List<FeatureSetRequest> featureSetRequests = new ArrayList<>();
     featureSetRequests.add(featureSetRequest);
@@ -171,6 +176,7 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
         .setName("feature_set")
         .addEntities(FeatureSetProto.EntitySpec.newBuilder().setName("entity_id_primary"))
         .addFeatures(FeatureSetProto.FeatureSpec.newBuilder().setName("feature_1"))
+        .addFeatures(FeatureSetProto.FeatureSpec.newBuilder().setName("feature_2"))
         .setMaxAge(Duration.newBuilder().setSeconds(30)) // default
         .build();
   }

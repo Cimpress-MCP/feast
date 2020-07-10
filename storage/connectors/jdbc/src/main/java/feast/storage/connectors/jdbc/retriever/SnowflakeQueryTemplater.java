@@ -32,6 +32,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   private static final String JOIN_TEMPLATE_NAME_SNOWFLAKE =
       "templates/join_featuresets_snowflake.sql";
   private static final String VARIANT_COLUMN_NAME = "feature";
+
   public SnowflakeQueryTemplater(JdbcConnectionProvider connectionProvider) {
     super(connectionProvider);
   }
@@ -47,7 +48,6 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
             "create or replace file format CSV_format type = 'CSV' field_delimiter = ',' skip_header=1;"));
     queries.add(String.format("create or replace stage my_stage file_format = CSV_format;"));
     queries.add(String.format("put file://%s @my_stage auto_compress=false;", filePath));
-    // TODO: generic staging location for snowflake_proj_entity_rows.csv
     String fileName = filePath.getName();
     queries.add(
         String.format(
@@ -64,7 +64,6 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     return queries;
   }
 
-  //TODO: adapt JSON variant column
   @Override
   protected String createFeatureSetPointInTimeQuery(
       FeatureSetQueryInfo featureSetInfo,
