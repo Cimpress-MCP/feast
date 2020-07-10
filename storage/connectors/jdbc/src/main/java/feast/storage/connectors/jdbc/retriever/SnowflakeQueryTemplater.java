@@ -38,6 +38,39 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   }
 
   @Override
+  protected List<String> createEntityTableRowCountQuery(
+      String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos) {
+    StringJoiner featureSetTableSelectJoiner = new StringJoiner(", ");
+    StringJoiner featureSetTableFromJoiner = new StringJoiner(" CROSS JOIN ");
+    Set<String> entities = new HashSet<>();
+    List<String> entityColumns = new ArrayList<>();
+    for (FeatureSetQueryInfo featureSetQueryInfo : featureSetQueryInfos) {
+      String table = featureSetQueryInfo.getFeatureSetTable();
+      for (String entity : featureSetQueryInfo.getEntities()) {
+        if (!entities.contains(entity)) {
+          entities.add(entity);
+          // parse entities from FEATURE variant column
+          entityColumns.add(
+              String.format("%s.%s:%s AS %s", table, VARIANT_COLUMN_NAME, entity, entity));
+        }
+      }
+      featureSetTableFromJoiner.add(table);
+    }
+    // Must preserve alphabetical order because column mapping isn't supported in COPY loads of CSV
+    entityColumns.sort(Comparator.comparing(entity -> entity.split("\\.")[0]));
+    entityColumns.forEach(featureSetTableSelectJoiner::add);
+
+    List<String> createEntityTableRowCountQueries = new ArrayList<>();
+    createEntityTableRowCountQueries.add(
+        String.format(
+            "CREATE TABLE %s AS (SELECT %s FROM %s WHERE 1 = 2);",
+            destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
+    createEntityTableRowCountQueries.add(
+        String.format("ALTER TABLE %s ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
+    return createEntityTableRowCountQueries;
+  }
+
+  @Override
   protected List<String> createLoadEntityQuery(
       String destinationTable, String temporaryTable, File filePath) {
     List<String> queries = new ArrayList<>();

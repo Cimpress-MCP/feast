@@ -243,36 +243,13 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
         "SELECT max(event_timestamp) as MAX, min(event_timestamp) as MIN from %s", leftTableName);
   }
 
-  protected List<String> createEntityTableRowCountQuery(
-      String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos) {
-    StringJoiner featureSetTableSelectJoiner = new StringJoiner(", ");
-    StringJoiner featureSetTableFromJoiner = new StringJoiner(" CROSS JOIN ");
-    Set<String> entities = new HashSet<>();
-    List<String> entityColumns = new ArrayList<>();
-    for (FeatureSetQueryInfo featureSetQueryInfo : featureSetQueryInfos) {
-      String table = featureSetQueryInfo.getFeatureSetTable();
-      for (String entity : featureSetQueryInfo.getEntities()) {
-        if (!entities.contains(entity)) {
-          entities.add(entity);
-          // parse entities from FEATURE variant column
-          entityColumns.add(String.format("%s.feature:%s AS %s", table, entity, entity));
-        }
-      }
-      featureSetTableFromJoiner.add(table);
-    }
-    // Must preserve alphabetical order because column mapping isn't supported in COPY loads of CSV
-    entityColumns.sort(Comparator.comparing(entity -> entity.split("\\.")[0]));
-    entityColumns.forEach(featureSetTableSelectJoiner::add);
-
-    List<String> createEntityTableRowCountQueries = new ArrayList<>();
-    createEntityTableRowCountQueries.add(
-        String.format(
-            "CREATE TABLE %s AS (SELECT %s FROM %s WHERE 1 = 2);",
-            destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
-    createEntityTableRowCountQueries.add(
-        String.format("ALTER TABLE %s ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
-    return createEntityTableRowCountQueries;
-  }
+  /**
+   * @param destinationTable
+   * @param featureSetQueryInfos
+   * @return
+   */
+  protected abstract List<String> createEntityTableRowCountQuery(
+      String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos);
 
   protected void loadEntitiesFromFile(String entityTable, Iterator<String> fileList) {
     while (fileList.hasNext()) {

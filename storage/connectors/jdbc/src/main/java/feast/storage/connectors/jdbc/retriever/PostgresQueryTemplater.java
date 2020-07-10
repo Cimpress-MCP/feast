@@ -23,10 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class PostgresQueryTemplater extends AbstractJdbcQueryTemplater {
   private static final PebbleEngine engine = new PebbleEngine.Builder().build();
@@ -34,9 +31,43 @@ public class PostgresQueryTemplater extends AbstractJdbcQueryTemplater {
       "templates/single_featureset_pit_join_postgres.sql";
   private static final String JOIN_TEMPLATE_NAME_POSTGRES =
       "templates/join_featuresets_postgres.sql";
+  private static final String VARIANT_COLUMN_NAME = "feature";
 
   public PostgresQueryTemplater(JdbcConnectionProvider connectionProvider) {
     super(connectionProvider);
+  }
+
+  @Override
+  protected List<String> createEntityTableRowCountQuery(
+      String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos) {
+    StringJoiner featureSetTableSelectJoiner = new StringJoiner(", ");
+    StringJoiner featureSetTableFromJoiner = new StringJoiner(" CROSS JOIN ");
+    Set<String> entities = new HashSet<>();
+    List<String> entityColumns = new ArrayList<>();
+    for (FeatureSetQueryInfo featureSetQueryInfo : featureSetQueryInfos) {
+      String table = featureSetQueryInfo.getFeatureSetTable();
+      for (String entity : featureSetQueryInfo.getEntities()) {
+        if (!entities.contains(entity)) {
+          entities.add(entity);
+          // parse entities from FEATURE variant column
+          entityColumns.add(
+              String.format("%s.%s ->> %s AS %s", table, VARIANT_COLUMN_NAME, entity, entity));
+        }
+      }
+      featureSetTableFromJoiner.add(table);
+    }
+    // Must preserve alphabetical order because column mapping isn't supported in COPY loads of CSV
+    entityColumns.sort(Comparator.comparing(entity -> entity.split("\\.")[0]));
+    entityColumns.forEach(featureSetTableSelectJoiner::add);
+
+    List<String> createEntityTableRowCountQueries = new ArrayList<>();
+    createEntityTableRowCountQueries.add(
+        String.format(
+            "CREATE TABLE %s AS (SELECT %s FROM %s WHERE 1 = 2);",
+            destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
+    createEntityTableRowCountQueries.add(
+        String.format("ALTER TABLE %s ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
+    return createEntityTableRowCountQueries;
   }
 
   @Override
@@ -56,6 +87,7 @@ public class PostgresQueryTemplater extends AbstractJdbcQueryTemplater {
     return queries;
   }
 
+  // TODO: update template to adapt JSON type column
   @Override
   protected String createFeatureSetPointInTimeQuery(
       FeatureSetQueryInfo featureSetInfo,
