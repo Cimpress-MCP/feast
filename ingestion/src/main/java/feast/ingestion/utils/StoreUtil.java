@@ -20,10 +20,13 @@ import static feast.proto.types.ValueProto.ValueType;
 
 import com.google.cloud.bigquery.StandardSQLTypeName;
 import feast.proto.core.StoreProto.Store;
+import feast.proto.core.StoreProto.Store.JdbcConfig;
 import feast.proto.core.StoreProto.Store.StoreType;
 import feast.proto.types.ValueProto.ValueType.Enum;
 import feast.storage.api.writer.FeatureSink;
 import feast.storage.connectors.bigquery.writer.BigQueryFeatureSink;
+import feast.storage.connectors.jdbc.connection.SnowflakeConnectionProvider;
+import feast.storage.connectors.jdbc.snowflake.SnowflakeTemplater;
 import feast.storage.connectors.jdbc.writer.JdbcFeatureSink;
 import feast.storage.connectors.redis.writer.RedisFeatureSink;
 import java.util.HashMap;
@@ -88,9 +91,38 @@ public class StoreUtil {
       case BIGQUERY:
         return BigQueryFeatureSink.fromConfig(store.getBigqueryConfig());
       case JDBC:
-        return JdbcFeatureSink.fromConfig(store.getJdbcConfig());
+        return createJdbcHistoricalSink(store.getJdbcConfig());
       default:
         throw new RuntimeException(String.format("Store type '%s' is unsupported", storeType));
+    }
+  }
+  
+ 
+  public static FeatureSink createJdbcHistoricalSink(JdbcConfig config) {
+
+    String className = config.getClassName();
+    Map<String, String> mapConfig = new HashMap<>();
+    mapConfig.put("username", config.getUsername());
+    mapConfig.put("password", config.getPassword());
+    mapConfig.put("class_name", config.getClassName());
+    mapConfig.put("url", config.getUrl());
+    mapConfig.put("database", config.getDatabase());
+    mapConfig.put("schema", config.getSchema());
+    mapConfig.put("schema", config.getWarehouse());
+  
+    switch (className) {
+      case "net.snowflake.client.jdbc.SnowflakeDriver":
+        SnowflakeConnectionProvider snowflakeConnectionProvider =
+            new SnowflakeConnectionProvider(mapConfig);
+        SnowflakeTemplater snowflakeTemplater = new SnowflakeTemplater();
+        return JdbcFeatureSink.fromConfig(snowflakeConnectionProvider, snowflakeTemplater);
+//      case "org.postgresql.Driver":
+
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "Unsupported JDBC store className '%s'",
+                className ));
     }
   }
 }

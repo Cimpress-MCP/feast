@@ -17,11 +17,11 @@
 package feast.storage.connectors.jdbc.writer;
 
 import feast.proto.core.FeatureSetProto;
-import feast.proto.core.StoreProto;
 import feast.proto.types.FeatureRowProto;
 import feast.storage.api.writer.FailedElement;
 import feast.storage.api.writer.WriteResult;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
+import feast.storage.connectors.jdbc.connection.JdbcConnectionProvider;
 import java.sql.PreparedStatement;
 import java.util.*;
 import org.apache.beam.sdk.io.jdbc.JdbcIO;
@@ -44,29 +44,54 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcWrite.class);
   private final Map<String, FeatureSetProto.FeatureSet> subscribedFeatureSets;
   private final JdbcTemplater jdbcTemplater;
-  private final StoreProto.Store.JdbcConfig config;
+  private final  JdbcConnectionProvider connectionProvider;
 
+  
   public JdbcWrite(
-      StoreProto.Store.JdbcConfig config,
-      JdbcTemplater jdbcTemplater,
-      Map<String, FeatureSetProto.FeatureSet> subscribedFeatureSets) {
-    this.config = config;
-    this.jdbcTemplater = jdbcTemplater;
-    this.subscribedFeatureSets = subscribedFeatureSets;
-    Map<String, String> sqlInsertStatements = new HashMap<>();
+		  JdbcConnectionProvider connectionProvider, 
+		  JdbcTemplater jdbcTemplater,
+		  Map<String, FeatureSetProto.FeatureSet> subscribedFeatureSets) {
+	  this.connectionProvider = connectionProvider;
+	  this.jdbcTemplater = jdbcTemplater;
+	  this.subscribedFeatureSets = subscribedFeatureSets;
+	  
+	  Map<String, String> sqlInsertStatements = new HashMap<>();
     for (String subscribedFeatureSetRef : subscribedFeatureSets.keySet()) {
+    	System.out.println("subscribedFeatureSetRef--------"+subscribedFeatureSetRef);
       FeatureSetProto.FeatureSet subscribedFeatureSet =
           subscribedFeatureSets.get(subscribedFeatureSetRef);
       FeatureSetProto.FeatureSetSpec subscribedFeatureSetSpec = subscribedFeatureSet.getSpec();
       String featureRowInsertSql = jdbcTemplater.getFeatureRowInsertSql(subscribedFeatureSetSpec);
       System.out.println("featureRowInsertSql" + featureRowInsertSql);
       sqlInsertStatements.put(subscribedFeatureSetRef, featureRowInsertSql);
-    }
   }
+  }
+//  public JdbcWrite(
+//      StoreProto.Store.JdbcConfig config,
+//      JdbcTemplater jdbcTemplater,
+//      Map<String, FeatureSetProto.FeatureSet> subscribedFeatureSets) {
+//    this.config = config;
+//    this.jdbcTemplater = jdbcTemplater;
+//    this.subscribedFeatureSets = subscribedFeatureSets;
+//    Map<String, String> sqlInsertStatements = new HashMap<>();
+//    for (String subscribedFeatureSetRef : subscribedFeatureSets.keySet()) {
+//      FeatureSetProto.FeatureSet subscribedFeatureSet =
+//          subscribedFeatureSets.get(subscribedFeatureSetRef);
+//      FeatureSetProto.FeatureSetSpec subscribedFeatureSetSpec = subscribedFeatureSet.getSpec();
+//      String featureRowInsertSql = jdbcTemplater.getFeatureRowInsertSql(subscribedFeatureSetSpec);
+//      System.out.println("featureRowInsertSql" + featureRowInsertSql);
+//      sqlInsertStatements.put(subscribedFeatureSetRef, featureRowInsertSql);
+//    }
+//  }
 
-  public StoreProto.Store.JdbcConfig getConfig() {
-    return config;
-  }
+//  public JdbcWrite(JdbcConnectionProvider getconnectionProvider, JdbcTemplater jdbcTemplater2,
+//		Map<String, FeatureSet> subscribedFeatureSets2) {
+//	// TODO Auto-generated constructor stub
+//}
+
+//public StoreProto.Store.JdbcConfig getConfig() {
+//    return config;
+//  }
 
   @Override
   public WriteResult expand(PCollection<FeatureRowProto.FeatureRow> input) {
@@ -90,7 +115,7 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
       // Find the feature set spec associated with this partition
       FeatureSetProto.FeatureSetSpec currentFeatureSetSpec =
           subscribedFeatureSets.get(featureSetRef).getSpec();
-      StoreProto.Store.JdbcConfig jdbcConfig = this.getConfig();
+//      StoreProto.Store.JdbcConfig jdbcConfig = this.getConfig();
 
       // Apply the WriteFeatureRow transformation to this feature set partitioned input
       applyWriteFeatureRowToJdbcIo(
@@ -98,7 +123,7 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
           featureSetRef,
           featureSetInput,
           currentFeatureSetSpec,
-          jdbcConfig,
+          connectionProvider,
           jdbcTemplater);
     }
 
@@ -151,15 +176,15 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
       String featureSetRef,
       PCollection<FeatureRowProto.FeatureRow> featureSetInput,
       FeatureSetProto.FeatureSetSpec currentFeatureSetSpec,
-      StoreProto.Store.JdbcConfig jdbcConfig,
+      JdbcConnectionProvider connectionProvider,
       JdbcTemplater jdbcTemplater) {
 
-    int batchSize = jdbcConfig.getBatchSize() > 0 ? jdbcConfig.getBatchSize() : 1;
+  int batchSize = 1;
 
     featureSetInput.apply(
         String.format("WriteFeatureRowToJdbcIO-%s", featureSetRef),
         JdbcIO.<FeatureRowProto.FeatureRow>write()
-            .withDataSourceConfiguration(create_dsconfig(jdbcConfig))
+            .withDataSourceConfiguration(create_dsconfig(connectionProvider))
             .withStatement(jdbcTemplater.getFeatureRowInsertSql(currentFeatureSetSpec))
             .withBatchSize(batchSize)
             .withPreparedStatementSetter(
@@ -172,27 +197,8 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
                 }));
   }
 
-  private static JdbcIO.DataSourceConfiguration create_dsconfig(
-      StoreProto.Store.JdbcConfig jdbcConfig) {
-    String username = jdbcConfig.getUsername();
-    String password = jdbcConfig.getPassword();
-    String className = jdbcConfig.getClassName();
-    String url = jdbcConfig.getUrl();
-
-    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
-      String database = jdbcConfig.getDatabase();
-      String schema = jdbcConfig.getSchema();
-      String warehouse = jdbcConfig.getWarehouse();
-      return JdbcIO.DataSourceConfiguration.create(className, url)
-          .withUsername(!username.isEmpty() ? username : null)
-          .withPassword(!password.isEmpty() ? password : null)
-          .withConnectionProperties(
-              String.format("warehouse=%s;db=%s;schema=%s", warehouse, database, schema));
-
-    } else {
-      return JdbcIO.DataSourceConfiguration.create(className, url)
-          .withUsername(!username.isEmpty() ? username : null)
-          .withPassword(!password.isEmpty() ? password : null);
-    }
+  private static JdbcIO.DataSourceConfiguration create_dsconfig( JdbcConnectionProvider connectionProvider){
+      return connectionProvider.getdsconfig();
   }
 }
+

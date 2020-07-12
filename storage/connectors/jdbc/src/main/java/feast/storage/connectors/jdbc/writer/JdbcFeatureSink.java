@@ -20,8 +20,13 @@ import feast.common.models.FeatureSetReference;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.StoreProto;
 import feast.proto.core.StoreProto.Store.JdbcConfig;
+import feast.proto.types.FeatureRowProto;
+import feast.proto.types.FeatureRowProto.FeatureRow;
+import feast.storage.api.writer.FailedElement;
 import feast.storage.api.writer.FeatureSink;
+import feast.storage.api.writer.WriteResult;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
+import feast.storage.connectors.jdbc.connection.JdbcConnectionProvider;
 import feast.storage.connectors.jdbc.postgres.PostgresqlTemplater;
 import feast.storage.connectors.jdbc.snowflake.SnowflakeTemplater;
 import feast.storage.connectors.jdbc.sqlite.SqliteTemplater;
@@ -29,47 +34,43 @@ import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+
+import org.apache.beam.sdk.coders.AvroCoder;
+import org.apache.beam.sdk.coders.KvCoder;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.DoFn.ProcessContext;
+import org.apache.beam.sdk.transforms.DoFn.ProcessElement;
+import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
+
 
 public class JdbcFeatureSink implements FeatureSink {
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcFeatureSink.class);
 
   private final Map<String, FeatureSetProto.FeatureSet> subscribedFeatureSets = new HashMap<>();
-  private final StoreProto.Store.JdbcConfig config;
+//  private final StoreProto.Store.JdbcConfig config;
 
   public JdbcTemplater getJdbcTemplater() {
     return jdbcTemplater;
   }
+  
+  public JdbcConnectionProvider getconnectionProvider() {
+	    return connectionProvider;
+	  }
 
   private JdbcTemplater jdbcTemplater;
-
-  public JdbcFeatureSink(JdbcConfig config) {
-    this.config = config;
-    this.jdbcTemplater = getJdbcTemplaterForClass(config.getClassName());
+  private JdbcConnectionProvider connectionProvider;
+  
+  public JdbcFeatureSink(JdbcConnectionProvider connectionProvider, JdbcTemplater jdbcTemplater) {
+	this.connectionProvider = connectionProvider;
+    this.jdbcTemplater = jdbcTemplater;
   }
 
-  private JdbcTemplater getJdbcTemplaterForClass(String className) {
-    switch (className) {
-      case "org.sqlite.JDBC":
-        return new SqliteTemplater();
-      case "org.postgresql.Driver":
-        return new PostgresqlTemplater();
-      case "net.snowflake.client.jdbc.SnowflakeDriver":
-        return new SnowflakeTemplater();
-      default:
-        throw new RuntimeException(
-            "JDBC class name was not specified, was incorrect, or had no implementation for templating.");
-    }
-  }
-
-  public static FeatureSink fromConfig(JdbcConfig config) {
-    return new JdbcFeatureSink(config);
-  }
-
-  public JdbcConfig getConfig() {
-    return config;
+  public static FeatureSink fromConfig(JdbcConnectionProvider connectionProvider, JdbcTemplater jdbcTemplater) {
+    return new JdbcFeatureSink(connectionProvider, jdbcTemplater);
   }
 
   // TODO: update prepareWrite with return PCollection<FeatureSetReference>
@@ -80,20 +81,22 @@ public class JdbcFeatureSink implements FeatureSink {
   @Override
   public PCollection<FeatureSetReference> prepareWrite(
       PCollection<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>> featureSetSpecs) {
-    return null;
-  }
-  // TODO: update prepareWrite
-  public void prepareWrite(FeatureSetProto.FeatureSet featureSet) {
-    FeatureSetProto.FeatureSetSpec featureSetSpec = featureSet.getSpec();
-    String featureSetKey = getFeatureSetRef(featureSetSpec);
-    this.subscribedFeatureSets.put(featureSetKey, featureSet);
+	  
+	  System.out.println("inside prepare write----");
 
-    Connection conn = connect(this.getConfig());
-    if (tableExists(conn, featureSetSpec, this.getConfig())) {
-      updateTable(conn, this.getJdbcTemplater(), featureSetSpec);
-    } else {
-      createTable(conn, this.getJdbcTemplater(), featureSetSpec);
-    }
+	  PCollection<FeatureSetReference> schemas =
+		        featureSetSpecs
+		            .apply(
+		                "GenerateTableSchema",
+		                ParDo.of(
+		                		 new FeatureSetSpecToTableSchemaJDBC(this.getconnectionProvider(), this.getJdbcTemplater())));
+//		                    new FeatureSetSpecToTableSchemaJDBC(this.getconnectionProvider(), this.getJdbcTemplater())));
+//		            .setCoder(
+//		                KvCoder.of(
+//		                    AvroCoder.of(FeatureSetReference.class),
+//		                    FeatureSetSpecToTableSchema.TableSchemaCoder.of()));
+	return schemas;
+
   }
 
   private void createTable(
@@ -151,39 +154,7 @@ public class JdbcFeatureSink implements FeatureSink {
           String.format("Could not determine columns for feature set %s", featureSetName), e);
     }
     return existingColumnsAndTypes;
-  }
-
-  private static Connection connect(JdbcConfig config) {
-    String username = config.getUsername();
-    String password = config.getPassword();
-    String className = config.getClassName();
-    String url = config.getUrl();
-    try {
-
-      if (!username.isEmpty()) {
-        if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
-          String database = config.getDatabase();
-          String schema = config.getSchema();
-          Properties props = new Properties();
-          props.put("user", username);
-          props.put("password", password);
-          props.put("db", database);
-          props.put("schema", schema);
-          Class.forName(className);
-          return DriverManager.getConnection(url, props);
-        } else {
-          Class.forName(className);
-          return DriverManager.getConnection(url, username, password);
-        }
-      }
-      return DriverManager.getConnection(url);
-    } catch (ClassNotFoundException | SQLException e) {
-      throw new RuntimeException(
-          String.format(
-              "Could not connect to database with url %s and classname %s", url, className),
-          e);
-    }
-  }
+  }  
 
   private static boolean tableExists(
       Connection conn,
@@ -218,9 +189,15 @@ public class JdbcFeatureSink implements FeatureSink {
     return subscribedFeatureSets;
   }
 
+//@Override
+//public PTransform<PCollection<FeatureRow>, WriteResult> writer() {
+//	// TODO Auto-generated method stub
+//	return null;
+//}
+
   @Override
   public JdbcWrite writer() {
     return new JdbcWrite(
-        this.getConfig(), this.getJdbcTemplater(), this.getSubscribedFeatureSets());
+    		this.getconnectionProvider() , this.getJdbcTemplater(), this.getSubscribedFeatureSets());
   }
 }

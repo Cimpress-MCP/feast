@@ -22,6 +22,10 @@ import java.sql.SQLException;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.beam.sdk.io.jdbc.JdbcIO;
+
+import feast.proto.core.StoreProto;
+
 public class SnowflakeConnectionProvider implements JdbcConnectionProvider {
   private final String database;
   private final String schema;
@@ -29,6 +33,7 @@ public class SnowflakeConnectionProvider implements JdbcConnectionProvider {
   private final String username;
   private final String url;
   private final String className;
+  private String warehouse = "";
 
   public SnowflakeConnectionProvider(Map<String, String> config) {
     if (!config.containsKey("database")
@@ -53,6 +58,7 @@ public class SnowflakeConnectionProvider implements JdbcConnectionProvider {
     this.url = config.get("url");
     this.username = config.get("username");
     this.password = config.get("password");
+    this.warehouse = config.get("warehouse");
   }
 
   @Override
@@ -74,5 +80,15 @@ public class SnowflakeConnectionProvider implements JdbcConnectionProvider {
               this.url, this.className, this.database, this.schema),
           e);
     }
+  }
+  
+  @Override
+  public JdbcIO.DataSourceConfiguration getdsconfig(){
+	      return JdbcIO.DataSourceConfiguration.create(this.className, this.url)
+	          .withUsername(!this.username.isEmpty() ? this.username : null)
+	          .withPassword(!this.password.isEmpty() ? this.password : null)
+	          .withConnectionProperties(
+	              String.format("warehouse=%s;db=%s;schema=%s", this.warehouse, this.database, this.schema));
+	    
   }
 }

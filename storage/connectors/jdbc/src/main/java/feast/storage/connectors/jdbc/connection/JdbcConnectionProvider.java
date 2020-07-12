@@ -18,7 +18,11 @@ package feast.storage.connectors.jdbc.connection;
 
 import java.sql.Connection;
 
+import org.apache.beam.sdk.io.jdbc.JdbcIO.DataSourceConfiguration;
+
 public interface JdbcConnectionProvider {
   /** @return a connection to the URL */
   Connection getConnection();
+
+DataSourceConfiguration getdsconfig();
 }
