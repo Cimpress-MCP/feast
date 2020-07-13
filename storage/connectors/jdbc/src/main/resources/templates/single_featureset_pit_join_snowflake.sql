@@ -83,4 +83,15 @@ WHERE is_entity_table
 /*
  4. Finally, deduplicate the rows by selecting the first occurrence of each entity table row row_number.
  */
-SELECT * FROM joined
+SELECT
+    row_number,
+    event_timestamp,
+    {{ featureSet.entities | join(', ')}},
+    {% for feature in featureSet.features %}
+    {{ featureSet.project }}__{{ featureSet.name }}__{{ feature.name }}{% if loop.last %}{% else %}, {% endif %}
+    {% endfor %}
+FROM (
+         SELECT j.*, ROW_NUMBER() OVER (PARTITION BY j.row_number ORDER BY 1) AS rk
+         FROM joined j
+     ) s
+WHERE s.rk = 1
