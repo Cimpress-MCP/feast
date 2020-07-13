@@ -49,10 +49,14 @@ public class JdbcSnowflakeFeatureSinkTest {
   private FeatureSink snowflakeFeatureSinkObj;
 
   // TODO: Update the variables to match your snowflake account
-    private String userName = System.getenv("SNOWFLAKE_USERNAME");
-    private String password = System.getenv("SNOWFLAKE_PASSWORD");
 
-  
+  //  private String userName = System.getenv("SNOWFLAKE_USERNAME");
+  //  private String password = System.getenv("SNOWFLAKE_PASSWORD");
+
+  private String userName = "SWATIARORA";
+
+  private String password = "Vistaprint1@";
+
 
   private String database = "DEMO_DB";
   private String schema = "PUBLIC";
@@ -67,7 +71,7 @@ public class JdbcSnowflakeFeatureSinkTest {
 
     FeatureSetProto.FeatureSetSpec spec1 =
         FeatureSetProto.FeatureSetSpec.newBuilder()
-            .setName("feature_set_temp1")
+            .setName("feature_set_8")
             .setProject("snowflake_proj")
             .build();
 
@@ -75,7 +79,7 @@ public class JdbcSnowflakeFeatureSinkTest {
 
     FeatureSetProto.FeatureSetSpec spec2 =
         FeatureSetProto.FeatureSetSpec.newBuilder()
-            .setName("feature_set_temp2")
+            .setName("feature_set_9")
             .setProject("snowflake_proj")
             .build();
     FeatureSetReference ref2 = FeatureSetReference.of(spec2.getProject(), spec2.getName(), 1);
@@ -97,7 +101,12 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .build());
 
 
+
     this.snowflakeFeatureSinkObj.prepareWrite(p.apply("create_spec",Create.of(specMap)));
+
+
+
+    this.snowflakeFeatureSinkObj.prepareWrite(p.apply(Create.of(specMap)));
 
     this.connect();
   }
@@ -157,13 +166,15 @@ public class JdbcSnowflakeFeatureSinkTest {
                         .build())
                 .addFields(field("feature_2", 4, Enum.INT64))
                 .build());
-    
-//    p.apply(Create.of(featureRows)).apply("create_features",this.snowflakeFeatureSinkObj.writer());
+
+
+    //    p.apply(Create.of(featureRows)).apply(this.snowflakeFeatureSinkObj.writer());
     p.run();
     DatabaseMetaData meta = conn.getMetaData();
     Assert.assertEquals(
-        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_3", null).next());
+        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_8", null).next());
     Assert.assertEquals(
-        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_4", null).next());
+        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_9", null).next());
+
   }
 }

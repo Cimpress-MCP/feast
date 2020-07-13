@@ -26,6 +26,9 @@ import feast.storage.connectors.jdbc.postgres.PostgresqlTemplater;
 import feast.storage.connectors.jdbc.snowflake.SnowflakeTemplater;
 import feast.storage.connectors.jdbc.sqlite.SqliteTemplater;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
@@ -81,6 +84,7 @@ public class JdbcFeatureSink implements FeatureSink {
       PCollection<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>> featureSetSpecs) {
 
 
+
     PCollection<FeatureSetReference> schemas =
         featureSetSpecs.apply(
             "CreateTableSchema",
@@ -88,6 +92,7 @@ public class JdbcFeatureSink implements FeatureSink {
                 new FeatureSetSpecToTableSchemaJDBC(this.getJdbcTemplater(), this.getConfig())));
  
    	  return schemas;
+
   }
 
   public static String getFeatureSetRef(FeatureSetProto.FeatureSetSpec featureSetSpec) {
