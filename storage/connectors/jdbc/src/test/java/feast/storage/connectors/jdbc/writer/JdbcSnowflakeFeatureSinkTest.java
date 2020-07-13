@@ -20,6 +20,7 @@ import static feast.storage.common.testing.TestUtil.field;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import feast.common.models.FeatureSetReference;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.StoreProto;
 import feast.proto.types.FeatureRowProto.FeatureRow;
@@ -47,8 +48,12 @@ public class JdbcSnowflakeFeatureSinkTest {
   private FeatureSink snowflakeFeatureSinkObj;
 
   // TODO: Update the variables to match your snowflake account
-  private String userName = System.getenv("SNOWFLAKE_USERNAME");
-  private String password = System.getenv("SNOWFLAKE_PASSWORD");
+  //  private String userName = System.getenv("SNOWFLAKE_USERNAME");
+  //  private String password = System.getenv("SNOWFLAKE_PASSWORD");
+
+  private String userName = "SWATIARORA";
+
+  private String password = "Vistaprint1@";
 
   private String database = "DEMO_DB";
   private String schema = "PUBLIC";
@@ -63,19 +68,21 @@ public class JdbcSnowflakeFeatureSinkTest {
 
     FeatureSetProto.FeatureSetSpec spec1 =
         FeatureSetProto.FeatureSetSpec.newBuilder()
-            .setName("feature_set_1")
+            .setName("feature_set_8")
             .setProject("snowflake_proj")
             .build();
+
+    FeatureSetReference ref1 = FeatureSetReference.of(spec1.getProject(), spec1.getName(), 1);
 
     FeatureSetProto.FeatureSetSpec spec2 =
         FeatureSetProto.FeatureSetSpec.newBuilder()
-            .setName("feature_set_2")
+            .setName("feature_set_9")
             .setProject("snowflake_proj")
             .build();
+    FeatureSetReference ref2 = FeatureSetReference.of(spec2.getProject(), spec2.getName(), 1);
 
-    Map<String, FeatureSetProto.FeatureSetSpec> specMap =
-        ImmutableMap.of(
-            "snowflake_proj/feature_set_1", spec1, "snowflake_proj/feature_set_2", spec2);
+    Map<FeatureSetReference, FeatureSetProto.FeatureSetSpec> specMap =
+        ImmutableMap.of(ref1, spec1, ref2, spec2);
 
     this.snowflakeFeatureSinkObj =
         JdbcFeatureSink.fromConfig(
@@ -89,11 +96,16 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setWarehouse(this.warehouse)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
+<<<<<<< HEAD
     // TODO: comment out waiting for prepareWrite update
     //    this.snowflakeFeatureSinkObj.prepareWrite(
     //        FeatureSetProto.FeatureSet.newBuilder().setSpec(spec1).build());
     //    this.snowflakeFeatureSinkObj.prepareWrite(
     //        FeatureSetProto.FeatureSet.newBuilder().setSpec(spec2).build());
+=======
+
+    this.snowflakeFeatureSinkObj.prepareWrite(p.apply(Create.of(specMap)));
+>>>>>>> updated prepare write as per new changes
     this.connect();
   }
 
@@ -151,12 +163,12 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .addFields(field("feature_2", 4, Enum.INT64))
                 .build());
 
-    p.apply(Create.of(featureRows)).apply(this.snowflakeFeatureSinkObj.writer());
+    //    p.apply(Create.of(featureRows)).apply(this.snowflakeFeatureSinkObj.writer());
     p.run();
     DatabaseMetaData meta = conn.getMetaData();
     Assert.assertEquals(
-        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_1", null).next());
+        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_8", null).next());
     Assert.assertEquals(
-        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_2", null).next());
+        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_9", null).next());
   }
 }
