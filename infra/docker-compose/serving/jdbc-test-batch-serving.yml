@@ -1,0 +1,35 @@
+feast:
+  core-host: core
+  active-store: historical
+  stores:
+    - name: historical
+      type: JDBC
+      config:  # Store specific configuration.
+        # Snowflake Project
+        url: jdbc:snowflake://ry42518.us-east-2.aws.snowflakecomputing.com
+        class_name: net.snowflake.client.jdbc.SnowflakeDriver
+        # JdbcFeatureSink This must be set to 1 for DirectRunner
+        batch_size: 1
+        username: CHIZHANG
+        password: 123456Pw
+        # staging-location specifies the URI to store intermediate files for batch serving.
+        # Feast Serving client is expected to have read access to this staging location
+        # to download the batch features.
+        # Please omit the trailing slash in the URI.
+        # TODO: s3 location
+        staging_location: /Users/e10117390/2020Summer/FeastStagingFolder
+        database: DEMO_DB
+        schema: PUBLIC
+        warehouse: COMPUTE_WH
+      subscriptions:
+        - name: "*"
+          project: "*"
+  job_store:
+    redis_host: redis
+    redis_port: 6379
+
+grpc:
+  port: 6567
+
+
+
