@@ -31,24 +31,23 @@ feast:
           project: "*"
           version: "*"
     - name: historical
-      type: BIGQUERY
+      type: JDBC
       config:  # Store specific configuration.
-        # GCP Project
-        project_id: my_project
-        # BigQuery Dataset Id
-        dataset_id: my_dataset
+        # Snowflake Project
+        url: jdbc:snowflake://ry42518.us-east-2.aws.snowflakecomputing.com
+        class_name: net.snowflake.client.jdbc.SnowflakeDriver
+        # JdbcFeatureSink This must be set to 1 for DirectRunner
+        batch_size: 1
+        username: CHIZHANG
+        password: 123456Pw
         # staging-location specifies the URI to store intermediate files for batch serving.
         # Feast Serving client is expected to have read access to this staging location
         # to download the batch features.
-        # For example: gs://mybucket/myprefix
         # Please omit the trailing slash in the URI.
-        staging_location: gs://mybucket/myprefix
-        # Retry options for BigQuery retrieval jobs
-        initial_retry_delay_seconds: 1
-        # BigQuery timeout for retrieval jobs
-        total_timeout_seconds: 21600
-        # BigQuery sink write frequency
-        write_triggering_frequency_seconds: 600
+        staging_location: /Users/e10117390/2020Summer/FeastStagingFolder
+        database: DEMO_DB
+        schema: PUBLIC
+        warehouse: COMPUTE_WH
       subscriptions:
         - name: "*"
           project: "*"
