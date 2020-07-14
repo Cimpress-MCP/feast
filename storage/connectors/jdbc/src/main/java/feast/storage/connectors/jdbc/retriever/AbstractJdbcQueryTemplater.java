@@ -31,14 +31,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
+  protected static final String EXPORT_FILE_FORMAT = "csv.gz";
   private Connection connection;
 
   public AbstractJdbcQueryTemplater(JdbcConnectionProvider connectionProvider) {
     this.connection = connectionProvider.getConnection();
-  }
-
-  protected Connection getConnection() {
-    return this.connection;
   }
 
   protected String createTempTableName() {
@@ -192,7 +189,7 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
     String stagingPath = stagingUri.getPath();
     // TODO: need flexible file type
     String exportPath =
-        String.format("%s/%s.csv.gz", stagingPath.replaceAll("/$", ""), resultTable);
+        String.format("%s/%s.%s", stagingPath.replaceAll("/$", ""), resultTable, EXPORT_FILE_FORMAT);
     List<String> exportTableSqlQueries = this.generateExportTableSqlQuery(resultTable, stagingPath);
     try {
       Statement statement = this.connection.createStatement();
