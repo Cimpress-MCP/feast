@@ -38,12 +38,11 @@ feast:
         class_name: net.snowflake.client.jdbc.SnowflakeDriver
         # JdbcFeatureSink This must be set to 1 for DirectRunner
         batch_size: 1
-        username: ""
-        password: ""
+        username: CHIZHANG
+        password: 123456Pw
         # staging-location specifies the URI to store intermediate files for batch serving.
         # Feast Serving client is expected to have read access to this staging location
         # to download the batch features.
-        # For example: gs://mybucket/myprefix for BIGQUERY
         # Please omit the trailing slash in the URI.
         staging_location: /Users/e10117390/2020Summer/FeastStagingFolder
         database: DEMO_DB
