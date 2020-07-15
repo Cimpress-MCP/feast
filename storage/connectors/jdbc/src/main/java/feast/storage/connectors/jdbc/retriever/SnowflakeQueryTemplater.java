@@ -111,7 +111,6 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     context.put("variantColumn", VARIANT_COLUMN_NAME);
     context.put("featureSet", featureSetInfo);
 
-    // TODO: Subtract max age to min timestamp
     context.put("minTimestamp", minTimestamp);
     context.put("maxTimestamp", maxTimestamp);
     context.put("leftTableName", leftTableName);
