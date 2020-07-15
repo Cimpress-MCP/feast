@@ -39,10 +39,13 @@ public interface JdbcTemplater extends Serializable {
   String getTableMigrationSql(
       FeatureSetProto.FeatureSetSpec featureSetSpec, Map<String, String> existingColumns);
 
-  String getFeatureRowInsertSql(FeatureSetProto.FeatureSetSpec featureSetSpec);
+//  String getFeatureRowInsertSql(FeatureSetProto.FeatureSetSpec featureSetSpec);
+  String getFeatureRowInsertSql(String featureSetSpec);
 
-  Map<String, String> getRequiredColumns(FeatureSetProto.FeatureSetSpec featureSet);
+//  Map<String, String> getRequiredColumns(FeatureSetProto.FeatureSetSpec featureSet);
 
+  Map<String, String> getRequiredColumns();
+  
   void setSinkParameters(
       FeatureRow element,
       PreparedStatement preparedStatement,

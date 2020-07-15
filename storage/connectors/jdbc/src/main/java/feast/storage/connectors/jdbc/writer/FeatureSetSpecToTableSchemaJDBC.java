@@ -16,21 +16,23 @@
  */
 package feast.storage.connectors.jdbc.writer;
 
-import com.google.api.services.bigquery.model.TableSchema;
-import com.google.cloud.bigquery.*;
-import feast.common.models.FeatureSetReference;
-import feast.proto.core.FeatureSetProto;
-import feast.proto.core.StoreProto.Store.JdbcConfig;
-import feast.storage.connectors.jdbc.common.JdbcTemplater;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
 import java.util.Properties;
+
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
 import org.slf4j.Logger;
+
+import com.google.api.services.bigquery.model.TableSchema;
+
+import feast.common.models.FeatureSetReference;
+import feast.proto.core.FeatureSetProto;
+import feast.proto.core.StoreProto.Store.JdbcConfig;
+import feast.storage.connectors.jdbc.common.JdbcTemplater;
 
 /**
  * Converts {@link feast.proto.core.FeatureSetProto.FeatureSetSpec} into BigQuery schema. Serializes
@@ -40,8 +42,10 @@ import org.slf4j.Logger;
  * <p>As a side effect this Operation may create bq table (if it doesn't exist) to make
  * bootstrapping faster
  */
+@SuppressWarnings("serial")
 public class FeatureSetSpecToTableSchemaJDBC
     extends DoFn<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>, FeatureSetReference> {
+	
   private JdbcTemplater jdbcTemplater;
   private JdbcConfig jdbcConfig;
 
@@ -64,8 +68,8 @@ public class FeatureSetSpecToTableSchemaJDBC
     System.out.println("inside FeatureSetSpecToTableSchema ////" + featureSetSpec.getName());
     String featureSetRef = JdbcTemplater.getTableName(featureSetSpec);
     System.out.println("featureSetRef ////" + featureSetRef);
-    Map<String, String> requiredColumns = this.jdbcTemplater.getRequiredColumns(featureSetSpec);
-
+//    Map<String, String> requiredColumns = this.jdbcTemplater.getRequiredColumns(featureSetSpec);
+    Map<String, String> requiredColumns = this.jdbcTemplater.getRequiredColumns();
     Properties props = new Properties();
     props.put("user", this.jdbcConfig.getUsername());
     props.put("password", this.jdbcConfig.getPassword());
@@ -87,12 +91,7 @@ public class FeatureSetSpecToTableSchemaJDBC
           e);
     }
 
-    //    for (String column : requiredColumns.keySet()) {
-    //
-    //    	 System.out.println("column---"+column);
-    //
-    //    	 System.out.println("type---"+requiredColumns.get(column));
-    //      }
+    
     out.output(element.getKey());
   }
 

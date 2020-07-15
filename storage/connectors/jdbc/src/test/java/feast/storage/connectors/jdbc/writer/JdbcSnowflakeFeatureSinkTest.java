@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Properties;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
+import org.apache.beam.sdk.values.PCollection;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -68,7 +69,7 @@ public class JdbcSnowflakeFeatureSinkTest {
 
     FeatureSetProto.FeatureSetSpec spec1 =
         FeatureSetProto.FeatureSetSpec.newBuilder()
-            .setName("feature_set_8")
+            .setName("feature_set_temp1")
             .setProject("snowflake_proj")
             .build();
 
@@ -76,7 +77,7 @@ public class JdbcSnowflakeFeatureSinkTest {
 
     FeatureSetProto.FeatureSetSpec spec2 =
         FeatureSetProto.FeatureSetSpec.newBuilder()
-            .setName("feature_set_9")
+            .setName("feature_set_temp2")
             .setProject("snowflake_proj")
             .build();
     FeatureSetReference ref2 = FeatureSetReference.of(spec2.getProject(), spec2.getName(), 1);
@@ -96,16 +97,10 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setWarehouse(this.warehouse)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
-<<<<<<< HEAD
-    // TODO: comment out waiting for prepareWrite update
-    //    this.snowflakeFeatureSinkObj.prepareWrite(
-    //        FeatureSetProto.FeatureSet.newBuilder().setSpec(spec1).build());
-    //    this.snowflakeFeatureSinkObj.prepareWrite(
-    //        FeatureSetProto.FeatureSet.newBuilder().setSpec(spec2).build());
-=======
 
-    this.snowflakeFeatureSinkObj.prepareWrite(p.apply(Create.of(specMap)));
->>>>>>> updated prepare write as per new changes
+ 
+    this.snowflakeFeatureSinkObj.prepareWrite(p.apply("create_spec",Create.of(specMap)));
+
     this.connect();
   }
 
@@ -130,22 +125,24 @@ public class JdbcSnowflakeFeatureSinkTest {
 
   @Test
   public void shouldWriteToSnowflake() throws SQLException {
+	  
+	  
 
     List<FeatureRow> featureRows =
         ImmutableList.of(
             FeatureRow.newBuilder()
-                .setFeatureSet("snowflake_proj/feature_set_1")
+                .setFeatureSet("snowflake_proj/feature_set_3")
                 .addFields(field("entity", 1, Enum.INT64))
                 .addFields(field("feature", "two", Enum.STRING))
                 .build(),
             FeatureRow.newBuilder()
-                .setFeatureSet("snowflake_proj/feature_set_1")
+                .setFeatureSet("snowflake_proj/feature_set_3")
                 .addFields(field("entity", 2, Enum.INT64))
                 .addFields(field("feature", "two", Enum.STRING))
                 .addFields(field("entity_id_secondary", "asjdh", Enum.STRING))
                 .build(),
             FeatureRow.newBuilder()
-                .setFeatureSet("snowflake_proj/feature_set_2")
+                .setFeatureSet("snowflake_proj/feature_set_4")
                 .addFields(field("entity_id_primary", 4, Enum.INT32))
                 .addFields(field("entity_id_secondary", "asjdh", Enum.STRING))
                 .addFields(
@@ -162,13 +159,13 @@ public class JdbcSnowflakeFeatureSinkTest {
                         .build())
                 .addFields(field("feature_2", 4, Enum.INT64))
                 .build());
-
-    //    p.apply(Create.of(featureRows)).apply(this.snowflakeFeatureSinkObj.writer());
+    
+//    p.apply(Create.of(featureRows)).apply("create_features",this.snowflakeFeatureSinkObj.writer());
     p.run();
     DatabaseMetaData meta = conn.getMetaData();
     Assert.assertEquals(
-        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_8", null).next());
+        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_3", null).next());
     Assert.assertEquals(
-        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_9", null).next());
+        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_4", null).next());
   }
 }
