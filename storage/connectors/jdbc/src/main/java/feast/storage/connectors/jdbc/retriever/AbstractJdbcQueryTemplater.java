@@ -188,7 +188,8 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
     }
     String stagingPath = stagingUri.getPath();
     String exportPath =
-        String.format("%s/%s.%s", stagingPath.replaceAll("/$", ""), resultTable, EXPORT_FILE_FORMAT);
+        String.format(
+            "%s/%s.%s", stagingPath.replaceAll("/$", ""), resultTable, EXPORT_FILE_FORMAT);
     List<String> exportTableSqlQueries = this.generateExportTableSqlQuery(resultTable, stagingPath);
     try {
       Statement statement = this.connection.createStatement();
@@ -200,7 +201,7 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
       throw new RuntimeException(
           String.format(
               "Could not export resulting historical dataset with data format: \n%s \n using query: \n%s",
-                  EXPORT_FILE_FORMAT, exportTableSqlQueries),
+              EXPORT_FILE_FORMAT, exportTableSqlQueries),
           e);
     }
   }

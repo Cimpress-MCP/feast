@@ -148,6 +148,34 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
     Assert.assertTrue(files.get(0).indexOf(staging_location) != -1);
   }
 
+  @Test
+  public void shouldRetrieveFromSnowflakeTestSameIds() {
+    //      Set CSV format DATA_FORMAT_CSV = 2; where the first column of the csv file must be
+    // entity_id
+    //      file_uri is under
+    // src/test/java/feast/storage/connectors/jdbc/retriever/entities_2dates.csv
+    String file_uris = System.getenv("ENTITIES_URI_SAME_IDS");
+    ServingAPIProto.DatasetSource.FileSource fileSource =
+        ServingAPIProto.DatasetSource.FileSource.newBuilder()
+            .setDataFormatValue(2)
+            .addFileUris(file_uris)
+            .build();
+
+    ServingAPIProto.DatasetSource datasetSource =
+        ServingAPIProto.DatasetSource.newBuilder().setFileSource(fileSource).build();
+    String retrievalId = "1234";
+    List<FeatureSetRequest> featureSetRequests = this.createFeatureSetRequests();
+    HistoricalRetrievalResult postgresHisRetrievalResult =
+        snowflakeFeatureRetriever.getHistoricalFeatures(
+            retrievalId, datasetSource, featureSetRequests, false);
+
+    List<String> files = postgresHisRetrievalResult.getFileUris();
+    File testFile = new File(files.get(0));
+    /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,400 2,100 3,300 1,410 */
+    Assert.assertTrue(testFile.exists());
+    Assert.assertTrue(files.get(0).indexOf(staging_location) != -1);
+  }
+
   private List<FeatureSetRequest> createFeatureSetRequests() {
     FeatureSetRequest featureSetRequest =
         FeatureSetRequest.newBuilder()

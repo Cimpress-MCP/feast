@@ -160,9 +160,9 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
                 + "single=true header = true;",
             resultTable, EXPORT_FILE_FORMAT, resultTable);
     String downloadTableQuery =
-        String.format("get @my_stage/%s.%s file://%s;", resultTable, EXPORT_FILE_FORMAT, exportPath);
-    String[] queryArray =
-        new String[] {createStageQuery, copyIntoStageQuery, downloadTableQuery};
+        String.format(
+            "get @my_stage/%s.%s file://%s;", resultTable, EXPORT_FILE_FORMAT, exportPath);
+    String[] queryArray = new String[] {createStageQuery, copyIntoStageQuery, downloadTableQuery};
     exportTableSqlQueries.addAll(Arrays.asList(queryArray));
     return exportTableSqlQueries;
   }
