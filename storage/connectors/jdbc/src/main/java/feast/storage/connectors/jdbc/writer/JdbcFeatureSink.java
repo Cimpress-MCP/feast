@@ -18,6 +18,7 @@ package feast.storage.connectors.jdbc.writer;
 
 import feast.common.models.FeatureSetReference;
 import feast.proto.core.FeatureSetProto;
+import feast.proto.core.FeatureSetProto.FeatureSet;
 import feast.proto.core.StoreProto;
 import feast.proto.core.StoreProto.Store.JdbcConfig;
 import feast.storage.api.writer.FeatureSink;
@@ -26,18 +27,32 @@ import feast.storage.connectors.jdbc.postgres.PostgresqlTemplater;
 import feast.storage.connectors.jdbc.snowflake.SnowflakeTemplater;
 import feast.storage.connectors.jdbc.sqlite.SqliteTemplater;
 
+<<<<<<< HEAD
 import java.util.HashMap;
 import java.util.Map;
 
+=======
+import java.util.Map;
+
+import org.apache.beam.sdk.transforms.DoFn;
+>>>>>>> trying to fix Sink Writer
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.View;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
+import org.apache.beam.sdk.values.PCollectionView;
 import org.slf4j.Logger;
 
 public class JdbcFeatureSink implements FeatureSink {
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcFeatureSink.class);
 
+<<<<<<< HEAD
 
+=======
+  private PCollectionView<Map<String, Iterable<FeatureSet>>> subscribedFeatureSets;
+  
+  private PCollectionView<Map<String, Iterable<String>>> subscribedTable;
+>>>>>>> trying to fix Sink Writer
   private final StoreProto.Store.JdbcConfig config;
 
   public JdbcTemplater getJdbcTemplater() {
@@ -83,8 +98,21 @@ public class JdbcFeatureSink implements FeatureSink {
   public PCollection<FeatureSetReference> prepareWrite(
       PCollection<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>> featureSetSpecs) {
 
+<<<<<<< HEAD
 
 
+=======
+	  
+	  this.subscribedTable = featureSetSpecs.apply(
+	            "GetSubscribedFeatureSets",
+	            ParDo.of(
+	                new SubscribedTable()))
+			  
+			  .apply("View", View.asMultimap());
+	  
+	  System.out.println(" this.subscribedTable----"+ this.subscribedTable);
+	  
+>>>>>>> trying to fix Sink Writer
     PCollection<FeatureSetReference> schemas =
         featureSetSpecs.apply(
             "CreateTableSchema",
@@ -92,13 +120,17 @@ public class JdbcFeatureSink implements FeatureSink {
                 new FeatureSetSpecToTableSchemaJDBC(this.getJdbcTemplater(), this.getConfig())));
  
    	  return schemas;
+<<<<<<< HEAD
 
+=======
+>>>>>>> trying to fix Sink Writer
   }
 
   public static String getFeatureSetRef(FeatureSetProto.FeatureSetSpec featureSetSpec) {
     return String.format("%s/%s", featureSetSpec.getProject(), featureSetSpec.getName());
   }
 
+<<<<<<< HEAD
   @Override
 public JdbcWrite writer() {
   return new JdbcWrite(
@@ -106,3 +138,73 @@ public JdbcWrite writer() {
 }
   
 }
+=======
+  public PCollectionView<Map<String, Iterable<FeatureSet>>> getSubscribedFeatureSets() {
+    return this.subscribedFeatureSets;
+  }
+  
+  public PCollectionView<Map<String, Iterable<String>>> getSubscribedTables() {
+	    return this.subscribedTable;
+	  }
+
+//  @Override
+//  public JdbcWrite writer() {
+//    return new JdbcWrite(
+//        this.getConfig(), this.getJdbcTemplater(), this.getSubscribedFeatureSets());
+//  }
+  
+  @Override
+public JdbcWrite writer() {
+  return new JdbcWrite(
+      this.getConfig(), this.getJdbcTemplater(), this.getSubscribedTables());
+}
+  
+//  public static class SubscribedFeatures
+//  extends DoFn<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>, KV<String, FeatureSetProto.FeatureSet>> {
+//
+//	@ProcessElement
+//	public void process(
+//		
+//		 @Element KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec> element,
+//	     OutputReceiver <KV<String, FeatureSetProto.FeatureSet>> out,
+//	     ProcessContext context) {
+//		
+//		System.out.println("SubscribedFeatures--");
+//			FeatureSetProto.FeatureSetSpec featureSetSpec = element.getValue();
+//		    String featureSetKey = JdbcTemplater.getTableName(featureSetSpec);
+//		    System.out.println("featureSetKey----"+featureSetKey);
+//		    FeatureSetProto.FeatureSet featureSet = FeatureSetProto.FeatureSet.newBuilder().setSpec(element.getValue()).build();
+////		   
+//		    System.out.println("featureSet----"+featureSet);
+//		    	
+//	  out.output(KV.of(featureSetKey, featureSet));
+//	}
+//  }
+
+
+public static class SubscribedTable
+extends DoFn<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>, KV<String, String>> {
+
+	@ProcessElement
+	public void process(
+		
+		 @Element KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec> element,
+	     OutputReceiver <KV<String, String>> out,
+	     ProcessContext context) {
+		
+		System.out.println("SubscribedFeatures--");
+			FeatureSetProto.FeatureSetSpec featureSetSpec = element.getValue();
+		    String featureSetKey = JdbcTemplater.getTableName(featureSetSpec);
+		    System.out.println("featureSetKey----"+featureSetKey);
+		    FeatureSetProto.FeatureSet featureSet = FeatureSetProto.FeatureSet.newBuilder().setSpec(element.getValue()).build();
+//		   
+		    System.out.println("featureSet----"+featureSet);
+		    	
+	  out.output(KV.of(featureSetKey, featureSet.getSpec().getName()));
+	}
+}}
+
+
+
+
+>>>>>>> trying to fix Sink Writer

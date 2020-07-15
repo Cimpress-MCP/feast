@@ -127,9 +127,12 @@ public class SnowflakeTemplater implements JdbcTemplater {
 //    
     return String.format(
 
-        "INSERT INTO %s (%s) select %s",
-        featureSetSpec, columnsSql, valueSql);
+            "INSERT INTO %s (%s) select %s",
+            featureSetSpec, columnsSql, valueSql);
+
   }
+  
+  
 
   public void setSinkParameters(
       FeatureRowProto.FeatureRow element,
@@ -247,5 +250,6 @@ public class SnowflakeTemplater implements JdbcTemplater {
           e.getMessage());
     }
   }
+
 
 }
