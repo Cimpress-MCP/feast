@@ -17,6 +17,7 @@
 package feast.storage.connectors.jdbc.snowflake;
 
 import feast.proto.core.FeatureSetProto;
+import feast.proto.core.FeatureSetProto.FeatureSetSpec;
 import feast.proto.types.FeatureRowProto;
 import feast.proto.types.FieldProto;
 import feast.proto.types.ValueProto;
@@ -40,8 +41,8 @@ public class SnowflakeTemplater implements JdbcTemplater {
   @Override
   public String getTableCreationSql(FeatureSetProto.FeatureSetSpec featureSetSpec) {
     StringJoiner columnsAndTypesSQL = new StringJoiner(", ");
-    Map<String, String> requiredColumns = getRequiredColumns(featureSetSpec);
-
+//    Map<String, String> requiredColumns = getRequiredColumns(featureSetSpec);
+    Map<String, String> requiredColumns = getRequiredColumns();
     for (String column : requiredColumns.keySet()) {
 
       String type = requiredColumns.get(column);
@@ -55,8 +56,20 @@ public class SnowflakeTemplater implements JdbcTemplater {
     return createTableStatement;
   }
 
+//  @Override
+//  public Map<String, String> getRequiredColumns(FeatureSetProto.FeatureSetSpec featureSetSpec) {
+//    Map<String, String> requiredColumns = new LinkedHashMap<>();
+//
+//    requiredColumns.put("event_timestamp", "TIMESTAMP_LTZ");
+//    requiredColumns.put("created_timestamp", "TIMESTAMP_LTZ");
+//    requiredColumns.put("feature", "VARIANT");
+//    requiredColumns.put("ingestion_id", "VARCHAR");
+//    requiredColumns.put("job_id", "VARCHAR");
+//    return requiredColumns;
+//  }
+//  
   @Override
-  public Map<String, String> getRequiredColumns(FeatureSetProto.FeatureSetSpec featureSetSpec) {
+  public Map<String, String> getRequiredColumns() {
     Map<String, String> requiredColumns = new LinkedHashMap<>();
 
     requiredColumns.put("event_timestamp", "TIMESTAMP_LTZ");
@@ -90,11 +103,11 @@ public class SnowflakeTemplater implements JdbcTemplater {
     return tableMigrationSql;
   }
 
-  public String getFeatureRowInsertSql(FeatureSetProto.FeatureSetSpec featureSetSpec) {
+  public String getFeatureRowInsertSql(String featureSetSpec) {
     StringJoiner columnsSql = new StringJoiner(",");
     StringJoiner valueSql = new StringJoiner(",");
-    Map<String, String> requiredColumns = getRequiredColumns(featureSetSpec);
-
+//    Map<String, String> requiredColumns = getRequiredColumns(featureSetSpec);
+    Map<String, String> requiredColumns = getRequiredColumns();
     for (String column : requiredColumns.keySet()) {
 
       columnsSql.add(column);
@@ -104,10 +117,16 @@ public class SnowflakeTemplater implements JdbcTemplater {
         valueSql.add("?");
       }
     }
+//    return String.format(
+//        "INSERT INTO %s (%s) select %s",
+//        JdbcTemplater.getTableName(featureSetSpec), columnsSql, valueSql);
+//    
     return String.format(
-        "INSERT INTO %s (%s) select %s",
-        JdbcTemplater.getTableName(featureSetSpec), columnsSql, valueSql);
+            "INSERT INTO %s (%s) select %s",
+            featureSetSpec, columnsSql, valueSql);
   }
+  
+  
 
   public void setSinkParameters(
       FeatureRowProto.FeatureRow element,
@@ -225,4 +244,10 @@ public class SnowflakeTemplater implements JdbcTemplater {
           e.getMessage());
     }
   }
+
+//@Override
+//public String getFeatureRowInsertSql(FeatureSetSpec featureSetSpec) {
+//	// TODO Auto-generated method stub
+//	return null;
+//}
 }
