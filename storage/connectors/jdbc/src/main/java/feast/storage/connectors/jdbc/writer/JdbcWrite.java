@@ -70,7 +70,6 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
   private PCollectionView<Map<String, Iterable<String>>> subscribedFeatureSets;
   private PCollection<KV<String, String>> subscribedTables;
 
-/
 
 public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
 	
@@ -82,6 +81,7 @@ public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
   @Override
   public WriteResult expand(PCollection<FeatureRowProto.FeatureRow> input) {
     String jobName = input.getPipeline().getOptions().getJobName();
+
   
 //	input.apply("WriteToTable",
 //	      ParDo.of(
@@ -103,7 +103,11 @@ public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
 						jdbcTemplater.setSinkParameters(element, preparedStatement, jobName);
 						
 					}}));
-            PCollection<FeatureRowProto.FeatureRow> successfulInserts =  input.apply(   	
+            
+
+        PCollection<FeatureRowProto.FeatureRow> successfulInserts =
+            input.apply(
+
                 "dummy",
                 ParDo.of(
                     new DoFn<FeatureRowProto.FeatureRow, FeatureRowProto.FeatureRow>() {
@@ -121,11 +125,13 @@ public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
                     }));
 
         return WriteResult.in(input.getPipeline(), successfulInserts, failedElements);
-//  }}
-       	              
-       	          
-       	      	    
-}
+
+  }
+
+
+
+
+  
   
   public static JdbcIO.DataSourceConfiguration create_dsconfig(
  	      StoreProto.Store.JdbcConfig jdbcConfig) {
