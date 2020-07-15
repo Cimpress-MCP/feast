@@ -50,12 +50,12 @@ public class JdbcSnowflakeFeatureSinkTest {
 
   // TODO: Update the variables to match your snowflake account
 
+
   //  private String userName = System.getenv("SNOWFLAKE_USERNAME");
   //  private String password = System.getenv("SNOWFLAKE_PASSWORD");
 
-  private String userName = "SWATIARORA";
 
-  private String password = "Vistaprint1@";
+  
 
 
   private String database = "DEMO_DB";
@@ -100,20 +100,8 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
 
-<<<<<<< HEAD
-
-
-    this.snowflakeFeatureSinkObj.prepareWrite(p.apply("create_spec",Create.of(specMap)));
-
-
-
     this.snowflakeFeatureSinkObj.prepareWrite(p.apply(Create.of(specMap)));
 
-=======
- 
-    this.snowflakeFeatureSinkObj.prepareWrite(p.apply("create_spec",Create.of(specMap)));
-
->>>>>>> trying to fix Sink Writer
     this.connect();
   }
 
@@ -172,24 +160,16 @@ public class JdbcSnowflakeFeatureSinkTest {
                         .build())
                 .addFields(field("feature_2", 4, Enum.INT64))
                 .build());
-<<<<<<< HEAD
 
 
     //    p.apply(Create.of(featureRows)).apply(this.snowflakeFeatureSinkObj.writer());
-=======
-    
-//    p.apply(Create.of(featureRows)).apply("create_features",this.snowflakeFeatureSinkObj.writer());
->>>>>>> trying to fix Sink Writer
-    p.run();
+
     DatabaseMetaData meta = conn.getMetaData();
     Assert.assertEquals(
         true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_3", null).next());
     Assert.assertEquals(
-<<<<<<< HEAD
-        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_9", null).next());
 
-=======
         true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_4", null).next());
->>>>>>> trying to fix Sink Writer
+
   }
 }
