@@ -33,6 +33,7 @@ SELECT
   {% endfor %}
   false AS is_entity_table
 FROM {{ featureSet.project }}_{{ featureSet.name }} WHERE event_timestamp <= '{{maxTimestamp}}'
+{% if featureSet.maxAge == 0 %}{% else %}AND event_timestamp >= dateadd(second,-{{featureSet.maxAge}},'{{minTimestamp}}'){% endif %}
 ),
 /*
  2. Window the data in the unioned dataset, partitioning by entity and ordering by event_timestamp, as
@@ -77,10 +78,22 @@ SELECT
   {{variantColumn}}:{{feature.name }} as {{ featureSet.project }}__{{ featureSet.name }}__{{ feature.name }}{% if loop.last %}{% else %}, {% endif %}
   {% endfor %}
 FROM {{ featureSet.project }}_{{ featureSet.name }} WHERE event_timestamp <= '{{maxTimestamp}}'
+{% if featureSet.maxAge == 0 %}{% else %}AND event_timestamp >= dateadd(second,-{{featureSet.maxAge}},'{{minTimestamp}}'){% endif %}
 ) as l_{{ featureSet.project }}_{{ featureSet.name }} USING ({{ featureSet.project }}_{{ featureSet.name }}_feature_timestamp, created_timestamp, {{ featureSet.entities | join(', ')}})
 WHERE is_entity_table
 )
 /*
  4. Finally, deduplicate the rows by selecting the first occurrence of each entity table row row_number.
  */
-SELECT * FROM joined
+SELECT
+    row_number,
+    event_timestamp,
+    {{ featureSet.entities | join(', ')}},
+    {% for feature in featureSet.features %}
+    {{ featureSet.project }}__{{ featureSet.name }}__{{ feature.name }}{% if loop.last %}{% else %}, {% endif %}
+    {% endfor %}
+FROM (
+         SELECT j.*, ROW_NUMBER() OVER (PARTITION BY j.row_number ORDER BY event_timestamp DESC) AS rk
+         FROM joined j
+     ) s
+WHERE s.rk = 1
