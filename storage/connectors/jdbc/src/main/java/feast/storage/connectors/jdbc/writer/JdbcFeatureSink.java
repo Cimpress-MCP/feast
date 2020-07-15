@@ -128,7 +128,7 @@ public class JdbcFeatureSink implements FeatureSink {
   @Override
 public JdbcWrite writer() {
   return new JdbcWrite(
-      this.getConfig(), this.getJdbcTemplater(), this.getSubscribedTables());
+      this.getConfig(), this.getJdbcTemplater());
 }
   
 //  public static class SubscribedFeatures

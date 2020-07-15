@@ -34,6 +34,14 @@ public interface JdbcTemplater extends Serializable {
         .replaceAll("-", "_");
   }
 
+  
+  static String getTableNameFromFeatureSet(String featureSet) {
+	    System.out.println(
+	        "getTableNameFromFeatureSet--"+ featureSet);
+	     String tablename = featureSet.replaceAll("/", "_");
+	    return tablename.replaceAll("-", "_");
+	  }
+  
   String getTableCreationSql(FeatureSetProto.FeatureSetSpec featureSetSpec);
 
   String getTableMigrationSql(
@@ -49,6 +57,5 @@ public interface JdbcTemplater extends Serializable {
   void setSinkParameters(
       FeatureRow element,
       PreparedStatement preparedStatement,
-      String jobName,
-      FeatureSetProto.FeatureSetSpec currentFeatureSetSpec);
+      String jobName);
 }

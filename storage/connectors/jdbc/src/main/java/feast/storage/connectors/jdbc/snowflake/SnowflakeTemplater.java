@@ -131,8 +131,7 @@ public class SnowflakeTemplater implements JdbcTemplater {
   public void setSinkParameters(
       FeatureRowProto.FeatureRow element,
       PreparedStatement preparedStatement,
-      String jobName,
-      FeatureSetProto.FeatureSetSpec currentFeatureSetSpec) {
+      String jobName) {
     try {
 
       Map<String, ValueProto.Value> fieldMap =
