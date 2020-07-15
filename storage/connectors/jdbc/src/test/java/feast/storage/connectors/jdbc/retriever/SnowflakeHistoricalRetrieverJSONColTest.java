@@ -171,7 +171,7 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
 
     List<String> files = postgresHisRetrievalResult.getFileUris();
     File testFile = new File(files.get(0));
-    /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,400 2,100 3,300 1,410 */
+    /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,null 2,100 3,300 1,410 */
     Assert.assertTrue(testFile.exists());
     Assert.assertTrue(files.get(0).indexOf(staging_location) != -1);
   }
