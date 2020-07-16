@@ -16,7 +16,6 @@ feast:
         # Feast Serving client is expected to have read access to this staging location
         # to download the batch features.
         # Please omit the trailing slash in the URI.
-        # TODO: s3 location
         staging_location: /Users/e10117390/2020Summer/FeastStagingFolder
         database: DEMO_DB
         schema: PUBLIC
