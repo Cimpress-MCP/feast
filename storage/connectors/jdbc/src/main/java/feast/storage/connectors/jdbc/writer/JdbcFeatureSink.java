@@ -18,7 +18,6 @@ package feast.storage.connectors.jdbc.writer;
 
 import feast.common.models.FeatureSetReference;
 import feast.proto.core.FeatureSetProto;
-import feast.proto.core.FeatureSetProto.FeatureSet;
 import feast.proto.core.StoreProto;
 import feast.proto.core.StoreProto.Store.JdbcConfig;
 import feast.storage.api.writer.FeatureSink;
@@ -27,20 +26,15 @@ import feast.storage.connectors.jdbc.postgres.PostgresqlTemplater;
 import feast.storage.connectors.jdbc.snowflake.SnowflakeTemplater;
 import feast.storage.connectors.jdbc.sqlite.SqliteTemplater;
 
-import java.util.Map;
-
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PCollectionView;
 import org.slf4j.Logger;
 
 public class JdbcFeatureSink implements FeatureSink {
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcFeatureSink.class);
 
-  private PCollectionView<Map<String, Iterable<FeatureSet>>> subscribedFeatureSets;
-  
-  private PCollectionView<Map<String, Iterable<String>>> subscribedTable;
+
   private final StoreProto.Store.JdbcConfig config;
 
   public JdbcTemplater getJdbcTemplater() {
@@ -86,7 +80,7 @@ public class JdbcFeatureSink implements FeatureSink {
   public PCollection<FeatureSetReference> prepareWrite(
       PCollection<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>> featureSetSpecs) {
 
-	 
+
     PCollection<FeatureSetReference> schemas =
         featureSetSpecs.apply(
             "CreateTableSchema",
@@ -100,7 +94,6 @@ public class JdbcFeatureSink implements FeatureSink {
     return String.format("%s/%s", featureSetSpec.getProject(), featureSetSpec.getName());
   }
 
-  
   @Override
 public JdbcWrite writer() {
   return new JdbcWrite(
@@ -108,7 +101,6 @@ public JdbcWrite writer() {
 }
   
 }
-
 
 
 

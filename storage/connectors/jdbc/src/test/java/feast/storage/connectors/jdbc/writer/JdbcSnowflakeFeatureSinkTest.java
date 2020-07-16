@@ -20,6 +20,7 @@ import static feast.storage.common.testing.TestUtil.field;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+
 import feast.proto.core.FeatureSetReference;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.StoreProto;
@@ -49,6 +50,7 @@ public class JdbcSnowflakeFeatureSinkTest {
   private FeatureSink snowflakeFeatureSinkObj;
 
   // TODO: Update the variables to match your snowflake account
+
   //  private String userName = System.getenv("SNOWFLAKE_USERNAME");
   //  private String password = System.getenv("SNOWFLAKE_PASSWORD");
 
@@ -98,9 +100,7 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
 
- 
     this.snowflakeFeatureSinkObj.prepareWrite(p.apply("create_spec",Create.of(specMap)));
-
     this.connect();
   }
 
@@ -159,8 +159,9 @@ public class JdbcSnowflakeFeatureSinkTest {
                         .build())
                 .addFields(field("feature_2", 4, Enum.INT64))
                 .build());
-    
+
     p.apply(Create.of(featureRows)).apply("create_features",this.snowflakeFeatureSinkObj.writer());
+
     p.run();
     DatabaseMetaData meta = conn.getMetaData();
     Assert.assertEquals(

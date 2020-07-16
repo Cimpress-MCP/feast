@@ -106,7 +106,9 @@ public class SnowflakeTemplater implements JdbcTemplater {
     return tableMigrationSql;
   }
 
+
   public String getFeatureRowInsertSql(String tableName) {
+
     StringJoiner columnsSql = new StringJoiner(",");
     StringJoiner valueSql = new StringJoiner(",");
 //    Map<String, String> requiredColumns = getRequiredColumns(featureSetSpec);
@@ -120,10 +122,6 @@ public class SnowflakeTemplater implements JdbcTemplater {
         valueSql.add("?");
       }
     }
-//    return String.format(
-//        "INSERT INTO %s (%s) select %s",
-//        JdbcTemplater.getTableNameFromFeatureSet(featureSetSpec), columnsSql, valueSql);
-//    
     return String.format(
             "INSERT INTO %s (%s) select %s",
             tableName, columnsSql, valueSql);
@@ -251,5 +249,4 @@ public class SnowflakeTemplater implements JdbcTemplater {
     }
   }
   
-
 }

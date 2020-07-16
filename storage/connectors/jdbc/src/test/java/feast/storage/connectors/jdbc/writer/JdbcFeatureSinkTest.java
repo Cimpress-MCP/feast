@@ -1,4 +1,3 @@
-
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright 2018-2019 The Feast Authors
@@ -179,4 +178,5 @@ public class JdbcFeatureSinkTest {
     Assert.assertEquals(true, dbm.getTables(null, null, "myproject2_feature_set", null).next());
   }
 }
+
 

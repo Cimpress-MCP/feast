@@ -16,21 +16,20 @@
  */
 package feast.storage.connectors.jdbc.writer;
 
-import feast.common.models.FeatureSetReference;
+import feast.proto.core.FeatureSetReferenceProto;
 import feast.proto.core.FeatureSetProto;
-import feast.proto.core.FeatureSetProto.FeatureSet;
 import feast.proto.core.StoreProto;
 import feast.proto.core.StoreProto.Store.JdbcConfig;
 import feast.proto.types.FeatureRowProto;
 import feast.proto.types.FeatureRowProto.FeatureRow;
 import feast.storage.api.writer.FailedElement;
 import feast.storage.api.writer.WriteResult;
-//import feast.storage.connectors.bigquery.writer.BigQueryWrite.FeatureDynamicDestinations;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
-//import feast.storage.connectors.jdbc.writer.JdbcFeatureSink.SubscribedFeatures;
+
 
 import java.io.Serializable;
 import java.sql.PreparedStatement;
+
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.*;
@@ -68,6 +67,10 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcWrite.class);	
   private final JdbcTemplater jdbcTemplater;
   private final StoreProto.Store.JdbcConfig config;
+  private PCollectionView<Map<String, Iterable<String>>> subscribedFeatureSets;
+  private PCollection<KV<String, String>> subscribedTables;
+
+/
 
 public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
 	
@@ -75,15 +78,6 @@ public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
 	  this.jdbcTemplater = jdbcTemplater;
 
 }
-
-
-public StoreProto.Store.JdbcConfig getConfig() {
-    return config;
-  }
-
-public JdbcTemplater getJdbcTemplater() {
-    return jdbcTemplater;
-  }
 
   @Override
   public WriteResult expand(PCollection<FeatureRowProto.FeatureRow> input) {
@@ -102,9 +96,10 @@ public JdbcTemplater getJdbcTemplater() {
         	        .withBatchSize(batchSize)
         	        .withPreparedStatementSetter(
         	            new JdbcIO.PreparedStatementSetter<FeatureRowProto.FeatureRow>() {
+        	            	
 					@Override
-					public void setParameters(FeatureRow element, PreparedStatement preparedStatement) {
-							
+					public void setParameters(FeatureRow element, PreparedStatement preparedStatement)
+							throws Exception {
 						jdbcTemplater.setSinkParameters(element, preparedStatement, jobName);
 						
 					}}));
@@ -162,7 +157,4 @@ public JdbcTemplater getJdbcTemplater() {
 
 }
 }
-
-  
-
 
