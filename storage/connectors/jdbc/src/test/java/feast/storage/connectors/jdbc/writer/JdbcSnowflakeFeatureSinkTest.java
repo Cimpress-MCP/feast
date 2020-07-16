@@ -20,7 +20,8 @@ import static feast.storage.common.testing.TestUtil.field;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import feast.proto.core.FeatureSetReference;
+
+import feast.common.models.FeatureSetReference;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.StoreProto;
 import feast.proto.types.FeatureRowProto.FeatureRow;
@@ -161,16 +162,11 @@ public class JdbcSnowflakeFeatureSinkTest {
                         .build())
                 .addFields(field("feature_2", 4, Enum.INT64))
                 .build());
-<<<<<<< HEAD
 
-
-    //    p.apply(Create.of(featureRows)).apply(this.snowflakeFeatureSinkObj.writer());
-
-=======
     
-    p.apply(Create.of(featureRows)).apply("create_features",this.snowflakeFeatureSinkObj.writer());
+//    p.apply(Create.of(featureRows)).apply("create_features",this.snowflakeFeatureSinkObj.writer());
     p.run();
->>>>>>> creating the prepared statement for write
+
     DatabaseMetaData meta = conn.getMetaData();
     Assert.assertEquals(
         true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_3", null).next());

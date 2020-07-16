@@ -17,13 +17,6 @@
 package feast.storage.connectors.jdbc.snowflake;
 
 import feast.proto.core.FeatureSetProto;
-<<<<<<< HEAD
-
-=======
-import feast.proto.core.StoreProto;
->>>>>>> creating the prepared statement for write
-import feast.proto.core.FeatureSetProto.FeatureSetSpec;
-
 import feast.proto.types.FeatureRowProto;
 import feast.proto.types.FieldProto;
 import feast.proto.types.ValueProto;
@@ -35,7 +28,6 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import org.apache.beam.sdk.io.jdbc.JdbcIO;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
@@ -127,19 +119,12 @@ public class SnowflakeTemplater implements JdbcTemplater {
         valueSql.add("?");
       }
     }
-//    return String.format(
-//        "INSERT INTO %s (%s) select %s",
-//        JdbcTemplater.getTableNameFromFeatureSet(featureSetSpec), columnsSql, valueSql);
-//    
+
     return String.format(
 
             "INSERT INTO %s (%s) select %s",
-<<<<<<< HEAD
-            featureSetSpec, columnsSql, valueSql);
-
-=======
             tableName, columnsSql, valueSql);
->>>>>>> creating the prepared statement for write
+
   }
   
   
@@ -265,8 +250,4 @@ public class SnowflakeTemplater implements JdbcTemplater {
   }
   
 
-<<<<<<< HEAD
-
-=======
->>>>>>> creating the prepared statement for write
 }

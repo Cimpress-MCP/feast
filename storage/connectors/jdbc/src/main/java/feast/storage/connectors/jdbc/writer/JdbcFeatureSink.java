@@ -29,12 +29,6 @@ import feast.storage.connectors.jdbc.sqlite.SqliteTemplater;
 
 
 import java.util.Map;
-
-<<<<<<< HEAD
-import org.apache.beam.sdk.transforms.DoFn;
-
-=======
->>>>>>> creating the prepared statement for write
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
@@ -89,11 +83,6 @@ public class JdbcFeatureSink implements FeatureSink {
   public PCollection<FeatureSetReference> prepareWrite(
       PCollection<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>> featureSetSpecs) {
 
-<<<<<<< HEAD
-
-=======
-	 
->>>>>>> creating the prepared statement for write
     PCollection<FeatureSetReference> schemas =
         featureSetSpecs.apply(
             "CreateTableSchema",
@@ -108,11 +97,6 @@ public class JdbcFeatureSink implements FeatureSink {
     return String.format("%s/%s", featureSetSpec.getProject(), featureSetSpec.getName());
   }
 
-<<<<<<< HEAD
-
-=======
-  
->>>>>>> creating the prepared statement for write
   @Override
 public JdbcWrite writer() {
   return new JdbcWrite(
@@ -120,10 +104,5 @@ public JdbcWrite writer() {
 }
   
 }
-<<<<<<< HEAD
-=======
 
-
-
->>>>>>> creating the prepared statement for write
 
