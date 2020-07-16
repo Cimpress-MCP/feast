@@ -20,7 +20,7 @@ import static feast.storage.common.testing.TestUtil.field;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import feast.common.models.FeatureSetReference;
+import feast.proto.core.FeatureSetReference;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.StoreProto;
 import feast.proto.types.FeatureRowProto.FeatureRow;
