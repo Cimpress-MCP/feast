@@ -18,6 +18,22 @@
             <artifactId>pebble</artifactId>
             <version>3.1.0</version>
         </dependency>
+        
+        
+        <dependency>
+        	<groupId>org.springframework</groupId>
+        	<artifactId>spring-context</artifactId>
+        </dependency>
+        
+        <dependency>
+        	<groupId>org.springframework</groupId>
+        	<artifactId>spring-jdbc</artifactId>
+        </dependency>
+        
+		<dependency>
+		    <groupId>com.zaxxer</groupId>
+		    <artifactId>HikariCP</artifactId>
+		</dependency>
 
         <dependency>
             <groupId>org.xerial</groupId>
@@ -67,7 +83,7 @@
             <version>4.12</version>
             <scope>test</scope>
         </dependency>
-
+        
         <dependency>
             <groupId>org.apache.beam</groupId>
             <artifactId>beam-runners-direct-java</artifactId>
@@ -97,7 +113,7 @@
  		<dependency>
         	<groupId>net.snowflake</groupId>
 			<artifactId>snowflake-jdbc</artifactId>
-			<version>3.12.6</version>
+			<version>3.12.9</version>
         </dependency>
         <dependency>
             <groupId>commons-logging</groupId>
@@ -116,15 +132,22 @@
 		    <artifactId>slf4j-jdk14</artifactId>
 		    <version>1.7.25</version>
 		</dependency>
-
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-dbcp2</artifactId>
             <version>2.7.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+        </dependency>
+  		<dependency>
+	        <groupId>org.json</groupId>
+	        <artifactId>json</artifactId>
+	        <version>20180813</version>
+    	</dependency>
     </dependencies>
     <properties>
         <maven.test.skip>true</maven.test.skip>
     </properties>
-
 </project>

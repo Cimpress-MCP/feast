@@ -32,7 +32,7 @@ SELECT
   {{variantColumn}}:{{entity}} as {{entity}},
   {% endfor %}
   false AS is_entity_table
-FROM {{ featureSet.project }}_{{ featureSet.name }} WHERE event_timestamp <= '{{maxTimestamp}}'
+FROM {{feastTable}} WHERE project = '{{ featureSet.project}}' AND FEATURESET = '{{featureSet.name}}' AND event_timestamp <= '{{maxTimestamp}}'
 {% if featureSet.maxAge == 0 %}{% else %}AND event_timestamp >= dateadd(second,-{{featureSet.maxAge}},'{{minTimestamp}}'){% endif %}
 ),
 /*
@@ -77,7 +77,7 @@ SELECT
   {% for feature in featureSet.features %}
   {{variantColumn}}:{{feature.name }} as {{ featureSet.project }}__{{ featureSet.name }}__{{ feature.name }}{% if loop.last %}{% else %}, {% endif %}
   {% endfor %}
-FROM {{ featureSet.project }}_{{ featureSet.name }} WHERE event_timestamp <= '{{maxTimestamp}}'
+FROM {{feastTable}} WHERE project = '{{ featureSet.project}}' AND FEATURESET = '{{featureSet.name}}' AND event_timestamp <= '{{maxTimestamp}}'
 {% if featureSet.maxAge == 0 %}{% else %}AND event_timestamp >= dateadd(second,-{{featureSet.maxAge}},'{{minTimestamp}}'){% endif %}
 ) as l_{{ featureSet.project }}_{{ featureSet.name }} USING ({{ featureSet.project }}_{{ featureSet.name }}_feature_timestamp, created_timestamp, {{ featureSet.entities | join(', ')}})
 WHERE is_entity_table

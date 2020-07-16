@@ -19,10 +19,8 @@ package feast.storage.connectors.jdbc.retriever;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
-import java.sql.Timestamp;
-import java.util.Iterator;
+import feast.storage.connectors.jdbc.snowflake.TimestampLimits;
 import java.util.List;
-import java.util.Map;
 
 public interface JdbcQueryTemplater {
 
@@ -41,13 +39,17 @@ public interface JdbcQueryTemplater {
    * Load entity rows into database
    *
    * @param featureSetQueryInfos
-   * @param fileList list of files in the {@link ServingAPIProto.DatasetSource} which contain entity
-   *     rows (csv files with delimiter="," and two columns in ordder:
-   *     entity_id_primary,created_timestamp)
+   * @param entitySourceUris list of files in the {@link ServingAPIProto.DatasetSource} which
+   *     contain entity rows (csv files with delimiter="," and two columns in order:
+   *     entity_id_primary, event_timestamp)
+   * @param stagingUri staging uri, eg: a S3 bucket or GCP location
    * @return entityTableWithRowCountName: the name of the entity Table in the database With RowCount
    *     column (for batch job retrieve)
    */
-  String loadEntities(List<FeatureSetQueryInfo> featureSetQueryInfos, Iterator<String> fileList);
+  String loadEntities(
+      List<FeatureSetQueryInfo> featureSetQueryInfos,
+      List<String> entitySourceUris,
+      String stagingUri);
 
   /**
    * Retrieve the temporal bounds of the entity dataset provided
@@ -55,7 +57,7 @@ public interface JdbcQueryTemplater {
    * @param entityTableWithRowCountName entity table name
    * @return a timestamp bounds map with max, and min as keys
    */
-  Map<String, Timestamp> getTimestampLimits(String entityTableWithRowCountName);
+  TimestampLimits getTimestampLimits(String entityTableWithRowCountName);
 
   /**
    * Generate the queries for point in time correctness join of data for the given feature sets to
@@ -69,7 +71,7 @@ public interface JdbcQueryTemplater {
    */
   List<String> generateFeatureSetQueries(
       String entityTableWithRowCountName,
-      Map<String, Timestamp> timestampLimits,
+      TimestampLimits timestampLimits,
       List<FeatureSetQueryInfo> featureSetQueryInfos);
 
   /**
@@ -93,8 +95,8 @@ public interface JdbcQueryTemplater {
    * Export the given result table in the database to the staging location as a CSV file
    *
    * @param resultTable name of the result table in the database
-   * @param stagingLocation staging location, eg: S3 bucket, local folder directory
+   * @param stagingUri staging uri, eg: a S3 bucket or GCP location
    * @return the fileUri of the exported csv file in the staging location
    */
-  String exportResultTableToStagingLocation(String resultTable, String stagingLocation);
+  String exportResultTableToStagingLocation(String resultTable, String stagingUri);
 }
