@@ -31,6 +31,8 @@ import feast.storage.connectors.jdbc.common.JdbcTemplater;
 
 import java.io.Serializable;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.time.Instant;
 import java.util.*;
 
 import org.apache.beam.sdk.io.gcp.bigquery.DynamicDestinations;
@@ -66,17 +68,6 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcWrite.class);	
   private final JdbcTemplater jdbcTemplater;
   private final StoreProto.Store.JdbcConfig config;
-  private PCollectionView<Map<String, Iterable<String>>> subscribedFeatureSets;
-  private PCollection<KV<String, String>> subscribedTables;
-
-//  public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater,
-//		  PCollection<KV<String, FeatureSet>> subscribedFeatureSets) {
-//	  System.out.println("inside JDBCWrite constructor");
-//	  this.config = config;
-//	  this.jdbcTemplater = jdbcTemplater;
-//	   this.subscribedFeatureSets = subscribedFeatureSets;
-//  }
-
 
 public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
 	
@@ -90,99 +81,34 @@ public StoreProto.Store.JdbcConfig getConfig() {
     return config;
   }
 
+public JdbcTemplater getJdbcTemplater() {
+    return jdbcTemplater;
+  }
+
   @Override
   public WriteResult expand(PCollection<FeatureRowProto.FeatureRow> input) {
     String jobName = input.getPipeline().getOptions().getJobName();
-    
-//    FeatureDynamicDestinations dynamicDestinations = new FeatureDynamicDestinations();
+  
+//	input.apply("WriteToTable",
+//	      ParDo.of(
+//	              new JdbcWriterHelper(this.getJdbcTemplater(), this.getConfig(), jobName)));
+	 int batchSize = this.config.getBatchSize() > 0 ? config.getBatchSize() : 1;
 
-    // Create a map of feature set references to incrementing partition numbers. This map will split
-    // partition
-    // The incoming feature rows an allow each of them to have a different INSERT statement based on
-    // their feature set
-    Map<String, Integer> featureSetToPartitionMap = new HashMap<>();
 
-//     Check the featureset
-//    PCollection<Map<String, String>> sqlInsertStatements = input.apply("SqlStatements",
-//            ParDo.of(
-//                    new DoFn<FeatureRowProto.FeatureRow , Map<String,String>>() {
-//
-//                  	@ProcessElement
-//                  	public void process(
-//                  		
-//                  		 @Element FeatureRowProto.FeatureRow element,
-//                  	     OutputReceiver <Map<String,String>> out,
-//                  	     ProcessContext context) {
-//                  		
-//                  System.out.println("JdbcTemplater.getTableNameFromFeatureSet(element.getFeatureSet())"+JdbcTemplater.getTableNameFromFeatureSet(element.getFeatureSet()));
-//                  		String featureRowInsertSql = jdbcTemplater.getFeatureRowInsertSql(element.getFeatureSet());
-//                        sqlInsertStatements.put(JdbcTemplater.getTableNameFromFeatureSet(element.getFeatureSet()), featureRowInsertSql);
-//                        sqlInsertStatements.  
-//                  			out.output(sqlInsertStatements);
-//                  		}
-//                  	
-//                  	
-//                    }
-//                  		    ));
-    
-//    PCollectionList<FeatureRowProto.FeatureRow> partitionedInput =
-//            applyPartitioningToPCollectionBasedOnFeatureSet(input, featureSetToPartitionMap);
-
-//    for (String featureSetRef : subscribedFeatureSets.keySet()) {
-//        // For this feature set reference find its partition number
-//        int partitionNumber = featureSetToPartitionMap.get(featureSetRef);
-//
-//        // Find the PCollection that is associated with a partition number
-//        PCollection<FeatureRowProto.FeatureRow> featureSetInput =
-//            partitionedInput.get(partitionNumber);
-
-        // Find the feature set spec associated with this partition
-        FeatureSetProto.FeatureSetSpec currentFeatureSetSpec =
-            subscribedFeatureSets.get(featureSetRef).getSpec();
-        StoreProto.Store.JdbcConfig jdbcConfig = this.getConfig();
-String getTableName = JdbcTemplater.getTableNameFromFeatureSet(element.getFeatureSet());
-        
-
-input.apply("SqlStatements",
-      ParDo.of(
-              new DoFn<FeatureRowProto.FeatureRow , Map<String,String>>() {
-
-            	@ProcessElement
-            	public void process(
-            		
-            		 @Element FeatureRowProto.FeatureRow element,
-            	     OutputReceiver <Map<String,String>> out,
-            	     ProcessContext context) {
-            		
-            		int batchSize = jdbcConfig.getBatchSize() > 0 ? jdbcConfig.getBatchSize() : 1;
-            	
-            	element.apply(
-                String.format("WriteFeatureRowToJdbcIO-%s", jdbcTemplater.getFeatureRowInsertSql(input.getName()));
-                JdbcIO.<FeatureRowProto.FeatureRow>write()
-                    .withDataSourceConfiguration(create_dsconfig(jdbcConfig))
-                    .withStatement(jdbcTemplater.getFeatureRowInsertSql(input.getName()))
-                    .withBatchSize(batchSize)
-                    .withPreparedStatementSetter(
-                        new JdbcIO.PreparedStatementSetter<FeatureRowProto.FeatureRow>() {
-                          public void setParameters(
-                              FeatureRowProto.FeatureRow element, PreparedStatement preparedStatement) {
-                            jdbcTemplater.setSinkParameters(
-                                element, preparedStatement, jobName);
-                          }
-                        }));
-          }
-        // Apply the WriteFeatureRow transformation to this feature set partitioned input
-//        applyWriteFeatureRowToJdbcIo(
-//            jobName,
-//            featureSetRef,
-//            featureSetInput,
-//            currentFeatureSetSpec,
-//            jdbcConfig,
-//            jdbcTemplater);
-//      }
-
-        PCollection<FeatureRowProto.FeatureRow> successfulInserts =
-            input.apply(
+            input.apply(JdbcIO.<FeatureRowProto.FeatureRow>write()
+        	        .withDataSourceConfiguration(create_dsconfig(this.config))
+//        	        .withStatement(this.jdbcTemplater.getFeatureRowInsertSql(JdbcTemplater.getTableNameFromFeatureSet())
+        	        .withStatement("INSERT into snowflake_proj_feature_set_4 (event_timestamp,created_timestamp,feature,ingestion_id,job_id) select (?,?, parse_json(?),?,?)")
+        	        .withBatchSize(batchSize)
+        	        .withPreparedStatementSetter(
+        	            new JdbcIO.PreparedStatementSetter<FeatureRowProto.FeatureRow>() {
+					@Override
+					public void setParameters(FeatureRow element, PreparedStatement preparedStatement) {
+							
+						jdbcTemplater.setSinkParameters(element, preparedStatement, jobName);
+						
+					}}));
+            PCollection<FeatureRowProto.FeatureRow> successfulInserts =  input.apply(   	
                 "dummy",
                 ParDo.of(
                     new DoFn<FeatureRowProto.FeatureRow, FeatureRowProto.FeatureRow>() {
@@ -200,59 +126,43 @@ input.apply("SqlStatements",
                     }));
 
         return WriteResult.in(input.getPipeline(), successfulInserts, failedElements);
-  }
+//  }}
+       	              
+       	          
+       	      	    
+}
+  
+  public static JdbcIO.DataSourceConfiguration create_dsconfig(
+ 	      StoreProto.Store.JdbcConfig jdbcConfig) {
+ 	    String username = jdbcConfig.getUsername();
+ 	    String password = jdbcConfig.getPassword();
+ 	    String className = jdbcConfig.getClassName();
+ 	    String url = jdbcConfig.getUrl();
+
+ 	    System.out.println(String.format("dsconfig Warehouse() %s Database %s Schema %s:::",
+ 	    		jdbcConfig.getWarehouse() ,
+ 	    		jdbcConfig.getDatabase(),
+ 	    		jdbcConfig.getSchema()));
+ 	    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+ 	      String database = jdbcConfig.getDatabase();
+ 	      String schema = jdbcConfig.getSchema();
+ 	      String warehouse = jdbcConfig.getWarehouse();
+ 	      return JdbcIO.DataSourceConfiguration.create(className, url)
+ 	          .withUsername(!username.isEmpty() ? username : null)
+ 	          .withPassword(!password.isEmpty() ? password : null)
+ 	          .withConnectionProperties(
+ 	              String.format("warehouse=%s;db=%s;schema=%s", warehouse, database, schema));
+
+ 	    } else {
+ 	      return JdbcIO.DataSourceConfiguration.create(className, url)
+ 	          .withUsername(!username.isEmpty() ? username : null)
+ 	          .withPassword(!password.isEmpty() ? password : null);
+ 	    }
+
+
+}
 }
 
-
-  private static void applyWriteFeatureRowToJdbcIo(
-      String jobName,
-      String featureSetRef,
-      PCollection<FeatureRowProto.FeatureRow> featureSetInput,
-      String currentFeatureSetSpec,
-      StoreProto.Store.JdbcConfig jdbcConfig,
-      JdbcTemplater jdbcTemplater) {
-
-    int batchSize = jdbcConfig.getBatchSize() > 0 ? jdbcConfig.getBatchSize() : 1;
-
-    featureSetInput.apply(
-        String.format("WriteFeatureRowToJdbcIO-%s", featureSetRef),
-        JdbcIO.<FeatureRowProto.FeatureRow>write()
-            .withDataSourceConfiguration(create_dsconfig(jdbcConfig))
-            .withStatement(jdbcTemplater.getFeatureRowInsertSql(currentFeatureSetSpec))
-            .withBatchSize(batchSize)
-            .withPreparedStatementSetter(
-                new JdbcIO.PreparedStatementSetter<FeatureRowProto.FeatureRow>() {
-                  public void setParameters(
-                      FeatureRowProto.FeatureRow element, PreparedStatement preparedStatement) {
-                    jdbcTemplater.setSinkParameters(
-                        element, preparedStatement, jobName);
-                  }
-                }));
-  }
-
-  private static JdbcIO.DataSourceConfiguration create_dsconfig(
-      StoreProto.Store.JdbcConfig jdbcConfig) {
-    String username = jdbcConfig.getUsername();
-    String password = jdbcConfig.getPassword();
-    String className = jdbcConfig.getClassName();
-    String url = jdbcConfig.getUrl();
-
-    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
-      String database = jdbcConfig.getDatabase();
-      String schema = jdbcConfig.getSchema();
-      String warehouse = jdbcConfig.getWarehouse();
-      return JdbcIO.DataSourceConfiguration.create(className, url)
-          .withUsername(!username.isEmpty() ? username : null)
-          .withPassword(!password.isEmpty() ? password : null)
-          .withConnectionProperties(
-              String.format("warehouse=%s;db=%s;schema=%s", warehouse, database, schema));
-
-    } else {
-      return JdbcIO.DataSourceConfiguration.create(className, url)
-          .withUsername(!username.isEmpty() ? username : null)
-          .withPassword(!password.isEmpty() ? password : null);
-    }
-  }
   
 
 

@@ -29,9 +29,7 @@ import feast.storage.connectors.jdbc.sqlite.SqliteTemplater;
 
 import java.util.Map;
 
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.transforms.View;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionView;
@@ -88,16 +86,7 @@ public class JdbcFeatureSink implements FeatureSink {
   public PCollection<FeatureSetReference> prepareWrite(
       PCollection<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>> featureSetSpecs) {
 
-	  
-	  this.subscribedTable = featureSetSpecs.apply(
-	            "GetSubscribedFeatureSets",
-	            ParDo.of(
-	                new SubscribedTable()))
-			  
-			  .apply("View", View.asMultimap());
-	  
-	  System.out.println(" this.subscribedTable----"+ this.subscribedTable);
-	  
+	 
     PCollection<FeatureSetReference> schemas =
         featureSetSpecs.apply(
             "CreateTableSchema",
@@ -111,19 +100,6 @@ public class JdbcFeatureSink implements FeatureSink {
     return String.format("%s/%s", featureSetSpec.getProject(), featureSetSpec.getName());
   }
 
-  public PCollectionView<Map<String, Iterable<FeatureSet>>> getSubscribedFeatureSets() {
-    return this.subscribedFeatureSets;
-  }
-  
-  public PCollectionView<Map<String, Iterable<String>>> getSubscribedTables() {
-	    return this.subscribedTable;
-	  }
-
-//  @Override
-//  public JdbcWrite writer() {
-//    return new JdbcWrite(
-//        this.getConfig(), this.getJdbcTemplater(), this.getSubscribedFeatureSets());
-//  }
   
   @Override
 public JdbcWrite writer() {
@@ -131,50 +107,7 @@ public JdbcWrite writer() {
       this.getConfig(), this.getJdbcTemplater());
 }
   
-//  public static class SubscribedFeatures
-//  extends DoFn<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>, KV<String, FeatureSetProto.FeatureSet>> {
-//
-//	@ProcessElement
-//	public void process(
-//		
-//		 @Element KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec> element,
-//	     OutputReceiver <KV<String, FeatureSetProto.FeatureSet>> out,
-//	     ProcessContext context) {
-//		
-//		System.out.println("SubscribedFeatures--");
-//			FeatureSetProto.FeatureSetSpec featureSetSpec = element.getValue();
-//		    String featureSetKey = JdbcTemplater.getTableName(featureSetSpec);
-//		    System.out.println("featureSetKey----"+featureSetKey);
-//		    FeatureSetProto.FeatureSet featureSet = FeatureSetProto.FeatureSet.newBuilder().setSpec(element.getValue()).build();
-////		   
-//		    System.out.println("featureSet----"+featureSet);
-//		    	
-//	  out.output(KV.of(featureSetKey, featureSet));
-//	}
-//  }
-
-
-public static class SubscribedTable
-extends DoFn<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>, KV<String, String>> {
-
-	@ProcessElement
-	public void process(
-		
-		 @Element KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec> element,
-	     OutputReceiver <KV<String, String>> out,
-	     ProcessContext context) {
-		
-		System.out.println("SubscribedFeatures--");
-			FeatureSetProto.FeatureSetSpec featureSetSpec = element.getValue();
-		    String featureSetKey = JdbcTemplater.getTableName(featureSetSpec);
-		    System.out.println("featureSetKey----"+featureSetKey);
-		    FeatureSetProto.FeatureSet featureSet = FeatureSetProto.FeatureSet.newBuilder().setSpec(element.getValue()).build();
-//		   
-		    System.out.println("featureSet----"+featureSet);
-		    	
-	  out.output(KV.of(featureSetKey, featureSet.getSpec().getName()));
-	}
-}}
+}
 
 
 

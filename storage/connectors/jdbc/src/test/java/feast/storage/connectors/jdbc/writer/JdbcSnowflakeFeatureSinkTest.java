@@ -69,7 +69,7 @@ public class JdbcSnowflakeFeatureSinkTest {
 
     FeatureSetProto.FeatureSetSpec spec1 =
         FeatureSetProto.FeatureSetSpec.newBuilder()
-            .setName("feature_set_temp1")
+            .setName("feature_set_3")
             .setProject("snowflake_proj")
             .build();
 
@@ -77,7 +77,7 @@ public class JdbcSnowflakeFeatureSinkTest {
 
     FeatureSetProto.FeatureSetSpec spec2 =
         FeatureSetProto.FeatureSetSpec.newBuilder()
-            .setName("feature_set_temp2")
+            .setName("feature_set_4")
             .setProject("snowflake_proj")
             .build();
     FeatureSetReference ref2 = FeatureSetReference.of(spec2.getProject(), spec2.getName(), 1);
@@ -160,7 +160,7 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .addFields(field("feature_2", 4, Enum.INT64))
                 .build());
     
-//    p.apply(Create.of(featureRows)).apply("create_features",this.snowflakeFeatureSinkObj.writer());
+    p.apply(Create.of(featureRows)).apply("create_features",this.snowflakeFeatureSinkObj.writer());
     p.run();
     DatabaseMetaData meta = conn.getMetaData();
     Assert.assertEquals(
