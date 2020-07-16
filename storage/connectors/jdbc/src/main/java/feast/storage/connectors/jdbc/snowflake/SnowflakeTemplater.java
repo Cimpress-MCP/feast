@@ -17,7 +17,11 @@
 package feast.storage.connectors.jdbc.snowflake;
 
 import feast.proto.core.FeatureSetProto;
+<<<<<<< HEAD
 
+=======
+import feast.proto.core.StoreProto;
+>>>>>>> creating the prepared statement for write
 import feast.proto.core.FeatureSetProto.FeatureSetSpec;
 
 import feast.proto.types.FeatureRowProto;
@@ -30,6 +34,8 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import org.apache.beam.sdk.io.jdbc.JdbcIO;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
@@ -105,7 +111,7 @@ public class SnowflakeTemplater implements JdbcTemplater {
     return tableMigrationSql;
   }
 
-  public String getFeatureRowInsertSql(String featureSetSpec) {
+  public String getFeatureRowInsertSql(String tableName) {
     StringJoiner columnsSql = new StringJoiner(",");
     StringJoiner valueSql = new StringJoiner(",");
 
@@ -123,13 +129,17 @@ public class SnowflakeTemplater implements JdbcTemplater {
     }
 //    return String.format(
 //        "INSERT INTO %s (%s) select %s",
-//        JdbcTemplater.getTableName(featureSetSpec), columnsSql, valueSql);
+//        JdbcTemplater.getTableNameFromFeatureSet(featureSetSpec), columnsSql, valueSql);
 //    
     return String.format(
 
             "INSERT INTO %s (%s) select %s",
+<<<<<<< HEAD
             featureSetSpec, columnsSql, valueSql);
 
+=======
+            tableName, columnsSql, valueSql);
+>>>>>>> creating the prepared statement for write
   }
   
   
@@ -140,10 +150,14 @@ public class SnowflakeTemplater implements JdbcTemplater {
       String jobName) {
     try {
 
+    	System.out.println("inside :::setSinkParameters snowflake");
       Map<String, ValueProto.Value> fieldMap =
           element.getFieldsList().stream()
               .collect(Collectors.toMap(FieldProto.Field::getName, FieldProto.Field::getValue));
 
+      for(String value: fieldMap.keySet()) {
+    	  System.out.println("inside :::setSinkParameters snowflake:: value:: "+value+ fieldMap.get(value));
+      }
       // Set event_timestamp
       Instant eventTsInstant =
           Instant.ofEpochSecond(element.getEventTimestamp().getSeconds())
@@ -249,6 +263,10 @@ public class SnowflakeTemplater implements JdbcTemplater {
           e.getMessage());
     }
   }
+  
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> creating the prepared statement for write
 }

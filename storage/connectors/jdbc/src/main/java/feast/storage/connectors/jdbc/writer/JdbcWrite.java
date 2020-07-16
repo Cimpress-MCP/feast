@@ -29,7 +29,10 @@ import feast.storage.connectors.jdbc.common.JdbcTemplater;
 
 import java.io.Serializable;
 import java.sql.PreparedStatement;
+<<<<<<< HEAD
 
+=======
+>>>>>>> creating the prepared statement for write
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.*;
@@ -67,9 +70,12 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcWrite.class);	
   private final JdbcTemplater jdbcTemplater;
   private final StoreProto.Store.JdbcConfig config;
+<<<<<<< HEAD
   private PCollectionView<Map<String, Iterable<String>>> subscribedFeatureSets;
   private PCollection<KV<String, String>> subscribedTables;
 
+=======
+>>>>>>> creating the prepared statement for write
 
 public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
 	
@@ -78,10 +84,25 @@ public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
 
 }
 
+<<<<<<< HEAD
   @Override
   public WriteResult expand(PCollection<FeatureRowProto.FeatureRow> input) {
     String jobName = input.getPipeline().getOptions().getJobName();
 
+=======
+
+public StoreProto.Store.JdbcConfig getConfig() {
+    return config;
+  }
+
+public JdbcTemplater getJdbcTemplater() {
+    return jdbcTemplater;
+  }
+
+  @Override
+  public WriteResult expand(PCollection<FeatureRowProto.FeatureRow> input) {
+    String jobName = input.getPipeline().getOptions().getJobName();
+>>>>>>> creating the prepared statement for write
   
 //	input.apply("WriteToTable",
 //	      ParDo.of(
@@ -96,6 +117,7 @@ public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
         	        .withBatchSize(batchSize)
         	        .withPreparedStatementSetter(
         	            new JdbcIO.PreparedStatementSetter<FeatureRowProto.FeatureRow>() {
+<<<<<<< HEAD
         	            	
 					@Override
 					public void setParameters(FeatureRow element, PreparedStatement preparedStatement)
@@ -108,6 +130,15 @@ public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
         PCollection<FeatureRowProto.FeatureRow> successfulInserts =
             input.apply(
 
+=======
+					@Override
+					public void setParameters(FeatureRow element, PreparedStatement preparedStatement) {
+							
+						jdbcTemplater.setSinkParameters(element, preparedStatement, jobName);
+						
+					}}));
+            PCollection<FeatureRowProto.FeatureRow> successfulInserts =  input.apply(   	
+>>>>>>> creating the prepared statement for write
                 "dummy",
                 ParDo.of(
                     new DoFn<FeatureRowProto.FeatureRow, FeatureRowProto.FeatureRow>() {
@@ -125,12 +156,52 @@ public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
                     }));
 
         return WriteResult.in(input.getPipeline(), successfulInserts, failedElements);
+<<<<<<< HEAD
 
   }
 
 
 
 
+=======
+//  }}
+       	              
+       	          
+       	      	    
+}
+  
+  public static JdbcIO.DataSourceConfiguration create_dsconfig(
+ 	      StoreProto.Store.JdbcConfig jdbcConfig) {
+ 	    String username = jdbcConfig.getUsername();
+ 	    String password = jdbcConfig.getPassword();
+ 	    String className = jdbcConfig.getClassName();
+ 	    String url = jdbcConfig.getUrl();
+
+ 	    System.out.println(String.format("dsconfig Warehouse() %s Database %s Schema %s:::",
+ 	    		jdbcConfig.getWarehouse() ,
+ 	    		jdbcConfig.getDatabase(),
+ 	    		jdbcConfig.getSchema()));
+ 	    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+ 	      String database = jdbcConfig.getDatabase();
+ 	      String schema = jdbcConfig.getSchema();
+ 	      String warehouse = jdbcConfig.getWarehouse();
+ 	      return JdbcIO.DataSourceConfiguration.create(className, url)
+ 	          .withUsername(!username.isEmpty() ? username : null)
+ 	          .withPassword(!password.isEmpty() ? password : null)
+ 	          .withConnectionProperties(
+ 	              String.format("warehouse=%s;db=%s;schema=%s", warehouse, database, schema));
+
+ 	    } else {
+ 	      return JdbcIO.DataSourceConfiguration.create(className, url)
+ 	          .withUsername(!username.isEmpty() ? username : null)
+ 	          .withPassword(!password.isEmpty() ? password : null);
+ 	    }
+
+
+}
+}
+
+>>>>>>> creating the prepared statement for write
   
   
   public static JdbcIO.DataSourceConfiguration create_dsconfig(
