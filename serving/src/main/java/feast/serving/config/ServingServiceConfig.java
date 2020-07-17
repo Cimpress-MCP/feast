@@ -18,24 +18,30 @@ package feast.serving.config;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import feast.proto.core.StoreProto;
-import feast.serving.service.*;
+import feast.serving.service.HistoricalServingService;
+import feast.serving.service.JobService;
+import feast.serving.service.NoopJobService;
+import feast.serving.service.OnlineServingService;
+import feast.serving.service.ServingService;
 import feast.serving.specs.CachedSpecService;
 import feast.storage.api.retriever.HistoricalRetriever;
 import feast.storage.api.retriever.OnlineRetriever;
 import feast.storage.connectors.bigquery.retriever.BigQueryHistoricalRetriever;
-import feast.storage.connectors.jdbc.connection.PostgresConnectionProvider;
-import feast.storage.connectors.jdbc.connection.SnowflakeConnectionProvider;
 import feast.storage.connectors.jdbc.retriever.JdbcHistoricalRetriever;
-import feast.storage.connectors.jdbc.retriever.PostgresQueryTemplater;
 import feast.storage.connectors.jdbc.retriever.SnowflakeQueryTemplater;
 import feast.storage.connectors.redis.retriever.RedisClusterOnlineRetriever;
 import feast.storage.connectors.redis.retriever.RedisOnlineRetriever;
 import io.opentracing.Tracer;
 import java.util.Map;
+import java.util.Properties;
+import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @Configuration
 public class ServingServiceConfig {
@@ -94,23 +100,38 @@ public class ServingServiceConfig {
     String className = config.get("class_name");
     switch (className) {
       case "net.snowflake.client.jdbc.SnowflakeDriver":
-        SnowflakeConnectionProvider snowflakeConnectionProvider =
-            new SnowflakeConnectionProvider(config);
         SnowflakeQueryTemplater snowflakeQueryTemplater =
-            new SnowflakeQueryTemplater(config, snowflakeConnectionProvider);
+            new SnowflakeQueryTemplater(config, this.createJdbcTemplate(feastProperties));
         return JdbcHistoricalRetriever.create(config, snowflakeQueryTemplater);
-      case "org.postgresql.Driver":
-        PostgresConnectionProvider postgresConnectionProvider =
-            new PostgresConnectionProvider(config);
-        PostgresQueryTemplater postgresQueryTemplater =
-            new PostgresQueryTemplater(config, postgresConnectionProvider);
-        return JdbcHistoricalRetriever.create(config, postgresQueryTemplater);
       default:
         throw new IllegalArgumentException(
             String.format(
                 "Unsupported JDBC store className '%s' for store name '%s'",
                 className, store.getName()));
     }
+  }
+
+  @Bean
+  public DataSource createDataSource(FeastProperties feastProperties) {
+    FeastProperties.Store store = feastProperties.getActiveStore();
+    Map<String, String> config = store.getConfig();
+    Properties dsProperties = new Properties();
+    dsProperties.put("user", config.get("username"));
+    dsProperties.put("password", config.get("password"));
+    dsProperties.put("db", config.get("database"));
+    dsProperties.put("schema", config.get("schema"));
+    dsProperties.put("role", config.get("role"));
+    HikariConfig hkConfig = new HikariConfig();
+    hkConfig.setMaximumPoolSize(100);
+    hkConfig.setDriverClassName(config.get("class_name"));
+    hkConfig.setJdbcUrl(config.get("url"));
+    hkConfig.setDataSourceProperties(dsProperties);
+    return new HikariDataSource(hkConfig);
+  }
+
+  @Bean
+  public JdbcTemplate createJdbcTemplate(FeastProperties feastProperties) {
+    return new JdbcTemplate(this.createDataSource(feastProperties));
   }
 
   private void validateJobServicePresence(JobService jobService) {

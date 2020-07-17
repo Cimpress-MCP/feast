@@ -14,11 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package feast.storage.connectors.jdbc.connection;
+package feast.storage.connectors.jdbc.snowflake;
 
-import java.sql.Connection;
+import java.sql.Timestamp;
 
-public interface JdbcConnectionProvider {
-  /** @return a connection to the URL */
-  Connection getConnection();
+public class TimestampLimits {
+
+  public Timestamp min;
+  public Timestamp max;
+
+  /**
+   * Timestamp limits for point-in-time correct retriever
+   *
+   * @param min
+   * @param max
+   */
+  public TimestampLimits(Timestamp min, Timestamp max) {
+    this.min = min;
+    this.max = max;
+  }
+
+  public Timestamp getMax() {
+    return max;
+  }
+
+  public Timestamp getMin() {
+    return min;
+  }
 }
