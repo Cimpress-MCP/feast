@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import feast.common.models.FeatureSetReference;
+
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.StoreProto;
 import feast.proto.types.FeatureRowProto.FeatureRow;
@@ -102,6 +103,7 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
 
+
     this.snowflakeFeatureSinkObj.prepareWrite(p.apply(Create.of(specMap)));
 
     this.connect();
@@ -165,6 +167,7 @@ public class JdbcSnowflakeFeatureSinkTest {
 
     
 //    p.apply(Create.of(featureRows)).apply("create_features",this.snowflakeFeatureSinkObj.writer());
+
     p.run();
 
     DatabaseMetaData meta = conn.getMetaData();
@@ -173,6 +176,5 @@ public class JdbcSnowflakeFeatureSinkTest {
     Assert.assertEquals(
 
         true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_4", null).next());
-
   }
 }

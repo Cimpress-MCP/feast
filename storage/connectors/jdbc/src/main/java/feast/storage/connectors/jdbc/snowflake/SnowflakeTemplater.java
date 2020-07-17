@@ -17,6 +17,8 @@
 package feast.storage.connectors.jdbc.snowflake;
 
 import feast.proto.core.FeatureSetProto;
+import feast.proto.core.StoreProto;
+import feast.proto.core.FeatureSetProto.FeatureSetSpec;
 import feast.proto.types.FeatureRowProto;
 import feast.proto.types.FieldProto;
 import feast.proto.types.ValueProto;
@@ -27,7 +29,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
-
+import org.apache.beam.sdk.io.jdbc.JdbcIO;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
@@ -104,12 +106,11 @@ public class SnowflakeTemplater implements JdbcTemplater {
   }
 
   public String getFeatureRowInsertSql(String tableName) {
+
     StringJoiner columnsSql = new StringJoiner(",");
     StringJoiner valueSql = new StringJoiner(",");
-
 //    Map<String, String> requiredColumns = getRequiredColumns(featureSetSpec);
     Map<String, String> requiredColumns = getRequiredColumns();
-
     for (String column : requiredColumns.keySet()) {
 
       columnsSql.add(column);
@@ -121,14 +122,11 @@ public class SnowflakeTemplater implements JdbcTemplater {
     }
 
     return String.format(
-
             "INSERT INTO %s (%s) select %s",
             tableName, columnsSql, valueSql);
 
   }
   
-  
-
   public void setSinkParameters(
       FeatureRowProto.FeatureRow element,
       PreparedStatement preparedStatement,
@@ -179,6 +177,7 @@ public class SnowflakeTemplater implements JdbcTemplater {
           e.getMessage());
     }
   }
+
 
   public static void setFeatureValue(JSONObject json_variant, String row, ValueProto.Value value) {
     ValueProto.Value.ValCase protoValueType = value.getValCase();

@@ -16,6 +16,7 @@
  */
 package feast.storage.connectors.jdbc.common;
 
+
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.StoreProto.Store.JdbcConfig;
 import feast.proto.types.FeatureRowProto.FeatureRow;
@@ -54,11 +55,12 @@ public interface JdbcTemplater extends Serializable {
   String getFeatureRowInsertSql(String featureSetSpec);
 
 
+
   Map<String, String> getRequiredColumns();
 
 
 void setSinkParameters(FeatureRow element, PreparedStatement preparedStatement, String jobName);
 
-  
-
 }
+
+  

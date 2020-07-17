@@ -67,7 +67,8 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcWrite.class);	
   private final JdbcTemplater jdbcTemplater;
   private final StoreProto.Store.JdbcConfig config;
-
+  private PCollectionView<Map<String, Iterable<String>>> subscribedFeatureSets;
+  private PCollection<KV<String, String>> subscribedTables;
 
 public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
 	
@@ -88,10 +89,7 @@ public JdbcTemplater getJdbcTemplater() {
   @Override
   public WriteResult expand(PCollection<FeatureRowProto.FeatureRow> input) {
     String jobName = input.getPipeline().getOptions().getJobName();
-
-//	input.apply("WriteToTable",
-//	      ParDo.of(
-//	              new JdbcWriterHelper(this.getJdbcTemplater(), this.getConfig(), jobName)));
+  
 	 int batchSize = this.config.getBatchSize() > 0 ? config.getBatchSize() : 1;
 
 
@@ -101,16 +99,15 @@ public JdbcTemplater getJdbcTemplater() {
         	        .withStatement("INSERT into snowflake_proj_feature_set_4 (event_timestamp,created_timestamp,feature,ingestion_id,job_id) select (?,?, parse_json(?),?,?)")
         	        .withBatchSize(batchSize)
         	        .withPreparedStatementSetter(
-        	            new JdbcIO.PreparedStatementSetter<FeatureRowProto.FeatureRow>() {
-
+        	            new JdbcIO.PreparedStatementSetter<FeatureRowProto.FeatureRow>() {     	
 					@Override
-					public void setParameters(FeatureRow element, PreparedStatement preparedStatement) {
-							
+					public void setParameters(FeatureRow element, PreparedStatement preparedStatement)
+							throws Exception {
+
 						jdbcTemplater.setSinkParameters(element, preparedStatement, jobName);
 						
 					}}));
             PCollection<FeatureRowProto.FeatureRow> successfulInserts =  input.apply(   	
-
                 "dummy",
                 ParDo.of(
                     new DoFn<FeatureRowProto.FeatureRow, FeatureRowProto.FeatureRow>() {
@@ -128,8 +125,7 @@ public JdbcTemplater getJdbcTemplater() {
                     }));
 
         return WriteResult.in(input.getPipeline(), successfulInserts, failedElements);
-       	              
-       	          
+	          
        	      	    
 }
   

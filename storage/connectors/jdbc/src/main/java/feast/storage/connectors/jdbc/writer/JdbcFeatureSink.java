@@ -27,7 +27,6 @@ import feast.storage.connectors.jdbc.postgres.PostgresqlTemplater;
 import feast.storage.connectors.jdbc.snowflake.SnowflakeTemplater;
 import feast.storage.connectors.jdbc.sqlite.SqliteTemplater;
 
-
 import java.util.Map;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
@@ -37,6 +36,7 @@ import org.slf4j.Logger;
 
 public class JdbcFeatureSink implements FeatureSink {
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcFeatureSink.class);
+
 
   private final StoreProto.Store.JdbcConfig config;
 
@@ -101,8 +101,10 @@ public class JdbcFeatureSink implements FeatureSink {
 public JdbcWrite writer() {
   return new JdbcWrite(
       this.getConfig(), this.getJdbcTemplater());
+
 }
   
 }
+
 
 
