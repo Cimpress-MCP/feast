@@ -22,9 +22,7 @@ import feast.proto.core.StoreProto;
 import feast.proto.core.StoreProto.Store.JdbcConfig;
 import feast.storage.api.writer.FeatureSink;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
-import feast.storage.connectors.jdbc.postgres.PostgresqlTemplater;
 import feast.storage.connectors.jdbc.snowflake.SnowflakeTemplater;
-import feast.storage.connectors.jdbc.sqlite.SqliteTemplater;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
@@ -48,10 +46,6 @@ public class JdbcFeatureSink implements FeatureSink {
 
   private JdbcTemplater getJdbcTemplaterForClass(String className) {
     switch (className) {
-      case "org.sqlite.JDBC":
-        return new SqliteTemplater();
-      case "org.postgresql.Driver":
-        return new PostgresqlTemplater();
       case "net.snowflake.client.jdbc.SnowflakeDriver":
         return new SnowflakeTemplater();
       default:

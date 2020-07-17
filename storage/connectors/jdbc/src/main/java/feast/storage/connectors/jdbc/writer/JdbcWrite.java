@@ -23,17 +23,10 @@ import feast.proto.types.FeatureRowProto.FeatureRow;
 import feast.storage.api.writer.FailedElement;
 import feast.storage.api.writer.WriteResult;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
-import java.sql.PreparedStatement;
-import java.util.*;
-import org.apache.beam.sdk.io.jdbc.JdbcIO;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.DoFn.ProcessContext;
-import org.apache.beam.sdk.transforms.DoFn.ProcessElement;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
-import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PCollectionView;
 import org.slf4j.Logger;
 
 /**
@@ -47,8 +40,6 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcWrite.class);
   private final JdbcTemplater jdbcTemplater;
   private final StoreProto.Store.JdbcConfig config;
-  private PCollectionView<Map<String, Iterable<String>>> subscribedFeatureSets;
-  private PCollection<KV<String, String>> subscribedTables;
 
   public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
 
@@ -70,23 +61,12 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
 
     int batchSize = this.config.getBatchSize() > 0 ? config.getBatchSize() : 1;
 
-    input.apply(
-        JdbcIO.<FeatureRowProto.FeatureRow>write()
-            .withDataSourceConfiguration(create_dsconfig(this.config))
-            //
-            // .withStatement(this.jdbcTemplater.getFeatureRowInsertSql(JdbcTemplater.getTableNameFromFeatureSet())
-            .withStatement(
-                "INSERT into snowflake_proj_feature_set_4 (event_timestamp,created_timestamp,feature,ingestion_id,job_id) select (?,?, parse_json(?),?,?)")
-            .withBatchSize(batchSize)
-            .withPreparedStatementSetter(
-                new JdbcIO.PreparedStatementSetter<FeatureRowProto.FeatureRow>() {
-                  @Override
-                  public void setParameters(FeatureRow element, PreparedStatement preparedStatement)
-                      throws Exception {
+    PCollection<FeatureRow> feature = input;
 
-                    jdbcTemplater.setSinkParameters(element, preparedStatement, jobName);
-                  }
-                }));
+    feature.apply(
+        "WriteFeaturestoTable",
+        ParDo.of(new InsertFeatureSetToTable(this.getJdbcTemplater(), this.getConfig(), jobName)));
+
     PCollection<FeatureRowProto.FeatureRow> successfulInserts =
         input.apply(
             "dummy",
@@ -106,33 +86,5 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
                 }));
 
     return WriteResult.in(input.getPipeline(), successfulInserts, failedElements);
-  }
-
-  public static JdbcIO.DataSourceConfiguration create_dsconfig(
-      StoreProto.Store.JdbcConfig jdbcConfig) {
-    String username = jdbcConfig.getUsername();
-    String password = jdbcConfig.getPassword();
-    String className = jdbcConfig.getClassName();
-    String url = jdbcConfig.getUrl();
-
-    System.out.println(
-        String.format(
-            "dsconfig Warehouse() %s Database %s Schema %s:::",
-            jdbcConfig.getWarehouse(), jdbcConfig.getDatabase(), jdbcConfig.getSchema()));
-    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
-      String database = jdbcConfig.getDatabase();
-      String schema = jdbcConfig.getSchema();
-      String warehouse = jdbcConfig.getWarehouse();
-      return JdbcIO.DataSourceConfiguration.create(className, url)
-          .withUsername(!username.isEmpty() ? username : null)
-          .withPassword(!password.isEmpty() ? password : null)
-          .withConnectionProperties(
-              String.format("warehouse=%s;db=%s;schema=%s", warehouse, database, schema));
-
-    } else {
-      return JdbcIO.DataSourceConfiguration.create(className, url)
-          .withUsername(!username.isEmpty() ? username : null)
-          .withPassword(!password.isEmpty() ? password : null);
-    }
   }
 }

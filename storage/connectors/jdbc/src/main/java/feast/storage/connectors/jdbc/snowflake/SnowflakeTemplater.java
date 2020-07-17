@@ -21,8 +21,6 @@ import feast.proto.types.FeatureRowProto;
 import feast.proto.types.FieldProto;
 import feast.proto.types.ValueProto;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.*;
@@ -40,7 +38,6 @@ public class SnowflakeTemplater implements JdbcTemplater {
   @Override
   public String getTableCreationSql(FeatureSetProto.FeatureSetSpec featureSetSpec) {
     StringJoiner columnsAndTypesSQL = new StringJoiner(", ");
-    //    Map<String, String> requiredColumns = getRequiredColumns(featureSetSpec);
     Map<String, String> requiredColumns = getRequiredColumns();
     for (String column : requiredColumns.keySet()) {
 
@@ -55,18 +52,6 @@ public class SnowflakeTemplater implements JdbcTemplater {
     return createTableStatement;
   }
 
-  //  @Override
-  //  public Map<String, String> getRequiredColumns(FeatureSetProto.FeatureSetSpec featureSetSpec) {
-  //    Map<String, String> requiredColumns = new LinkedHashMap<>();
-  //
-  //    requiredColumns.put("event_timestamp", "TIMESTAMP_LTZ");
-  //    requiredColumns.put("created_timestamp", "TIMESTAMP_LTZ");
-  //    requiredColumns.put("feature", "VARIANT");
-  //    requiredColumns.put("ingestion_id", "VARCHAR");
-  //    requiredColumns.put("job_id", "VARCHAR");
-  //    return requiredColumns;
-  //  }
-  //
   @Override
   public Map<String, String> getRequiredColumns() {
     Map<String, String> requiredColumns = new LinkedHashMap<>();
@@ -79,96 +64,53 @@ public class SnowflakeTemplater implements JdbcTemplater {
     return requiredColumns;
   }
 
-  public Map<String, String> getSubscribedColumns(FeatureSetProto.FeatureSetSpec featureSetSpec) {
-    Map<String, String> subscribedColumns = new LinkedHashMap<>();
-    for (FeatureSetProto.EntitySpec entity : featureSetSpec.getEntitiesList()) {
-      subscribedColumns.put(
-          entity.getName(), SnowflakesqlTypeUtil.toSqlType(entity.getValueType()));
-    }
-
-    for (FeatureSetProto.FeatureSpec feature : featureSetSpec.getFeaturesList()) {
-      subscribedColumns.put(
-          feature.getName(), SnowflakesqlTypeUtil.toSqlType(feature.getValueType()));
-    }
-
-    return subscribedColumns;
-  }
-
   @Override
-  public String getTableMigrationSql(
-      FeatureSetProto.FeatureSetSpec featureSetSpec, Map<String, String> existingColumns) {
-
-    String tableMigrationSql = "";
-    return tableMigrationSql;
-  }
-
-  public String getFeatureRowInsertSql(String tableName) {
+  public String getFeatureRowInsertSql(FeatureRowProto.FeatureRow element, String jobName) {
 
     StringJoiner columnsSql = new StringJoiner(",");
     StringJoiner valueSql = new StringJoiner(",");
-    //    Map<String, String> requiredColumns = getRequiredColumns(featureSetSpec);
+
+    String tableName = JdbcTemplater.getTableNameFromFeatureSet(element.getFeatureSet());
     Map<String, String> requiredColumns = getRequiredColumns();
     for (String column : requiredColumns.keySet()) {
-
       columnsSql.add(column);
-      if (column == "feature") {
-        valueSql.add(" parse_json(?)");
-      } else {
-        valueSql.add("?");
-      }
+    }
+    Map<String, ValueProto.Value> fieldMap =
+        element.getFieldsList().stream()
+            .collect(Collectors.toMap(FieldProto.Field::getName, FieldProto.Field::getValue));
+
+    // Set event_timestamp
+    Instant eventTsInstant =
+        Instant.ofEpochSecond(element.getEventTimestamp().getSeconds())
+            .plusNanos(element.getEventTimestamp().getNanos());
+
+    valueSql.add("'" + Timestamp.from(eventTsInstant) + "'");
+
+    // Set created_timestamp
+
+    valueSql.add("'" + System.currentTimeMillis() + "'");
+
+    // Set Feature
+
+    JSONObject json_variant = new JSONObject();
+    for (String row : fieldMap.keySet()) {
+      setFeatureValue(json_variant, row, fieldMap.get(row));
     }
 
-    return String.format("INSERT INTO %s (%s) select %s", tableName, columnsSql, valueSql);
-  }
+    valueSql.add("parse_json('" + json_variant.toString() + "')");
 
-  public void setSinkParameters(
-      FeatureRowProto.FeatureRow element, PreparedStatement preparedStatement, String jobName) {
-    try {
+    // Set ingestion Id
 
-      System.out.println("inside :::setSinkParameters snowflake");
-      Map<String, ValueProto.Value> fieldMap =
-          element.getFieldsList().stream()
-              .collect(Collectors.toMap(FieldProto.Field::getName, FieldProto.Field::getValue));
-
-      for (String value : fieldMap.keySet()) {
-        System.out.println(
-            "inside :::setSinkParameters snowflake:: value:: " + value + fieldMap.get(value));
-      }
-      // Set event_timestamp
-      Instant eventTsInstant =
-          Instant.ofEpochSecond(element.getEventTimestamp().getSeconds())
-              .plusNanos(element.getEventTimestamp().getNanos());
-
-      preparedStatement.setTimestamp(
-          1, Timestamp.from(eventTsInstant), Calendar.getInstance(TimeZone.getTimeZone("UTC")));
-
-      // Set created_timestamp
-      preparedStatement.setTimestamp(
-          2,
-          new Timestamp(System.currentTimeMillis()),
-          Calendar.getInstance(TimeZone.getTimeZone("UTC")));
-
-      // Set Feature
-      JSONObject json_variant = new JSONObject();
-      for (String row : fieldMap.keySet()) {
-        setFeatureValue(json_variant, row, fieldMap.get(row));
-      }
-
-      preparedStatement.setString(3, json_variant.toString());
-
-      // Set ingestion Id
-      preparedStatement.setString(4, element.getIngestionId());
-
-      // Set job Name
-      preparedStatement.setString(5, jobName);
-
-      preparedStatement.getConnection().commit();
-    } catch (SQLException e) {
-      log.error(
-          String.format(
-              "Could not construct prepared statement for JDBC IO. FeatureRow: %s:", element),
-          e.getMessage());
+    if (element.getIngestionId() == "") {
+      valueSql.add("NULL");
+    } else {
+      valueSql.add("'" + element.getIngestionId() + "'");
     }
+
+    // Set job Name
+    valueSql.add("'" + jobName + "'");
+
+    return String.format("INSERT INTO %s (%s) select %s;", tableName, columnsSql, valueSql);
   }
 
   public static void setFeatureValue(JSONObject json_variant, String row, ValueProto.Value value) {

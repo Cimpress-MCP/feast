@@ -17,18 +17,18 @@
 package feast.storage.connectors.jdbc.writer;
 
 import com.google.api.services.bigquery.model.TableSchema;
-import feast.common.models.FeatureSetReference;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.StoreProto.Store.JdbcConfig;
+import feast.proto.types.FeatureRowProto;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
 import java.util.Properties;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.values.KV;
 import org.slf4j.Logger;
 
 /**
@@ -40,41 +40,59 @@ import org.slf4j.Logger;
  * bootstrapping faster
  */
 @SuppressWarnings("serial")
-public class FeatureSetSpecToTableSchemaJDBC
-    extends DoFn<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>, FeatureSetReference> {
+public class InsertFeatureSetToTable extends DoFn<FeatureRowProto.FeatureRow, String> {
 
   private JdbcTemplater jdbcTemplater;
   private JdbcConfig jdbcConfig;
+  private String jobName;
 
   private static final Logger log =
-      org.slf4j.LoggerFactory.getLogger(FeatureSetSpecToTableSchemaJDBC.class);
+      org.slf4j.LoggerFactory.getLogger(InsertFeatureSetToTable.class);
 
-  public FeatureSetSpecToTableSchemaJDBC(JdbcTemplater jdbcTemplater, JdbcConfig jdbcConfig) {
+  public InsertFeatureSetToTable(
+      JdbcTemplater jdbcTemplater, JdbcConfig jdbcConfig, String jobName) {
     this.jdbcTemplater = jdbcTemplater;
     this.jdbcConfig = jdbcConfig;
+    this.jobName = jobName;
   }
 
   @ProcessElement
   public void processElement(
-      @Element KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec> element,
-      OutputReceiver<FeatureSetReference> out,
+      @Element FeatureRowProto.FeatureRow element,
+      OutputReceiver<String> out,
       ProcessContext context) {
-
-    FeatureSetProto.FeatureSetSpec featureSetSpec = element.getValue();
-
-    Map<String, String> requiredColumns = this.jdbcTemplater.getRequiredColumns();
-    Properties props = new Properties();
-    props.put("user", this.jdbcConfig.getUsername());
-    props.put("password", this.jdbcConfig.getPassword());
-    props.put("db", this.jdbcConfig.getDatabase());
-    props.put("schema", this.jdbcConfig.getSchema());
+    String tableName = JdbcTemplater.getTableNameFromFeatureSet(element.getFeatureSet());
 
     try {
       Class.forName(this.jdbcConfig.getClassName());
+      Properties props = new Properties();
+      props.put("user", this.jdbcConfig.getUsername());
+      props.put("password", this.jdbcConfig.getPassword());
+      props.put("db", this.jdbcConfig.getDatabase());
+      props.put("schema", this.jdbcConfig.getSchema());
+      props.put("tracing", "ALL");
+      props.put("warehouse", this.jdbcConfig.getWarehouse());
       Connection conn = DriverManager.getConnection(this.jdbcConfig.getUrl(), props);
-      String createSqlTableCreationQuery = this.jdbcTemplater.getTableCreationSql(featureSetSpec);
-      Statement stmt = conn.createStatement();
-      stmt.execute(createSqlTableCreationQuery);
+
+      DatabaseMetaData meta = conn.getMetaData();
+
+      if (!meta.getTables(null, null, tableName.toUpperCase(), null).next()) {
+        log.info("Table doesnot exists");
+        FeatureSetProto.FeatureSetSpec spec =
+            FeatureSetProto.FeatureSetSpec.newBuilder()
+                .setName(element.getFeatureSet().split("/")[1])
+                .setProject(element.getFeatureSet().split("/")[0])
+                .build();
+
+        Map<String, String> requiredColumns = this.jdbcTemplater.getRequiredColumns();
+        String createSqlTableCreationQuery = this.jdbcTemplater.getTableCreationSql(spec);
+        Statement stmt = conn.createStatement();
+        stmt.execute(createSqlTableCreationQuery);
+      }
+      String insertQuery = this.jdbcTemplater.getFeatureRowInsertSql(element, this.jobName);
+      Statement statement = conn.createStatement();
+      statement.executeQuery(insertQuery);
+      conn.close();
 
     } catch (ClassNotFoundException | SQLException e) {
       throw new RuntimeException(
@@ -84,10 +102,6 @@ public class FeatureSetSpecToTableSchemaJDBC
           e);
     }
 
-    out.output(element.getKey());
-  }
-
-  public static String getFeatureSetRef(FeatureSetProto.FeatureSetSpec featureSetSpec) {
-    return String.format("%s/%s", featureSetSpec.getProject(), featureSetSpec.getName());
+    out.output(tableName);
   }
 }
