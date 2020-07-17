@@ -17,8 +17,6 @@
 package feast.storage.connectors.jdbc.snowflake;
 
 import feast.proto.core.FeatureSetProto;
-import feast.proto.core.StoreProto;
-import feast.proto.core.FeatureSetProto.FeatureSetSpec;
 import feast.proto.types.FeatureRowProto;
 import feast.proto.types.FieldProto;
 import feast.proto.types.ValueProto;
@@ -29,7 +27,6 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
-import org.apache.beam.sdk.io.jdbc.JdbcIO;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 
@@ -43,7 +40,7 @@ public class SnowflakeTemplater implements JdbcTemplater {
   @Override
   public String getTableCreationSql(FeatureSetProto.FeatureSetSpec featureSetSpec) {
     StringJoiner columnsAndTypesSQL = new StringJoiner(", ");
-//    Map<String, String> requiredColumns = getRequiredColumns(featureSetSpec);
+    //    Map<String, String> requiredColumns = getRequiredColumns(featureSetSpec);
     Map<String, String> requiredColumns = getRequiredColumns();
     for (String column : requiredColumns.keySet()) {
 
@@ -58,18 +55,18 @@ public class SnowflakeTemplater implements JdbcTemplater {
     return createTableStatement;
   }
 
-//  @Override
-//  public Map<String, String> getRequiredColumns(FeatureSetProto.FeatureSetSpec featureSetSpec) {
-//    Map<String, String> requiredColumns = new LinkedHashMap<>();
-//
-//    requiredColumns.put("event_timestamp", "TIMESTAMP_LTZ");
-//    requiredColumns.put("created_timestamp", "TIMESTAMP_LTZ");
-//    requiredColumns.put("feature", "VARIANT");
-//    requiredColumns.put("ingestion_id", "VARCHAR");
-//    requiredColumns.put("job_id", "VARCHAR");
-//    return requiredColumns;
-//  }
-//  
+  //  @Override
+  //  public Map<String, String> getRequiredColumns(FeatureSetProto.FeatureSetSpec featureSetSpec) {
+  //    Map<String, String> requiredColumns = new LinkedHashMap<>();
+  //
+  //    requiredColumns.put("event_timestamp", "TIMESTAMP_LTZ");
+  //    requiredColumns.put("created_timestamp", "TIMESTAMP_LTZ");
+  //    requiredColumns.put("feature", "VARIANT");
+  //    requiredColumns.put("ingestion_id", "VARCHAR");
+  //    requiredColumns.put("job_id", "VARCHAR");
+  //    return requiredColumns;
+  //  }
+  //
   @Override
   public Map<String, String> getRequiredColumns() {
     Map<String, String> requiredColumns = new LinkedHashMap<>();
@@ -109,7 +106,7 @@ public class SnowflakeTemplater implements JdbcTemplater {
 
     StringJoiner columnsSql = new StringJoiner(",");
     StringJoiner valueSql = new StringJoiner(",");
-//    Map<String, String> requiredColumns = getRequiredColumns(featureSetSpec);
+    //    Map<String, String> requiredColumns = getRequiredColumns(featureSetSpec);
     Map<String, String> requiredColumns = getRequiredColumns();
     for (String column : requiredColumns.keySet()) {
 
@@ -121,25 +118,21 @@ public class SnowflakeTemplater implements JdbcTemplater {
       }
     }
 
-    return String.format(
-            "INSERT INTO %s (%s) select %s",
-            tableName, columnsSql, valueSql);
-
+    return String.format("INSERT INTO %s (%s) select %s", tableName, columnsSql, valueSql);
   }
-  
+
   public void setSinkParameters(
-      FeatureRowProto.FeatureRow element,
-      PreparedStatement preparedStatement,
-      String jobName) {
+      FeatureRowProto.FeatureRow element, PreparedStatement preparedStatement, String jobName) {
     try {
 
-    	System.out.println("inside :::setSinkParameters snowflake");
+      System.out.println("inside :::setSinkParameters snowflake");
       Map<String, ValueProto.Value> fieldMap =
           element.getFieldsList().stream()
               .collect(Collectors.toMap(FieldProto.Field::getName, FieldProto.Field::getValue));
 
-      for(String value: fieldMap.keySet()) {
-    	  System.out.println("inside :::setSinkParameters snowflake:: value:: "+value+ fieldMap.get(value));
+      for (String value : fieldMap.keySet()) {
+        System.out.println(
+            "inside :::setSinkParameters snowflake:: value:: " + value + fieldMap.get(value));
       }
       // Set event_timestamp
       Instant eventTsInstant =
@@ -177,7 +170,6 @@ public class SnowflakeTemplater implements JdbcTemplater {
           e.getMessage());
     }
   }
-
 
   public static void setFeatureValue(JSONObject json_variant, String row, ValueProto.Value value) {
     ValueProto.Value.ValCase protoValueType = value.getValCase();
@@ -247,6 +239,4 @@ public class SnowflakeTemplater implements JdbcTemplater {
           e.getMessage());
     }
   }
-  
-
 }

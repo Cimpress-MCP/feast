@@ -16,15 +16,11 @@
  */
 package feast.storage.connectors.jdbc.common;
 
-
 import feast.proto.core.FeatureSetProto;
-import feast.proto.core.StoreProto.Store.JdbcConfig;
 import feast.proto.types.FeatureRowProto.FeatureRow;
 import java.io.Serializable;
 import java.sql.PreparedStatement;
 import java.util.Map;
-
-import org.apache.beam.sdk.io.jdbc.JdbcIO.DataSourceConfiguration;
 
 public interface JdbcTemplater extends Serializable {
   static String getTableName(FeatureSetProto.FeatureSetSpec featureSetSpec) {
@@ -38,29 +34,21 @@ public interface JdbcTemplater extends Serializable {
         .replaceAll("-", "_");
   }
 
-  
   static String getTableNameFromFeatureSet(String featureSet) {
-	    System.out.println(
-	        "getTableNameFromFeatureSet--"+ featureSet);
-	     String tablename = featureSet.replaceAll("/", "_");
-	    return tablename.replaceAll("-", "_");
-	  }
-  
+    System.out.println("getTableNameFromFeatureSet--" + featureSet);
+    String tablename = featureSet.replaceAll("/", "_");
+    return tablename.replaceAll("-", "_");
+  }
+
   String getTableCreationSql(FeatureSetProto.FeatureSetSpec featureSetSpec);
 
   String getTableMigrationSql(
       FeatureSetProto.FeatureSetSpec featureSetSpec, Map<String, String> existingColumns);
 
-//  String getFeatureRowInsertSql(FeatureSetProto.FeatureSetSpec featureSetSpec);
+  //  String getFeatureRowInsertSql(FeatureSetProto.FeatureSetSpec featureSetSpec);
   String getFeatureRowInsertSql(String featureSetSpec);
-
-
 
   Map<String, String> getRequiredColumns();
 
-
-void setSinkParameters(FeatureRow element, PreparedStatement preparedStatement, String jobName);
-
+  void setSinkParameters(FeatureRow element, PreparedStatement preparedStatement, String jobName);
 }
-
-  

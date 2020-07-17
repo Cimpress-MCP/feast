@@ -20,9 +20,7 @@ import static feast.storage.common.testing.TestUtil.field;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-
 import feast.common.models.FeatureSetReference;
-
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.StoreProto;
 import feast.proto.types.FeatureRowProto.FeatureRow;
@@ -39,7 +37,6 @@ import java.util.Map;
 import java.util.Properties;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
-import org.apache.beam.sdk.values.PCollection;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -55,11 +52,9 @@ public class JdbcSnowflakeFeatureSinkTest {
   //  private String userName = System.getenv("SNOWFLAKE_USERNAME");
   //  private String password = System.getenv("SNOWFLAKE_PASSWORD");
 
-
   private String userName = "SWATIARORA";
 
   private String password = "Vistaprint1@";
-
 
   private String database = "DEMO_DB";
   private String schema = "PUBLIC";
@@ -103,7 +98,6 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
 
-
     this.snowflakeFeatureSinkObj.prepareWrite(p.apply(Create.of(specMap)));
 
     this.connect();
@@ -130,8 +124,6 @@ public class JdbcSnowflakeFeatureSinkTest {
 
   @Test
   public void shouldWriteToSnowflake() throws SQLException {
-	  
-	  
 
     List<FeatureRow> featureRows =
         ImmutableList.of(
@@ -165,8 +157,8 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .addFields(field("feature_2", 4, Enum.INT64))
                 .build());
 
-    
-//    p.apply(Create.of(featureRows)).apply("create_features",this.snowflakeFeatureSinkObj.writer());
+    //
+    // p.apply(Create.of(featureRows)).apply("create_features",this.snowflakeFeatureSinkObj.writer());
 
     p.run();
 
@@ -174,7 +166,6 @@ public class JdbcSnowflakeFeatureSinkTest {
     Assert.assertEquals(
         true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_3", null).next());
     Assert.assertEquals(
-
         true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_4", null).next());
   }
 }

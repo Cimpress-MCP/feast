@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-=======
-
 /*
  * SPDX-License-Identifier: Apache-2.0
  * Copyright 2018-2019 The Feast Authors
@@ -18,9 +15,8 @@
  * limitations under the License.
  */
 package feast.storage.connectors.jdbc.writer;
->>>>>>> trying to fix Sink Writer
 
-///*
+/// *
 // * SPDX-License-Identifier: Apache-2.0
 // * Copyright 2018-2019 The Feast Authors
 // *
@@ -36,34 +32,34 @@ package feast.storage.connectors.jdbc.writer;
 // * See the License for the specific language governing permissions and
 // * limitations under the License.
 // */
-//package feast.storage.connectors.jdbc.writer;
+// package feast.storage.connectors.jdbc.writer;
 //
-//import static feast.storage.common.testing.TestUtil.field;
+// import static feast.storage.common.testing.TestUtil.field;
 //
-//import com.google.common.collect.ImmutableList;
-//import com.google.common.collect.ImmutableMap;
-//import feast.proto.core.FeatureSetProto;
-//import feast.proto.core.FeatureSetProto.EntitySpec;
-//import feast.proto.core.StoreProto;
-//import feast.proto.types.FeatureRowProto.FeatureRow;
-//import feast.proto.types.FieldProto;
-//import feast.proto.types.ValueProto;
-//import feast.proto.types.ValueProto.ValueType.Enum;
-//import feast.storage.api.writer.FeatureSink;
-//import java.sql.Connection;
-//import java.sql.DatabaseMetaData;
-//import java.sql.DriverManager;
-//import java.sql.SQLException;
-//import java.util.List;
-//import java.util.Map;
-//import org.apache.beam.sdk.testing.TestPipeline;
-//import org.apache.beam.sdk.transforms.Create;
-//import org.junit.Assert;
-//import org.junit.Before;
-//import org.junit.Rule;
-//import org.junit.Test;
+// import com.google.common.collect.ImmutableList;
+// import com.google.common.collect.ImmutableMap;
+// import feast.proto.core.FeatureSetProto;
+// import feast.proto.core.FeatureSetProto.EntitySpec;
+// import feast.proto.core.StoreProto;
+// import feast.proto.types.FeatureRowProto.FeatureRow;
+// import feast.proto.types.FieldProto;
+// import feast.proto.types.ValueProto;
+// import feast.proto.types.ValueProto.ValueType.Enum;
+// import feast.storage.api.writer.FeatureSink;
+// import java.sql.Connection;
+// import java.sql.DatabaseMetaData;
+// import java.sql.DriverManager;
+// import java.sql.SQLException;
+// import java.util.List;
+// import java.util.Map;
+// import org.apache.beam.sdk.testing.TestPipeline;
+// import org.apache.beam.sdk.transforms.Create;
+// import org.junit.Assert;
+// import org.junit.Before;
+// import org.junit.Rule;
+// import org.junit.Test;
 //
-//public class JdbcFeatureSinkTest {
+// public class JdbcFeatureSinkTest {
 //  @Rule public transient TestPipeline p = TestPipeline.create();
 //
 //  private FeatureSink sqliteFeatureSink;
@@ -134,8 +130,10 @@ package feast.storage.connectors.jdbc.writer;
 //                .setPassword(pw)
 //                .setBatchSize(1) // This must be set to 1 for DirectRunner
 //                .build());
-//    sqliteFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec1).build());
-//    sqliteFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec2).build());
+//
+// sqliteFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec1).build());
+//
+// sqliteFeatureSink.prepareWrite(FeatureSetProto.FeatureSet.newBuilder().setSpec(spec2).build());
 //
 //    this.connect();
 //  }
@@ -196,6 +194,4 @@ package feast.storage.connectors.jdbc.writer;
 //    DatabaseMetaData dbm = conn.getMetaData();
 //    Assert.assertEquals(true, dbm.getTables(null, null, "myproject2_feature_set", null).next());
 //  }
-//}
-
-
+// }

@@ -18,7 +18,6 @@ package feast.storage.connectors.jdbc.writer;
 
 import feast.common.models.FeatureSetReference;
 import feast.proto.core.FeatureSetProto;
-import feast.proto.core.FeatureSetProto.FeatureSet;
 import feast.proto.core.StoreProto;
 import feast.proto.core.StoreProto.Store.JdbcConfig;
 import feast.storage.api.writer.FeatureSink;
@@ -26,17 +25,13 @@ import feast.storage.connectors.jdbc.common.JdbcTemplater;
 import feast.storage.connectors.jdbc.postgres.PostgresqlTemplater;
 import feast.storage.connectors.jdbc.snowflake.SnowflakeTemplater;
 import feast.storage.connectors.jdbc.sqlite.SqliteTemplater;
-
-import java.util.Map;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.PCollectionView;
 import org.slf4j.Logger;
 
 public class JdbcFeatureSink implements FeatureSink {
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcFeatureSink.class);
-
 
   private final StoreProto.Store.JdbcConfig config;
 
@@ -45,8 +40,6 @@ public class JdbcFeatureSink implements FeatureSink {
   }
 
   private JdbcTemplater jdbcTemplater;
-
-
 
   public JdbcFeatureSink(JdbcConfig config) {
     this.config = config;
@@ -75,10 +68,6 @@ public class JdbcFeatureSink implements FeatureSink {
     return config;
   }
 
-  /**
-   * @param KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>
-   * @return FeatureSetReference
-   */
   @Override
   public PCollection<FeatureSetReference> prepareWrite(
       PCollection<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>> featureSetSpecs) {
@@ -88,9 +77,8 @@ public class JdbcFeatureSink implements FeatureSink {
             "CreateTableSchema",
             ParDo.of(
                 new FeatureSetSpecToTableSchemaJDBC(this.getJdbcTemplater(), this.getConfig())));
- 
-   	  return schemas;
 
+    return schemas;
   }
 
   public static String getFeatureSetRef(FeatureSetProto.FeatureSetSpec featureSetSpec) {
@@ -98,13 +86,7 @@ public class JdbcFeatureSink implements FeatureSink {
   }
 
   @Override
-public JdbcWrite writer() {
-  return new JdbcWrite(
-      this.getConfig(), this.getJdbcTemplater());
-
+  public JdbcWrite writer() {
+    return new JdbcWrite(this.getConfig(), this.getJdbcTemplater());
+  }
 }
-  
-}
-
-
-

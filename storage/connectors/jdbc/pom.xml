@@ -128,15 +128,7 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
         </dependency>
-
-
-
-         <dependency>
-	        <groupId>org.json</groupId>
-	        <artifactId>json</artifactId>
-	        <version>20180813</version>
-   		 </dependency>
-  		         <dependency>
+  		 <dependency>
         <groupId>org.json</groupId>
         <artifactId>json</artifactId>
         <version>20180813</version>

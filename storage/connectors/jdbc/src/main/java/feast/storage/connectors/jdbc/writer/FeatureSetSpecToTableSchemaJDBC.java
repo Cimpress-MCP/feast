@@ -16,23 +16,20 @@
  */
 package feast.storage.connectors.jdbc.writer;
 
+import com.google.api.services.bigquery.model.TableSchema;
+import feast.common.models.FeatureSetReference;
+import feast.proto.core.FeatureSetProto;
+import feast.proto.core.StoreProto.Store.JdbcConfig;
+import feast.storage.connectors.jdbc.common.JdbcTemplater;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
 import java.util.Properties;
-
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
 import org.slf4j.Logger;
-
-import com.google.api.services.bigquery.model.TableSchema;
-
-import feast.common.models.FeatureSetReference;
-import feast.proto.core.FeatureSetProto;
-import feast.proto.core.StoreProto.Store.JdbcConfig;
-import feast.storage.connectors.jdbc.common.JdbcTemplater;
 
 /**
  * Converts {@link feast.proto.core.FeatureSetProto.FeatureSetSpec} into BigQuery schema. Serializes
@@ -45,7 +42,7 @@ import feast.storage.connectors.jdbc.common.JdbcTemplater;
 @SuppressWarnings("serial")
 public class FeatureSetSpecToTableSchemaJDBC
     extends DoFn<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>, FeatureSetReference> {
-	
+
   private JdbcTemplater jdbcTemplater;
   private JdbcConfig jdbcConfig;
 
@@ -68,7 +65,8 @@ public class FeatureSetSpecToTableSchemaJDBC
     System.out.println("inside FeatureSetSpecToTableSchema ////" + featureSetSpec.getName());
     String featureSetRef = JdbcTemplater.getTableName(featureSetSpec);
     System.out.println("featureSetRef ////" + featureSetRef);
-//    Map<String, String> requiredColumns = this.jdbcTemplater.getRequiredColumns(featureSetSpec);
+    //    Map<String, String> requiredColumns =
+    // this.jdbcTemplater.getRequiredColumns(featureSetSpec);
     Map<String, String> requiredColumns = this.jdbcTemplater.getRequiredColumns();
     Properties props = new Properties();
     props.put("user", this.jdbcConfig.getUsername());
@@ -91,7 +89,6 @@ public class FeatureSetSpecToTableSchemaJDBC
           e);
     }
 
-    
     out.output(element.getKey());
   }
 
