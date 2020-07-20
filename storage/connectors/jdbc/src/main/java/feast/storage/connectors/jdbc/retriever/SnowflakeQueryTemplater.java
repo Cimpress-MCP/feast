@@ -70,6 +70,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     return createEntityTableRowCountQueries;
   }
 
+  //TODO: File -> URI
   @Override
   protected List<String> createLoadEntityQuery(
       String destinationTable, String temporaryTable, File filePath) {
@@ -146,7 +147,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     return writer.toString();
   }
 
-  // TODO: export as decoded csv file
+  // TODO: export as decoded csv file and needs to support S3 staging location: "s3://....."
   @Override
   protected List<String> generateExportTableSqlQuery(String resultTable, String stagingPath) {
     String exportPath = String.format("%s/", stagingPath.replaceAll("/$", ""));
