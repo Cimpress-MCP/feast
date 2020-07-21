@@ -97,13 +97,13 @@ public class ServingServiceConfig {
         SnowflakeConnectionProvider snowflakeConnectionProvider =
             new SnowflakeConnectionProvider(config);
         SnowflakeQueryTemplater snowflakeQueryTemplater =
-            new SnowflakeQueryTemplater(snowflakeConnectionProvider);
+            new SnowflakeQueryTemplater(config, snowflakeConnectionProvider);
         return JdbcHistoricalRetriever.create(config, snowflakeQueryTemplater);
       case "org.postgresql.Driver":
         PostgresConnectionProvider postgresConnectionProvider =
             new PostgresConnectionProvider(config);
         PostgresQueryTemplater postgresQueryTemplater =
-            new PostgresQueryTemplater(postgresConnectionProvider);
+            new PostgresQueryTemplater(config, postgresConnectionProvider);
         return JdbcHistoricalRetriever.create(config, postgresQueryTemplater);
       default:
         throw new IllegalArgumentException(
