@@ -22,7 +22,6 @@ import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
 import feast.storage.api.retriever.HistoricalRetrievalResult;
 import feast.storage.connectors.jdbc.connection.SnowflakeConnectionProvider;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,7 +33,9 @@ import org.junit.Test;
 public class SnowflakeHistoricalRetrieverJSONColTest {
   private JdbcHistoricalRetriever snowflakeFeatureRetriever;
   //  Snowflake account
-  private String staging_location = System.getenv("STAGING_LOCATION");
+  //  private String staging_location = System.getenv("STAGING_LOCATION");
+  private String staging_location = "s3://feast-snowflake-staging/test/";
+
   private Map<String, String> snowflakeConfig = new HashMap<>();
   private String SFUrl = "jdbc:snowflake://ry42518.us-east-2.aws.snowflakecomputing.com";
   private String SFClassName = "net.snowflake.client.jdbc.SnowflakeDriver";
@@ -42,6 +43,7 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
   private String SFpw = System.getenv("SNOWFLAKE_PASSWORD_RETRI");
   private String SFDatabase = "DEMO_DB";
   private String SFSchema = "PUBLIC";
+  private String SFRole = "ACCOUNTADMIN";
 
   @Before
   public void setUp() {
@@ -53,6 +55,7 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
     snowflakeConfig.put("password", SFpw);
     snowflakeConfig.put("url", SFUrl);
     snowflakeConfig.put("staging_location", staging_location);
+    snowflakeConfig.put("role", SFRole);
     SnowflakeConnectionProvider snowflakeConnectionProvider =
         new SnowflakeConnectionProvider(snowflakeConfig);
     SnowflakeQueryTemplater snowflakeQueryTemplater =
@@ -84,10 +87,8 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
             retrievalId, datasetSource, featureSetRequests, false);
 
     List<String> files = postgresHisRetrievalResult.getFileUris();
-    File testFile = new File(files.get(0));
     /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,400 2,100 3,300 */
-    Assert.assertTrue(testFile.exists());
-    Assert.assertTrue(files.get(0).indexOf(staging_location) != -1);
+    Assert.assertTrue(files.get(0).contains(staging_location));
   }
 
   @Test
@@ -113,10 +114,8 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
             retrievalId, datasetSource, featureSetRequests, false);
 
     List<String> files = postgresHisRetrievalResult.getFileUris();
-    File testFile = new File(files.get(0));
     /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,410 2,220 3,300 */
-    Assert.assertTrue(testFile.exists());
-    Assert.assertTrue(files.get(0).indexOf(staging_location) != -1);
+    Assert.assertTrue(files.get(0).contains(staging_location));
   }
 
   @Test
@@ -142,10 +141,8 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
             retrievalId, datasetSource, featureSetRequests, false);
 
     List<String> files = postgresHisRetrievalResult.getFileUris();
-    File testFile = new File(files.get(0));
     /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,410 2,100 3,null */
-    Assert.assertTrue(testFile.exists());
-    Assert.assertTrue(files.get(0).indexOf(staging_location) != -1);
+    Assert.assertTrue(files.get(0).contains(staging_location));
   }
 
   @Test
@@ -170,10 +167,8 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
             retrievalId, datasetSource, featureSetRequests, false);
 
     List<String> files = postgresHisRetrievalResult.getFileUris();
-    File testFile = new File(files.get(0));
     /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,null 2,100 3,300 1,410 */
-    Assert.assertTrue(testFile.exists());
-    Assert.assertTrue(files.get(0).indexOf(staging_location) != -1);
+    Assert.assertTrue(files.get(0).contains(staging_location));
   }
 
   private List<FeatureSetRequest> createFeatureSetRequests() {

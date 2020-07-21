@@ -186,10 +186,10 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
       throw new RuntimeException(
           String.format("Could not parse staging location: %s", stagingLocation), e);
     }
-    String stagingPath = stagingUri.getPath();
-    String exportPath =
-        String.format(
-            "%s/%s.%s", stagingPath.replaceAll("/$", ""), resultTable, EXPORT_FILE_FORMAT);
+    String bucketName = stagingUri.getHost();
+    String prefix = stagingUri.getPath();
+    String stagingPath = String.format("s3://%s%s", bucketName, prefix);
+    String exportPath = String.format("%s%s.%s", stagingPath, resultTable, EXPORT_FILE_FORMAT);
     List<String> exportTableSqlQueries = this.generateExportTableSqlQuery(resultTable, stagingPath);
     try {
       Statement statement = this.connection.createStatement();
@@ -345,7 +345,7 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
    * name "{exportPath}/{resultTable}.csv"
    *
    * @param resultTable the table in the database, needs to exported
-   * @param stagingPath staging location
+   * @param stagingPath a S3 staging location. eg: 's3://{bucket_name}/{prefix}/'
    * @return a list of sql queries for exporting
    */
   protected abstract List<String> generateExportTableSqlQuery(

@@ -149,19 +149,21 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   // TODO: export as decoded csv file
   @Override
   protected List<String> generateExportTableSqlQuery(String resultTable, String stagingPath) {
-    String exportPath = String.format("%s/", stagingPath.replaceAll("/$", ""));
 
     List<String> exportTableSqlQueries = new ArrayList<>();
-    String createStageQuery = String.format("create or replace stage my_stage;");
+    // TODO: s3 integration needs to be configurable: s3_int
+    String createStageQuery =
+        String.format(
+            "create or replace stage my_s3_stage\n"
+                + "  storage_integration = s3_int\n"
+                + "  url = '%s';",
+            stagingPath);
     String copyIntoStageQuery =
         String.format(
-            "COPY INTO '@my_stage/%s.%s' FROM %s file_format = (type=csv compression='gzip')\n"
+            "COPY INTO '@my_s3_stage/%s.%s' FROM %s file_format = (type=csv compression='gzip')\n"
                 + "single=true header = true;",
             resultTable, EXPORT_FILE_FORMAT, resultTable);
-    String downloadTableQuery =
-        String.format(
-            "get @my_stage/%s.%s file://%s;", resultTable, EXPORT_FILE_FORMAT, exportPath);
-    String[] queryArray = new String[] {createStageQuery, copyIntoStageQuery, downloadTableQuery};
+    String[] queryArray = new String[] {createStageQuery, copyIntoStageQuery};
     exportTableSqlQueries.addAll(Arrays.asList(queryArray));
     return exportTableSqlQueries;
   }

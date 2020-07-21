@@ -139,6 +139,7 @@ public class PostgresQueryTemplater extends AbstractJdbcQueryTemplater {
 
   @Override
   protected List<String> generateExportTableSqlQuery(String resultTable, String stagingPath) {
+    // TODO: add support for s3 staging location
     String exportPath = String.format("%s/%s.csv", stagingPath.replaceAll("/$", ""), resultTable);
     List<String> exportTableSqlQueries = new ArrayList<>();
     exportTableSqlQueries.add(
