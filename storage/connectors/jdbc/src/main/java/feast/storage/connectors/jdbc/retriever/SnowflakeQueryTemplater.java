@@ -22,7 +22,6 @@ import feast.storage.connectors.jdbc.connection.JdbcConnectionProvider;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.net.URI;
 import java.util.*;
 
 public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
@@ -32,9 +31,12 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   private static final String JOIN_TEMPLATE_NAME_SNOWFLAKE =
       "templates/join_featuresets_snowflake.sql";
   private static final String VARIANT_COLUMN_NAME = "feature";
+  private String storageIntegration;
 
-  public SnowflakeQueryTemplater(JdbcConnectionProvider connectionProvider) {
-    super(connectionProvider);
+  public SnowflakeQueryTemplater(
+      Map<String, String> databaseConfig, JdbcConnectionProvider connectionProvider) {
+    super(databaseConfig, connectionProvider);
+    this.storageIntegration = databaseConfig.get("storage_integration");
   }
 
   @Override
@@ -70,34 +72,23 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     return createEntityTableRowCountQueries;
   }
 
-  // TODO: support filepath as s3 location
   @Override
-  protected List<String> createLoadEntityQuery(
-      String destinationTable, String stagingLocation, URI fileUri) {
+  protected List<String> createLoadEntityQuery(String destinationTable, String entitySourceUri) {
     List<String> queries = new ArrayList<>();
     String csvFormatQuey =
         String.format(
             "create or replace file format CSV_format type = 'CSV' field_delimiter = ',' skip_header=1;");
-    String createStageQuery =
-        String.format(
-            "create or replace stage my_s3_stage\n"
-                + "  storage_integration = s3_int\n"
-                + "  url = '%s';",
-            stagingLocation);
-    // TODO: fileUri must be the in the stagingLocation??
-    String folderPath = fileUri.toString().substring(stagingLocation.length());
     String copyIntoDestTable =
         String.format(
-            "COPY INTO %s FROM '@my_s3_stage/%s' FILE_FORMAT = CSV_format on_error = 'skip_file';",
-            destinationTable, folderPath);
-
+            "COPY INTO %s FROM '%s' FILE_FORMAT = CSV_format on_error = 'skip_file' storage_integration = %s;",
+            destinationTable, entitySourceUri, this.storageIntegration);
     String addRowNum =
         String.format(
             "CREATE OR REPLACE TABLE %s as SELECT *, ROW_NUMBER() OVER (ORDER BY 1) AS row_number FROM %s;",
             destinationTable, destinationTable);
-    String[] queryArray =
-        new String[] {csvFormatQuey, createStageQuery, copyIntoDestTable, addRowNum};
+    String[] queryArray = new String[] {csvFormatQuey, copyIntoDestTable, addRowNum};
     queries.addAll(Arrays.asList(queryArray));
+    //    System.out.println(String.format("Entity Table: %s", destinationTable));
     return queries;
   }
 
@@ -151,22 +142,15 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   }
 
   @Override
-  protected List<String> generateExportTableSqlQuery(String resultTable, String stagingPath) {
+  protected List<String> generateExportTableSqlQuery(String resultTable, String stagingUri) {
 
     List<String> exportTableSqlQueries = new ArrayList<>();
-    // TODO: s3 integration needs to be configurable: s3_int
-    String createStageQuery =
-        String.format(
-            "create or replace stage my_s3_stage\n"
-                + "  storage_integration = s3_int\n"
-                + "  url = '%s';",
-            stagingPath);
     String copyIntoStageQuery =
         String.format(
-            "COPY INTO '@my_s3_stage/%s.%s' FROM %s file_format = (type=csv compression='gzip')\n"
-                + "single=true header = true;",
-            resultTable, EXPORT_FILE_FORMAT, resultTable);
-    String[] queryArray = new String[] {createStageQuery, copyIntoStageQuery};
+            "COPY INTO '%s%s.%s' FROM %s file_format = (type=csv compression='gzip')\n"
+                + "single=true header = true storage_integration = %s;",
+            stagingUri, resultTable, EXPORT_FILE_FORMAT, resultTable, this.storageIntegration);
+    String[] queryArray = new String[] {copyIntoStageQuery};
     exportTableSqlQueries.addAll(Arrays.asList(queryArray));
     return exportTableSqlQueries;
   }

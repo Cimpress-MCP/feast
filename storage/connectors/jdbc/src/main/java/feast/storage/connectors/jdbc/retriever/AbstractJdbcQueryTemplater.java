@@ -23,8 +23,6 @@ import feast.storage.api.retriever.FeatureSetRequest;
 import feast.storage.connectors.jdbc.connection.JdbcConnectionProvider;
 import io.grpc.Status;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.sql.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,7 +31,8 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
   protected static final String EXPORT_FILE_FORMAT = "csv.gz";
   private Connection connection;
 
-  public AbstractJdbcQueryTemplater(JdbcConnectionProvider connectionProvider) {
+  public AbstractJdbcQueryTemplater(
+      Map<String, String> databaseConfig, JdbcConnectionProvider connectionProvider) {
     this.connection = connectionProvider.getConnection();
   }
 
@@ -64,13 +63,13 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
   @Override
   public String loadEntities(
       List<FeatureSetQueryInfo> featureSetQueryInfos,
-      Iterator<String> fileList,
-      String stagingPath) {
+      List<String> entitySourceUris,
+      String stagingUri) {
     // Create table from existing feature set entities
     String entityTable = this.createStagedEntityTable(featureSetQueryInfos);
 
     // Load files into database
-    this.loadEntitiesFromFile(entityTable, fileList, stagingPath);
+    this.loadEntitiesFromFile(entityTable, entitySourceUris);
 
     // Return entity table
     return entityTable;
@@ -178,20 +177,12 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
     }
   }
 
+  // TODO: use stagingUri
   @Override
-  public String exportResultTableToStagingLocation(String resultTable, String stagingLocation) {
-    URI stagingUri;
-    try {
-      stagingUri = new URI(stagingLocation);
-    } catch (URISyntaxException e) {
-      throw new RuntimeException(
-          String.format("Could not parse staging location: %s", stagingLocation), e);
-    }
-    String bucketName = stagingUri.getHost();
-    String prefix = stagingUri.getPath();
-    String stagingPath = String.format("s3://%s%s", bucketName, prefix);
-    String exportPath = String.format("%s%s.%s", stagingPath, resultTable, EXPORT_FILE_FORMAT);
-    List<String> exportTableSqlQueries = this.generateExportTableSqlQuery(resultTable, stagingPath);
+  public String exportResultTableToStagingLocation(String resultTable, String stagingUri) {
+
+    String exportPath = String.format("%s%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
+    List<String> exportTableSqlQueries = this.generateExportTableSqlQuery(resultTable, stagingUri);
     try {
       Statement statement = this.connection.createStatement();
       for (String query : exportTableSqlQueries) {
@@ -249,24 +240,10 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
   protected abstract List<String> createEntityTableRowCountQuery(
       String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos);
 
-  protected void loadEntitiesFromFile(
-      String entityTable, Iterator<String> fileList, String stagingPath) {
-    while (fileList.hasNext()) {
-
-      URI fileURI;
-      String fileString = fileList.next();
-      try {
-        fileURI = new URI(fileString);
-      } catch (URISyntaxException e) {
-        throw new RuntimeException(String.format("Could not parse file string %s", fileString), e);
-      }
-
+  protected void loadEntitiesFromFile(String entityTable, List<String> entitySourceUris) {
+    for (String entitySourceUri : entitySourceUris) {
       Statement statement;
-      // TODO: remove tempTableForLoad
-      //      String tempTableForLoad = createTempTableName();
-      List<String> loadEntitiesQueries =
-          this.createLoadEntityQuery(entityTable, stagingPath, fileURI);
-
+      List<String> loadEntitiesQueries = this.createLoadEntityQuery(entityTable, entitySourceUri);
       try {
         statement = this.connection.createStatement();
         for (String query : loadEntitiesQueries) {
@@ -276,22 +253,21 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
         throw new RuntimeException(
             String.format(
                 "Could not load entity data from %s into table %s using query: \n%s",
-                fileURI, entityTable, loadEntitiesQueries),
+                entitySourceUri, entityTable, loadEntitiesQueries),
             e);
       }
     }
   }
   /**
-   * Load entity rows from filePath to the destinationTable
+   * Load entity rows from entitySourceUri to the destinationTable
    *
    * @param destinationTable the entity table
-   * @param stagingPath a S3 staging location. eg: 's3://{bucket_name}/{prefix}/'
-   * @param fileUri a S3 csv file contains entity rows, with columns: entity_id and
-   *     created_timestamp
+   * @param entitySourceUri a csv file uri contains entity rows, with columns: entity_id and
+   *     event_timestamp. eg: a S3 bucket or GCP location
    * @return
    */
   protected abstract List<String> createLoadEntityQuery(
-      String destinationTable, String stagingPath, URI fileUri);
+      String destinationTable, String entitySourceUri);
 
   /**
    * Generate the query for point in time correctness join of data for a single feature set to the
@@ -348,9 +324,9 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
    * name "{exportPath}/{resultTable}.csv"
    *
    * @param resultTable the table in the database, needs to exported
-   * @param stagingPath a S3 staging location. eg: 's3://{bucket_name}/{prefix}/'
+   * @param stagingUri staging uri, eg: a S3 bucket or GCP location
    * @return a list of sql queries for exporting
    */
   protected abstract List<String> generateExportTableSqlQuery(
-      String resultTable, String stagingPath);
+      String resultTable, String stagingUri);
 }

@@ -62,7 +62,7 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
         this.queryTemplater.getFeatureSetInfos(featureSetRequests);
 
     // 3. Load entity rows into database
-    Iterator<String> fileList = datasetSource.getFileSource().getFileUrisList().iterator();
+    List<String> fileList = datasetSource.getFileSource().getFileUrisList();
     String entityTableWithRowCountName =
         this.queryTemplater.loadEntities(featureSetQueryInfos, fileList, stagingLocation);
 
