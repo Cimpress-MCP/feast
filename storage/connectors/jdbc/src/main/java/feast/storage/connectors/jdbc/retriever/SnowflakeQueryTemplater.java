@@ -19,10 +19,10 @@ package feast.storage.connectors.jdbc.retriever;
 import com.mitchellbosecke.pebble.PebbleEngine;
 import com.mitchellbosecke.pebble.template.PebbleTemplate;
 import feast.storage.connectors.jdbc.connection.JdbcConnectionProvider;
-import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.net.URI;
 import java.util.*;
 
 public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
@@ -70,30 +70,34 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     return createEntityTableRowCountQueries;
   }
 
+  // TODO: support filepath as s3 location
   @Override
   protected List<String> createLoadEntityQuery(
-      String destinationTable, String temporaryTable, File filePath) {
+      String destinationTable, String stagingLocation, URI fileUri) {
     List<String> queries = new ArrayList<>();
-    queries.add(
-        String.format("CREATE TABLE %s AS (SELECT * FROM %s);", temporaryTable, destinationTable));
-    queries.add(
+    String csvFormatQuey =
         String.format(
-            "create or replace file format CSV_format type = 'CSV' field_delimiter = ',' skip_header=1;"));
-    queries.add(String.format("create or replace stage my_stage file_format = CSV_format;"));
-    queries.add(String.format("put file://%s @my_stage auto_compress=false;", filePath));
-    String fileName = filePath.getName();
-    queries.add(
+            "create or replace file format CSV_format type = 'CSV' field_delimiter = ',' skip_header=1;");
+    String createStageQuery =
         String.format(
-            "COPY INTO %s FROM '@my_stage/%s' FILE_FORMAT = CSV_format on_error = 'skip_file';",
-            temporaryTable, fileName));
-    queries.add(
-        String.format("INSERT INTO %s SELECT * FROM %s;", destinationTable, temporaryTable));
+            "create or replace stage my_s3_stage\n"
+                + "  storage_integration = s3_int\n"
+                + "  url = '%s';",
+            stagingLocation);
+    // TODO: fileUri must be the in the stagingLocation??
+    String folderPath = fileUri.toString().substring(stagingLocation.length());
+    String copyIntoDestTable =
+        String.format(
+            "COPY INTO %s FROM '@my_s3_stage/%s' FILE_FORMAT = CSV_format on_error = 'skip_file';",
+            destinationTable, folderPath);
 
-    queries.add(String.format("DROP TABLE %s;", temporaryTable));
-    queries.add(
+    String addRowNum =
         String.format(
             "CREATE OR REPLACE TABLE %s as SELECT *, ROW_NUMBER() OVER (ORDER BY 1) AS row_number FROM %s;",
-            destinationTable, destinationTable));
+            destinationTable, destinationTable);
+    String[] queryArray =
+        new String[] {csvFormatQuey, createStageQuery, copyIntoDestTable, addRowNum};
+    queries.addAll(Arrays.asList(queryArray));
     return queries;
   }
 
@@ -146,7 +150,6 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     return writer.toString();
   }
 
-  // TODO: export as decoded csv file
   @Override
   protected List<String> generateExportTableSqlQuery(String resultTable, String stagingPath) {
 

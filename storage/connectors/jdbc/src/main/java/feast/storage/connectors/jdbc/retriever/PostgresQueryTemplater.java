@@ -19,10 +19,10 @@ package feast.storage.connectors.jdbc.retriever;
 import com.mitchellbosecke.pebble.PebbleEngine;
 import com.mitchellbosecke.pebble.template.PebbleTemplate;
 import feast.storage.connectors.jdbc.connection.JdbcConnectionProvider;
-import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.net.URI;
 import java.util.*;
 
 public class PostgresQueryTemplater extends AbstractJdbcQueryTemplater {
@@ -72,13 +72,13 @@ public class PostgresQueryTemplater extends AbstractJdbcQueryTemplater {
 
   @Override
   protected List<String> createLoadEntityQuery(
-      String destinationTable, String temporaryTable, File filePath) {
+      String destinationTable, String temporaryTable, URI fileUri) {
     List<String> queries = new ArrayList<>();
     queries.add(
         String.format("CREATE TABLE %s AS (SELECT * FROM %s);", temporaryTable, destinationTable));
     //      queries.add(String.format("ALTER TABLE %s DROP COLUMN row_number;",temporaryTable));
     queries.add(
-        String.format("COPY %s FROM '%s' DELIMITER ',' CSV HEADER;", temporaryTable, filePath));
+        String.format("COPY %s FROM '%s' DELIMITER ',' CSV HEADER;", temporaryTable, fileUri));
     queries.add(
         String.format("INSERT INTO %s SELECT * FROM %s;", destinationTable, temporaryTable));
     queries.add(String.format("DROP TABLE %s;", temporaryTable));

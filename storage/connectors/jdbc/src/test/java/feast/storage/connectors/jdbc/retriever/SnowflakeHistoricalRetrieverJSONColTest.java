@@ -71,7 +71,7 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
     // entity_id
     //      file_uri is under
     // src/test/java/feast/storage/connectors/jdbc/retriever/entities_2dates.csv
-    String file_uris = System.getenv("ENTITIES_URI_2DATES");
+    String file_uris = "s3://feast-snowflake-staging/test/entity_tables/entities_2dates.csv";
     ServingAPIProto.DatasetSource.FileSource fileSource =
         ServingAPIProto.DatasetSource.FileSource.newBuilder()
             .setDataFormatValue(2)

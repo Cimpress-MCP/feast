@@ -22,7 +22,6 @@ import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
 import feast.storage.connectors.jdbc.connection.JdbcConnectionProvider;
 import io.grpc.Status;
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -64,12 +63,14 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
 
   @Override
   public String loadEntities(
-      List<FeatureSetQueryInfo> featureSetQueryInfos, Iterator<String> fileList) {
+      List<FeatureSetQueryInfo> featureSetQueryInfos,
+      Iterator<String> fileList,
+      String stagingPath) {
     // Create table from existing feature set entities
     String entityTable = this.createStagedEntityTable(featureSetQueryInfos);
 
     // Load files into database
-    this.loadEntitiesFromFile(entityTable, fileList);
+    this.loadEntitiesFromFile(entityTable, fileList, stagingPath);
 
     // Return entity table
     return entityTable;
@@ -248,22 +249,23 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
   protected abstract List<String> createEntityTableRowCountQuery(
       String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos);
 
-  protected void loadEntitiesFromFile(String entityTable, Iterator<String> fileList) {
+  protected void loadEntitiesFromFile(
+      String entityTable, Iterator<String> fileList, String stagingPath) {
     while (fileList.hasNext()) {
 
-      File filePath;
+      URI fileURI;
       String fileString = fileList.next();
       try {
-        URI fileURI = new URI(fileString);
-        filePath = new File(fileString);
+        fileURI = new URI(fileString);
       } catch (URISyntaxException e) {
         throw new RuntimeException(String.format("Could not parse file string %s", fileString), e);
       }
 
       Statement statement;
-      String tempTableForLoad = createTempTableName();
+      // TODO: remove tempTableForLoad
+      //      String tempTableForLoad = createTempTableName();
       List<String> loadEntitiesQueries =
-          this.createLoadEntityQuery(entityTable, tempTableForLoad, filePath);
+          this.createLoadEntityQuery(entityTable, stagingPath, fileURI);
 
       try {
         statement = this.connection.createStatement();
@@ -274,7 +276,7 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
         throw new RuntimeException(
             String.format(
                 "Could not load entity data from %s into table %s using query: \n%s",
-                filePath, entityTable, loadEntitiesQueries),
+                fileURI, entityTable, loadEntitiesQueries),
             e);
       }
     }
@@ -282,13 +284,14 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
   /**
    * Load entity rows from filePath to the destinationTable
    *
-   * @param destinationTable
-   * @param temporaryTable temporary table for staging
-   * @param filePath csv file contains entity rows, with columns: entity_id and created_timestamp
+   * @param destinationTable the entity table
+   * @param stagingPath a S3 staging location. eg: 's3://{bucket_name}/{prefix}/'
+   * @param fileUri a S3 csv file contains entity rows, with columns: entity_id and
+   *     created_timestamp
    * @return
    */
   protected abstract List<String> createLoadEntityQuery(
-      String destinationTable, String temporaryTable, File filePath);
+      String destinationTable, String stagingPath, URI fileUri);
 
   /**
    * Generate the query for point in time correctness join of data for a single feature set to the

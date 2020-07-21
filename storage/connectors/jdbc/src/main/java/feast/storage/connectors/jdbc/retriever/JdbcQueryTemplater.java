@@ -44,10 +44,14 @@ public interface JdbcQueryTemplater {
    * @param fileList list of files in the {@link ServingAPIProto.DatasetSource} which contain entity
    *     rows (csv files with delimiter="," and two columns in ordder:
    *     entity_id_primary,created_timestamp)
+   * @param stagingPath staging location, eg: S3 bucket, local folder directory
    * @return entityTableWithRowCountName: the name of the entity Table in the database With RowCount
    *     column (for batch job retrieve)
    */
-  String loadEntities(List<FeatureSetQueryInfo> featureSetQueryInfos, Iterator<String> fileList);
+  String loadEntities(
+      List<FeatureSetQueryInfo> featureSetQueryInfos,
+      Iterator<String> fileList,
+      String stagingPath);
 
   /**
    * Retrieve the temporal bounds of the entity dataset provided
