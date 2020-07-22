@@ -16,16 +16,9 @@
  */
 package feast.storage.connectors.jdbc.snowflake;
 
-import feast.proto.core.FeatureSetProto;
-import feast.proto.types.FeatureRowProto;
-import feast.proto.types.FieldProto;
-import feast.proto.types.ValueProto;
+import feast.proto.core.StoreProto;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
-import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.*;
-import java.util.stream.Collectors;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 
 public class SnowflakeTemplater implements JdbcTemplater {
@@ -36,7 +29,7 @@ public class SnowflakeTemplater implements JdbcTemplater {
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(SnowflakeTemplater.class);
 
   @Override
-  public String getTableCreationSql(FeatureSetProto.FeatureSetSpec featureSetSpec) {
+  public String getTableCreationSql(StoreProto.Store.JdbcConfig config) {
     StringJoiner columnsAndTypesSQL = new StringJoiner(", ");
     Map<String, String> requiredColumns = getRequiredColumns();
     for (String column : requiredColumns.keySet()) {
@@ -46,8 +39,7 @@ public class SnowflakeTemplater implements JdbcTemplater {
     }
     String createTableStatement =
         String.format(
-            "CREATE TABLE IF NOT EXISTS %s (%s);",
-            JdbcTemplater.getTableName(featureSetSpec), columnsAndTypesSQL);
+            "CREATE TABLE IF NOT EXISTS %s (%s);", config.getTablename(), columnsAndTypesSQL);
     log.debug(createTableStatement);
     return createTableStatement;
   }
@@ -58,6 +50,8 @@ public class SnowflakeTemplater implements JdbcTemplater {
 
     requiredColumns.put("event_timestamp", "TIMESTAMP_LTZ");
     requiredColumns.put("created_timestamp", "TIMESTAMP_LTZ");
+    requiredColumns.put("project", "VARCHAR");
+    requiredColumns.put("featureset", "VARCHAR");
     requiredColumns.put("feature", "VARIANT");
     requiredColumns.put("ingestion_id", "VARCHAR");
     requiredColumns.put("job_id", "VARCHAR");
@@ -65,120 +59,21 @@ public class SnowflakeTemplater implements JdbcTemplater {
   }
 
   @Override
-  public String getFeatureRowInsertSql(FeatureRowProto.FeatureRow element, String jobName) {
+  public String getFeatureRowInsertSql(String tableName) {
 
     StringJoiner columnsSql = new StringJoiner(",");
     StringJoiner valueSql = new StringJoiner(",");
 
-    String tableName = JdbcTemplater.getTableNameFromFeatureSet(element.getFeatureSet());
     Map<String, String> requiredColumns = getRequiredColumns();
     for (String column : requiredColumns.keySet()) {
       columnsSql.add(column);
+      if (column == "feature") {
+        valueSql.add("parse_json(?)");
+      } else {
+        valueSql.add("?");
+      }
     }
-    Map<String, ValueProto.Value> fieldMap =
-        element.getFieldsList().stream()
-            .collect(Collectors.toMap(FieldProto.Field::getName, FieldProto.Field::getValue));
-
-    // Set event_timestamp
-    Instant eventTsInstant =
-        Instant.ofEpochSecond(element.getEventTimestamp().getSeconds())
-            .plusNanos(element.getEventTimestamp().getNanos());
-
-    valueSql.add("'" + Timestamp.from(eventTsInstant) + "'");
-
-    // Set created_timestamp
-
-    valueSql.add("'" + System.currentTimeMillis() + "'");
-
-    // Set Feature
-
-    JSONObject json_variant = new JSONObject();
-    for (String row : fieldMap.keySet()) {
-      setFeatureValue(json_variant, row, fieldMap.get(row));
-    }
-
-    valueSql.add("parse_json('" + json_variant.toString() + "')");
-
-    // Set ingestion Id
-
-    if (element.getIngestionId() == "") {
-      valueSql.add("NULL");
-    } else {
-      valueSql.add("'" + element.getIngestionId() + "'");
-    }
-
-    // Set job Name
-    valueSql.add("'" + jobName + "'");
 
     return String.format("INSERT INTO %s (%s) select %s;", tableName, columnsSql, valueSql);
-  }
-
-  public static void setFeatureValue(JSONObject json_variant, String row, ValueProto.Value value) {
-    ValueProto.Value.ValCase protoValueType = value.getValCase();
-    try {
-      switch (protoValueType) {
-        case BYTES_VAL:
-          json_variant.put(row, value.getBytesVal().toByteArray());
-          break;
-        case STRING_VAL:
-          json_variant.put(row, value.getStringVal());
-          break;
-        case INT32_VAL:
-          json_variant.put(row, value.getInt32Val());
-          break;
-        case INT64_VAL:
-          json_variant.put(row, value.getInt64Val());
-          break;
-        case FLOAT_VAL:
-          json_variant.put(row, value.getFloatVal());
-          break;
-        case DOUBLE_VAL:
-          json_variant.put(row, value.getDoubleVal());
-          break;
-        case BOOL_VAL:
-          json_variant.put(row, value.getBoolVal());
-          break;
-        case STRING_LIST_VAL:
-          json_variant.put(
-              row, Base64.getEncoder().encodeToString(value.getStringListVal().toByteArray()));
-          break;
-        case BYTES_LIST_VAL:
-          json_variant.put(
-              row, Base64.getEncoder().encodeToString(value.getBytesListVal().toByteArray()));
-          break;
-        case INT64_LIST_VAL:
-          json_variant.put(
-              row, Base64.getEncoder().encodeToString(value.getInt64ListVal().toByteArray()));
-          break;
-        case INT32_LIST_VAL:
-          json_variant.put(
-              row, Base64.getEncoder().encodeToString(value.getInt32ListVal().toByteArray()));
-          break;
-        case FLOAT_LIST_VAL:
-          json_variant.put(
-              row, Base64.getEncoder().encodeToString(value.getFloatListVal().toByteArray()));
-          break;
-        case DOUBLE_LIST_VAL:
-          json_variant.put(
-              row, Base64.getEncoder().encodeToString(value.getDoubleListVal().toByteArray()));
-          break;
-        case BOOL_LIST_VAL:
-          json_variant.put(
-              row, Base64.getEncoder().encodeToString(value.getBoolListVal().toByteArray()));
-          break;
-        case VAL_NOT_SET:
-        default:
-          throw new IllegalArgumentException(
-              String.format(
-                  "Could not determine field protoValueType for incoming feature row: %s",
-                  protoValueType));
-      }
-    } catch (IllegalArgumentException e) {
-      log.error(
-          String.format(
-              "Could not cast value %s of type %s int SQL field: ",
-              value.toString(), protoValueType),
-          e.getMessage());
-    }
   }
 }

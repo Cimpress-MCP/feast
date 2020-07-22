@@ -17,7 +17,7 @@
 package feast.storage.connectors.jdbc.common;
 
 import feast.proto.core.FeatureSetProto;
-import feast.proto.types.FeatureRowProto;
+import feast.proto.core.StoreProto.Store.JdbcConfig;
 import java.io.Serializable;
 import java.util.Map;
 
@@ -32,9 +32,9 @@ public interface JdbcTemplater extends Serializable {
     return tablename.replaceAll("-", "_");
   }
 
-  String getTableCreationSql(FeatureSetProto.FeatureSetSpec featureSetSpec);
-
-  String getFeatureRowInsertSql(FeatureRowProto.FeatureRow element, String jobName);
-
   Map<String, String> getRequiredColumns();
+
+  String getTableCreationSql(JdbcConfig config);
+
+  String getFeatureRowInsertSql(String tableName);
 }

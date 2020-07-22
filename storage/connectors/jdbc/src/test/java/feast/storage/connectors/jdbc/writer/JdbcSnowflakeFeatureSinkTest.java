@@ -57,7 +57,7 @@ public class JdbcSnowflakeFeatureSinkTest {
   private String warehouse = "COMPUTE_WH";
   private String snowflakeUrl = "jdbc:snowflake://kia19877.snowflakecomputing.com";
   private String className = "net.snowflake.client.jdbc.SnowflakeDriver";
-
+  private String tableName = "feast_features";
   private Connection conn;
 
   @Before
@@ -91,6 +91,7 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setDatabase(this.database)
                 .setSchema(this.schema)
                 .setWarehouse(this.warehouse)
+                .setTablename(this.tableName)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
 
@@ -115,6 +116,41 @@ public class JdbcSnowflakeFeatureSinkTest {
       this.conn = DriverManager.getConnection(this.snowflakeUrl, props);
     } catch (ClassNotFoundException | SQLException e) {
       System.err.println(e.getClass().getName() + ": " + e.getMessage());
+    }
+  }
+
+  @Test
+  public void shouldthrow() throws RuntimeException {
+
+    String tableName = "fake_tableName";
+    FeatureSink snowflakeFeatureSinkObj2 =
+        JdbcFeatureSink.fromConfig(
+            StoreProto.Store.JdbcConfig.newBuilder()
+                .setUrl(this.snowflakeUrl)
+                .setClassName(this.className)
+                .setUsername(this.userName)
+                .setPassword(this.password)
+                .setDatabase(this.database)
+                .setSchema(this.schema)
+                .setWarehouse(this.warehouse)
+                .setTablename(tableName)
+                .setBatchSize(1) // This must be set to 1 for DirectRunner
+                .build());
+    List<FeatureRow> featureRows =
+        ImmutableList.of(
+            FeatureRow.newBuilder()
+                .setFeatureSet("snowflake_proj/feature_set_1")
+                .addFields(field("entity", 1, Enum.INT64))
+                .addFields(field("feature", "two", Enum.STRING))
+                .build());
+    try {
+      p.apply(Create.of(featureRows)).apply(snowflakeFeatureSinkObj2.writer());
+
+      p.run();
+    } catch (RuntimeException re) {
+      String message =
+          String.format("Table '%s' does not exist or not authorized.", tableName.toUpperCase());
+      Assert.assertTrue(re.getMessage().contains(message));
     }
   }
 
@@ -166,10 +202,6 @@ public class JdbcSnowflakeFeatureSinkTest {
 
     DatabaseMetaData meta = conn.getMetaData();
     Assert.assertEquals(
-        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_1", null).next());
-    Assert.assertEquals(
-        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_2", null).next());
-    Assert.assertEquals(
-        true, meta.getTables(null, null, "SNOWFLAKE_PROJ_FEATURE_SET_3", null).next());
+        true, meta.getTables(null, null, this.tableName.toUpperCase(), null).next());
   }
 }

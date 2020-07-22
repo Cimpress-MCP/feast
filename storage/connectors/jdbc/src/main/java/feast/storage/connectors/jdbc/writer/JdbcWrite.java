@@ -20,13 +20,23 @@ import feast.proto.core.StoreProto;
 import feast.proto.core.StoreProto.Store.JdbcConfig;
 import feast.proto.types.FeatureRowProto;
 import feast.proto.types.FeatureRowProto.FeatureRow;
+import feast.proto.types.FieldProto;
+import feast.proto.types.ValueProto;
 import feast.storage.api.writer.FailedElement;
 import feast.storage.api.writer.WriteResult;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.*;
+import java.util.stream.Collectors;
+import org.apache.beam.sdk.io.jdbc.JdbcIO;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 
 /**
@@ -57,6 +67,7 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
 
   @Override
   public WriteResult expand(PCollection<FeatureRowProto.FeatureRow> input) {
+
     String jobName = input.getPipeline().getOptions().getJobName();
 
     int batchSize = this.config.getBatchSize() > 0 ? config.getBatchSize() : 1;
@@ -64,8 +75,72 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
     PCollection<FeatureRow> feature = input;
 
     feature.apply(
-        "WriteFeaturestoTable",
-        ParDo.of(new InsertFeatureSetToTable(this.getJdbcTemplater(), this.getConfig(), jobName)));
+        String.format("WriteFeatureRowToJdbcIO-%s", jobName),
+        JdbcIO.<FeatureRowProto.FeatureRow>write()
+            .withDataSourceConfiguration(create_dsconfig(this.config))
+            .withStatement(jdbcTemplater.getFeatureRowInsertSql(this.config.getTablename()))
+            .withBatchSize(batchSize)
+            .withPreparedStatementSetter(
+                new JdbcIO.PreparedStatementSetter<FeatureRowProto.FeatureRow>() {
+                  @Override
+                  public void setParameters(
+                      FeatureRowProto.FeatureRow element, PreparedStatement preparedStatement) {
+                    try {
+
+                      Map<String, ValueProto.Value> fieldMap =
+                          element.getFieldsList().stream()
+                              .collect(
+                                  Collectors.toMap(
+                                      FieldProto.Field::getName, FieldProto.Field::getValue));
+
+                      // Set event_timestamp
+                      Instant eventTsInstant =
+                          Instant.ofEpochSecond(element.getEventTimestamp().getSeconds())
+                              .plusNanos(element.getEventTimestamp().getNanos());
+
+                      preparedStatement.setTimestamp(
+                          1,
+                          Timestamp.from(eventTsInstant),
+                          Calendar.getInstance(TimeZone.getTimeZone("UTC")));
+
+                      // Set created_timestamp
+                      preparedStatement.setTimestamp(
+                          2,
+                          new Timestamp(System.currentTimeMillis()),
+                          Calendar.getInstance(TimeZone.getTimeZone("UTC")));
+
+                      // Set Project
+
+                      preparedStatement.setString(3, getProject(element.getFeatureSet()));
+
+                      // Set FeatureSet
+
+                      preparedStatement.setString(4, getFeatureSet(element.getFeatureSet()));
+
+                      //
+                      JSONObject json_variant = new JSONObject();
+                      for (String row : fieldMap.keySet()) {
+                        setFeatureValue(json_variant, row, fieldMap.get(row));
+                      }
+
+                      preparedStatement.setString(5, json_variant.toString());
+
+                      // Set ingestion Id
+                      preparedStatement.setString(6, element.getIngestionId());
+
+                      // Set job Name
+                      preparedStatement.setString(7, jobName);
+
+                      preparedStatement.getConnection().commit();
+                    } catch (SQLException e) {
+                      log.error(
+                          String.format(
+                              "Could not construct prepared statement for JDBC IO. FeatureRow: %s:",
+                              element),
+                          e.getMessage());
+                    }
+                  }
+                }));
 
     PCollection<FeatureRowProto.FeatureRow> successfulInserts =
         input.apply(
@@ -86,5 +161,108 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
                 }));
 
     return WriteResult.in(input.getPipeline(), successfulInserts, failedElements);
+  }
+
+  public String getProject(String featureSet) {
+
+    return featureSet.split("/")[0];
+  }
+
+  public String getFeatureSet(String featureSet) {
+
+    return featureSet.split("/")[1];
+  }
+
+  public static void setFeatureValue(JSONObject json_variant, String row, ValueProto.Value value) {
+    ValueProto.Value.ValCase protoValueType = value.getValCase();
+    try {
+      switch (protoValueType) {
+        case BYTES_VAL:
+          json_variant.put(row, value.getBytesVal().toByteArray());
+          break;
+        case STRING_VAL:
+          json_variant.put(row, value.getStringVal());
+          break;
+        case INT32_VAL:
+          json_variant.put(row, value.getInt32Val());
+          break;
+        case INT64_VAL:
+          json_variant.put(row, value.getInt64Val());
+          break;
+        case FLOAT_VAL:
+          json_variant.put(row, value.getFloatVal());
+          break;
+        case DOUBLE_VAL:
+          json_variant.put(row, value.getDoubleVal());
+          break;
+        case BOOL_VAL:
+          json_variant.put(row, value.getBoolVal());
+          break;
+        case STRING_LIST_VAL:
+          json_variant.put(
+              row, Base64.getEncoder().encodeToString(value.getStringListVal().toByteArray()));
+          break;
+        case BYTES_LIST_VAL:
+          json_variant.put(
+              row, Base64.getEncoder().encodeToString(value.getBytesListVal().toByteArray()));
+          break;
+        case INT64_LIST_VAL:
+          json_variant.put(
+              row, Base64.getEncoder().encodeToString(value.getInt64ListVal().toByteArray()));
+          break;
+        case INT32_LIST_VAL:
+          json_variant.put(
+              row, Base64.getEncoder().encodeToString(value.getInt32ListVal().toByteArray()));
+          break;
+        case FLOAT_LIST_VAL:
+          json_variant.put(
+              row, Base64.getEncoder().encodeToString(value.getFloatListVal().toByteArray()));
+          break;
+        case DOUBLE_LIST_VAL:
+          json_variant.put(
+              row, Base64.getEncoder().encodeToString(value.getDoubleListVal().toByteArray()));
+          break;
+        case BOOL_LIST_VAL:
+          json_variant.put(
+              row, Base64.getEncoder().encodeToString(value.getBoolListVal().toByteArray()));
+          break;
+        case VAL_NOT_SET:
+        default:
+          throw new IllegalArgumentException(
+              String.format(
+                  "Could not determine field protoValueType for incoming feature row: %s",
+                  protoValueType));
+      }
+    } catch (IllegalArgumentException e) {
+      log.error(
+          String.format(
+              "Could not cast value %s of type %s int SQL field: ",
+              value.toString(), protoValueType),
+          e.getMessage());
+    }
+  }
+
+  public static JdbcIO.DataSourceConfiguration create_dsconfig(
+      StoreProto.Store.JdbcConfig jdbcConfig) {
+    String username = jdbcConfig.getUsername();
+    String password = jdbcConfig.getPassword();
+    String className = jdbcConfig.getClassName();
+    String url = jdbcConfig.getUrl();
+    log.info("setting the jdbc connection");
+    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
+      String database = jdbcConfig.getDatabase();
+      String schema = jdbcConfig.getSchema();
+      String warehouse = jdbcConfig.getWarehouse();
+      return JdbcIO.DataSourceConfiguration.create(className, url)
+          .withUsername(!username.isEmpty() ? username : null)
+          .withPassword(!password.isEmpty() ? password : null)
+          .withConnectionProperties(
+              String.format("warehouse=%s;db=%s;schema=%s", warehouse, database, schema));
+
+    } else {
+      return JdbcIO.DataSourceConfiguration.create(className, url)
+          .withUsername(!username.isEmpty() ? username : null)
+          .withPassword(!password.isEmpty() ? password : null);
+    }
   }
 }
