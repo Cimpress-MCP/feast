@@ -23,21 +23,24 @@ import feast.storage.api.retriever.HistoricalRetriever;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.*;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 public class JdbcHistoricalRetriever implements HistoricalRetriever {
 
   private final String stagingLocation;
   private JdbcQueryTemplater queryTemplater;
+  private JdbcTemplate jdbcTemplate;
 
-  private JdbcHistoricalRetriever(Map<String, String> config, JdbcQueryTemplater queryTemplater) {
+  private JdbcHistoricalRetriever(Map<String, String> config, JdbcQueryTemplater queryTemplater, JdbcTemplate jdbcTemplate) {
 
     this.stagingLocation = config.get("staging_location");
     this.queryTemplater = queryTemplater;
+    this.jdbcTemplate = jdbcTemplate;
   }
 
   public static HistoricalRetriever create(
-      Map<String, String> config, JdbcQueryTemplater jdbcQueryTemplater) {
-    return new JdbcHistoricalRetriever(config, jdbcQueryTemplater);
+      Map<String, String> config, JdbcQueryTemplater jdbcQueryTemplater, JdbcTemplate jdbcTemplate) {
+    return new JdbcHistoricalRetriever(config, jdbcQueryTemplater, jdbcTemplate);
   }
 
   // TODO: implement computeStatistics

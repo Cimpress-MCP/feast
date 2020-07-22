@@ -18,6 +18,8 @@ package feast.serving.config;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import feast.proto.core.StoreProto;
 import feast.serving.service.*;
 import feast.serving.specs.CachedSpecService;
@@ -33,9 +35,12 @@ import feast.storage.connectors.redis.retriever.RedisClusterOnlineRetriever;
 import feast.storage.connectors.redis.retriever.RedisOnlineRetriever;
 import io.opentracing.Tracer;
 import java.util.Map;
+import java.util.Properties;
+import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @Configuration
 public class ServingServiceConfig {
@@ -96,21 +101,36 @@ public class ServingServiceConfig {
       case "net.snowflake.client.jdbc.SnowflakeDriver":
         SnowflakeConnectionProvider snowflakeConnectionProvider =
             new SnowflakeConnectionProvider(config);
-        SnowflakeQueryTemplater snowflakeQueryTemplater =
+        SnowflakeQueryTemplater snowflakeQueryTemplater = 
             new SnowflakeQueryTemplater(config, snowflakeConnectionProvider);
-        return JdbcHistoricalRetriever.create(config, snowflakeQueryTemplater);
-      case "org.postgresql.Driver":
-        PostgresConnectionProvider postgresConnectionProvider =
-            new PostgresConnectionProvider(config);
-        PostgresQueryTemplater postgresQueryTemplater =
-            new PostgresQueryTemplater(config, postgresConnectionProvider);
-        return JdbcHistoricalRetriever.create(config, postgresQueryTemplater);
+        return JdbcHistoricalRetriever.create(config, snowflakeQueryTemplater, jdbcTemplate(feastProperties));
       default:
         throw new IllegalArgumentException(
             String.format(
                 "Unsupported JDBC store className '%s' for store name '%s'",
                 className, store.getName()));
     }
+  }
+  
+
+  @Bean
+  public DataSource dataSource(FeastProperties feastProperties) {
+    FeastProperties.Store store = feastProperties.getActiveStore();
+    Map<String, String> config = store.getConfig();
+    String driverClassName = config.get("class_name");
+    Properties dsProperties = new Properties();
+    dsProperties.putAll(config);
+    HikariConfig hkConfig = new HikariConfig();
+    hkConfig.setMaximumPoolSize(100);
+    hkConfig.setDriverClassName(driverClassName);
+    hkConfig.setDataSourceProperties(dsProperties);
+    final HikariDataSource ds = new HikariDataSource(hkConfig);
+    return ds;
+  }
+
+  @Bean
+  public JdbcTemplate jdbcTemplate(FeastProperties feastProperties) {
+    return new JdbcTemplate(dataSource(feastProperties));
   }
 
   private void validateJobServicePresence(JobService jobService) {
