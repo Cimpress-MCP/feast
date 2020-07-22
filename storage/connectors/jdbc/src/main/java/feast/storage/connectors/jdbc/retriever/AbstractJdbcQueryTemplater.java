@@ -279,14 +279,14 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
    * entity dataset.
    *
    * @param featureSetInfo Information about the feature set necessary for the query templating
-   * @param leftTableName entityTableWithRowCountName: entity table name
+   * @param entityTable entityTableWithRowCountName: entity table name
    * @param minTimestamp earliest allowed timestamp for the historical data in feast
    * @param maxTimestamp latest allowed timestamp for the historical data in feast
    * @return point in time correctness join BQ SQL query
    */
   protected abstract String createFeatureSetPointInTimeQuery(
       FeatureSetQueryInfo featureSetInfo,
-      String leftTableName,
+      String entityTable,
       String minTimestamp,
       String maxTimestamp)
       throws IOException;
