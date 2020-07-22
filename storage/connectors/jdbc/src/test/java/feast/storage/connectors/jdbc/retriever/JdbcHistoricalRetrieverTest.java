@@ -57,7 +57,7 @@ public class JdbcHistoricalRetrieverTest {
     PostgresConnectionProvider postgresConnectionProvider =
         new PostgresConnectionProvider(postgressqlConfig);
     PostgresQueryTemplater postgresQueryTemplater =
-        new PostgresQueryTemplater(postgresConnectionProvider);
+        new PostgresQueryTemplater(postgressqlConfig, postgresConnectionProvider);
     postgresqlFeatureRetriever =
         JdbcHistoricalRetriever.create(postgressqlConfig, postgresQueryTemplater);
   }

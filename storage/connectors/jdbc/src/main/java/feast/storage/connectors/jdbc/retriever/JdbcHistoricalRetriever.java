@@ -62,9 +62,9 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
         this.queryTemplater.getFeatureSetInfos(featureSetRequests);
 
     // 3. Load entity rows into database
-    Iterator<String> fileList = datasetSource.getFileSource().getFileUrisList().iterator();
+    List<String> fileList = datasetSource.getFileSource().getFileUrisList();
     String entityTableWithRowCountName =
-        this.queryTemplater.loadEntities(featureSetQueryInfos, fileList);
+        this.queryTemplater.loadEntities(featureSetQueryInfos, fileList, stagingLocation);
 
     // 4. Retrieve the temporal bounds of the entity dataset provided
     Map<String, Timestamp> timestampLimits =

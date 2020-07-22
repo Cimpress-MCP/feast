@@ -23,56 +23,28 @@ import java.util.Map;
 import java.util.Properties;
 
 public class SnowflakeConnectionProvider implements JdbcConnectionProvider {
-  private final String database;
-  private final String schema;
-  private final String password;
-  private final String username;
-  private final String url;
-  private final String className;
+  private final Map<String, String> config;
 
   public SnowflakeConnectionProvider(Map<String, String> config) {
-    if (!config.containsKey("database")
-        || !config.containsKey("schema")
-        || !config.containsKey("class_name")
-        || !config.containsKey("url")
-        || !config.containsKey("username")
-        || !config.containsKey("password")) {
-      throw new IllegalArgumentException(
-          String.format(
-              "SnowflakeConnectionProvider config missing one or more fields! "
-                  + "Database: %s Schema: %s ClassName: %s Url: %s Username: %s Password: MASKED ",
-              config.get("database"),
-              config.get("schema"),
-              config.get("class_name"),
-              config.get("url"),
-              config.get("username")));
-    }
-    this.database = config.get("database");
-    this.schema = config.get("schema");
-    this.className = config.get("class_name");
-    this.url = config.get("url");
-    this.username = config.get("username");
-    this.password = config.get("password");
+    this.config = config;
   }
 
   @Override
   public Connection getConnection() {
     try {
-      Class.forName(this.className);
+      Class.forName(this.config.get("class_name"));
       // db and schema are required for snowflake connection
       Properties props = new Properties();
-      props.put("user", this.username);
-      props.put("password", this.password);
-      props.put("db", this.database);
-      props.put("schema", this.schema);
-      return DriverManager.getConnection(this.url, props);
+      props.put("user", this.config.get("username"));
+      props.put("password", this.config.get("password"));
+      props.put("db", this.config.get("database"));
+      props.put("schema", this.config.get("schema"));
+      props.put("role", this.config.get("role"));
+      return DriverManager.getConnection(this.config.get("url"), props);
 
     } catch (ClassNotFoundException | SQLException e) {
       throw new RuntimeException(
-          String.format(
-              "Could not connect to database with url %s and classname %s wuth database %s, and schema %s",
-              this.url, this.className, this.database, this.schema),
-          e);
+          String.format("Could not connect to database with the given config: %s", this.config), e);
     }
   }
 }
