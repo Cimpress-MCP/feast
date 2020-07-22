@@ -43,6 +43,7 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
   private String SFpw = System.getenv("SNOWFLAKE_PASSWORD_RETRI");
   private String SFDatabase = "DEMO_DB";
   private String SFSchema = "PUBLIC";
+  private String SFTable = "FEAST_FEATURES";
   private String SFRole = "ACCOUNTADMIN";
   private String SFStorageIntegration = "s3_int";
 
@@ -58,6 +59,7 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
     snowflakeConfig.put("staging_location", staging_location);
     snowflakeConfig.put("role", SFRole);
     snowflakeConfig.put("storage_integration", SFStorageIntegration);
+    snowflakeConfig.put("table", SFTable);
     SnowflakeConnectionProvider snowflakeConnectionProvider =
         new SnowflakeConnectionProvider(snowflakeConfig);
     SnowflakeQueryTemplater snowflakeQueryTemplater =

@@ -32,13 +32,16 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
       "templates/join_featuresets_snowflake.sql";
   private static final String VARIANT_COLUMN_NAME = "feature";
   private String storageIntegration;
+  private String feastTable;
 
   public SnowflakeQueryTemplater(
       Map<String, String> databaseConfig, JdbcConnectionProvider connectionProvider) {
     super(databaseConfig, connectionProvider);
     this.storageIntegration = databaseConfig.get("storage_integration");
+    this.feastTable = databaseConfig.get("table");
   }
 
+  // TODO: change table to feast_table
   @Override
   protected List<String> createEntityTableRowCountQuery(
       String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos) {
@@ -47,7 +50,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     Set<String> entities = new HashSet<>();
     List<String> entityColumns = new ArrayList<>();
     for (FeatureSetQueryInfo featureSetQueryInfo : featureSetQueryInfos) {
-      String table = featureSetQueryInfo.getFeatureSetTable();
+      String table = this.feastTable;
       for (String entity : featureSetQueryInfo.getEntities()) {
         if (!entities.contains(entity)) {
           entities.add(entity);
@@ -95,7 +98,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   @Override
   protected String createFeatureSetPointInTimeQuery(
       FeatureSetQueryInfo featureSetInfo,
-      String leftTableName,
+      String entityTable,
       String minTimestamp,
       String maxTimestamp)
       throws IOException {
@@ -105,10 +108,10 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     Map<String, Object> context = new HashMap<>();
     context.put("variantColumn", VARIANT_COLUMN_NAME);
     context.put("featureSet", featureSetInfo);
-
     context.put("minTimestamp", minTimestamp);
     context.put("maxTimestamp", maxTimestamp);
-    context.put("leftTableName", leftTableName);
+    context.put("leftTableName", entityTable);
+    context.put("feastTable", this.feastTable);
 
     Writer writer = new StringWriter();
     template.evaluate(writer, context);
@@ -145,7 +148,6 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   protected List<String> generateExportTableSqlQuery(String resultTable, String stagingUri) {
     // support stagingUri with and without a trailing slash
     String exportPath;
-    System.out.println(stagingUri);
     if (stagingUri.substring(stagingUri.length() - 1).equals("/")) {
       exportPath = String.format("%s%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
     } else {
@@ -157,7 +159,6 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
             "COPY INTO '%s' FROM %s file_format = (type=csv compression='gzip')\n"
                 + "single=true header = true storage_integration = %s;",
             exportPath, resultTable, this.storageIntegration);
-    System.out.println(exportPath);
     String[] queryArray = new String[] {copyIntoStageQuery};
     exportTableSqlQueries.addAll(Arrays.asList(queryArray));
     return exportTableSqlQueries;
