@@ -177,11 +177,16 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
     }
   }
 
-  // TODO: use stagingUri
   @Override
   public String exportResultTableToStagingLocation(String resultTable, String stagingUri) {
 
-    String exportPath = String.format("%s%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
+    // support stagingUri with and without a trailing slash
+    String exportPath;
+    if (stagingUri.substring(stagingUri.length() - 1).equals("/")) {
+      exportPath = String.format("%s%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
+    } else {
+      exportPath = String.format("%s/%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
+    }
     List<String> exportTableSqlQueries = this.generateExportTableSqlQuery(resultTable, stagingUri);
     try {
       Statement statement = this.connection.createStatement();

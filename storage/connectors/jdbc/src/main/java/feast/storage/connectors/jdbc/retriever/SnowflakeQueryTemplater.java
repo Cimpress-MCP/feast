@@ -143,13 +143,21 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
 
   @Override
   protected List<String> generateExportTableSqlQuery(String resultTable, String stagingUri) {
-
+    // support stagingUri with and without a trailing slash
+    String exportPath;
+    System.out.println(stagingUri);
+    if (stagingUri.substring(stagingUri.length() - 1).equals("/")) {
+      exportPath = String.format("%s%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
+    } else {
+      exportPath = String.format("%s/%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
+    }
     List<String> exportTableSqlQueries = new ArrayList<>();
     String copyIntoStageQuery =
         String.format(
-            "COPY INTO '%s%s.%s' FROM %s file_format = (type=csv compression='gzip')\n"
+            "COPY INTO '%s' FROM %s file_format = (type=csv compression='gzip')\n"
                 + "single=true header = true storage_integration = %s;",
-            stagingUri, resultTable, EXPORT_FILE_FORMAT, resultTable, this.storageIntegration);
+            exportPath, resultTable, this.storageIntegration);
+    System.out.println(exportPath);
     String[] queryArray = new String[] {copyIntoStageQuery};
     exportTableSqlQueries.addAll(Arrays.asList(queryArray));
     return exportTableSqlQueries;
