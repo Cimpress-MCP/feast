@@ -17,18 +17,21 @@
 package feast.storage.connectors.jdbc.retriever;
 
 import com.google.protobuf.Duration;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
 import feast.storage.api.retriever.HistoricalRetrievalResult;
-import feast.storage.connectors.jdbc.connection.SnowflakeConnectionProvider;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 public class SnowflakeHistoricalRetrieverJSONColTest {
   private JdbcHistoricalRetriever snowflakeFeatureRetriever;
@@ -60,10 +63,21 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
     snowflakeConfig.put("role", SFRole);
     snowflakeConfig.put("storage_integration", SFStorageIntegration);
     snowflakeConfig.put("table", SFTable);
-    SnowflakeConnectionProvider snowflakeConnectionProvider =
-        new SnowflakeConnectionProvider(snowflakeConfig);
+    Properties dsProperties = new Properties();
+    dsProperties.put("user", this.snowflakeConfig.get("username"));
+    dsProperties.put("password", this.snowflakeConfig.get("password"));
+    dsProperties.put("db", this.snowflakeConfig.get("database"));
+    dsProperties.put("schema", this.snowflakeConfig.get("schema"));
+    dsProperties.put("role", this.snowflakeConfig.get("role"));
+    HikariConfig hkConfig = new HikariConfig();
+    hkConfig.setMaximumPoolSize(100);
+    hkConfig.setDriverClassName(SFClassName);
+    hkConfig.setDataSourceProperties(dsProperties);
+    hkConfig.setJdbcUrl(this.snowflakeConfig.get("url"));
+    final HikariDataSource ds = new HikariDataSource(hkConfig);
+    JdbcTemplate jdbcTemplate = new JdbcTemplate(ds);
     SnowflakeQueryTemplater snowflakeQueryTemplater =
-        new SnowflakeQueryTemplater(snowflakeConfig, snowflakeConnectionProvider);
+        new SnowflakeQueryTemplater(snowflakeConfig, jdbcTemplate);
     snowflakeFeatureRetriever =
         (JdbcHistoricalRetriever)
             JdbcHistoricalRetriever.create(snowflakeConfig, snowflakeQueryTemplater);

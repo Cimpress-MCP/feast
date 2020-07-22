@@ -18,11 +18,11 @@ package feast.storage.connectors.jdbc.retriever;
 
 import com.mitchellbosecke.pebble.PebbleEngine;
 import com.mitchellbosecke.pebble.template.PebbleTemplate;
-import feast.storage.connectors.jdbc.connection.JdbcConnectionProvider;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.*;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   private static final PebbleEngine engine = new PebbleEngine.Builder().build();
@@ -34,14 +34,12 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   private String storageIntegration;
   private String feastTable;
 
-  public SnowflakeQueryTemplater(
-      Map<String, String> databaseConfig, JdbcConnectionProvider connectionProvider) {
-    super(databaseConfig, connectionProvider);
+  public SnowflakeQueryTemplater(Map<String, String> databaseConfig, JdbcTemplate jdbcTemplate) {
+    super(databaseConfig, jdbcTemplate);
     this.storageIntegration = databaseConfig.get("storage_integration");
     this.feastTable = databaseConfig.get("table");
   }
 
-  // TODO: change table to feast_table
   @Override
   protected List<String> createEntityTableRowCountQuery(
       String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos) {
@@ -66,6 +64,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     entityColumns.forEach(featureSetTableSelectJoiner::add);
 
     List<String> createEntityTableRowCountQueries = new ArrayList<>();
+    // TODO: update to temporary table
     createEntityTableRowCountQueries.add(
         String.format(
             "CREATE TABLE %s AS (SELECT %s FROM %s WHERE 1 = 2);",

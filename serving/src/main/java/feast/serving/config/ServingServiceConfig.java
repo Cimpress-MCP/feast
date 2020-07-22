@@ -21,15 +21,16 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import feast.proto.core.StoreProto;
-import feast.serving.service.*;
+import feast.serving.service.HistoricalServingService;
+import feast.serving.service.JobService;
+import feast.serving.service.NoopJobService;
+import feast.serving.service.OnlineServingService;
+import feast.serving.service.ServingService;
 import feast.serving.specs.CachedSpecService;
 import feast.storage.api.retriever.HistoricalRetriever;
 import feast.storage.api.retriever.OnlineRetriever;
 import feast.storage.connectors.bigquery.retriever.BigQueryHistoricalRetriever;
-import feast.storage.connectors.jdbc.connection.PostgresConnectionProvider;
-import feast.storage.connectors.jdbc.connection.SnowflakeConnectionProvider;
 import feast.storage.connectors.jdbc.retriever.JdbcHistoricalRetriever;
-import feast.storage.connectors.jdbc.retriever.PostgresQueryTemplater;
 import feast.storage.connectors.jdbc.retriever.SnowflakeQueryTemplater;
 import feast.storage.connectors.redis.retriever.RedisClusterOnlineRetriever;
 import feast.storage.connectors.redis.retriever.RedisOnlineRetriever;
@@ -99,11 +100,9 @@ public class ServingServiceConfig {
     String className = config.get("class_name");
     switch (className) {
       case "net.snowflake.client.jdbc.SnowflakeDriver":
-        SnowflakeConnectionProvider snowflakeConnectionProvider =
-            new SnowflakeConnectionProvider(config);
-        SnowflakeQueryTemplater snowflakeQueryTemplater = 
-            new SnowflakeQueryTemplater(config, snowflakeConnectionProvider);
-        return JdbcHistoricalRetriever.create(config, snowflakeQueryTemplater, jdbcTemplate(feastProperties));
+        SnowflakeQueryTemplater snowflakeQueryTemplater =
+            new SnowflakeQueryTemplater(config, jdbcTemplate(feastProperties));
+        return JdbcHistoricalRetriever.create(config, snowflakeQueryTemplater);
       default:
         throw new IllegalArgumentException(
             String.format(
@@ -111,7 +110,6 @@ public class ServingServiceConfig {
                 className, store.getName()));
     }
   }
-  
 
   @Bean
   public DataSource dataSource(FeastProperties feastProperties) {
@@ -119,6 +117,7 @@ public class ServingServiceConfig {
     Map<String, String> config = store.getConfig();
     String driverClassName = config.get("class_name");
     Properties dsProperties = new Properties();
+    //TODO: do mapping with snowflake config
     dsProperties.putAll(config);
     HikariConfig hkConfig = new HikariConfig();
     hkConfig.setMaximumPoolSize(100);
