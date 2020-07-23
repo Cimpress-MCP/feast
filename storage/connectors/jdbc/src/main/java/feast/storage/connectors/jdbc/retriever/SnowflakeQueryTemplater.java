@@ -19,7 +19,6 @@ package feast.storage.connectors.jdbc.retriever;
 import com.mitchellbosecke.pebble.PebbleEngine;
 import com.mitchellbosecke.pebble.template.PebbleTemplate;
 import feast.storage.connectors.jdbc.connection.JdbcConnectionProvider;
-import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
@@ -32,11 +31,17 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   private static final String JOIN_TEMPLATE_NAME_SNOWFLAKE =
       "templates/join_featuresets_snowflake.sql";
   private static final String VARIANT_COLUMN_NAME = "feature";
+  private String storageIntegration;
+  private String feastTable;
 
-  public SnowflakeQueryTemplater(JdbcConnectionProvider connectionProvider) {
-    super(connectionProvider);
+  public SnowflakeQueryTemplater(
+      Map<String, String> databaseConfig, JdbcConnectionProvider connectionProvider) {
+    super(databaseConfig, connectionProvider);
+    this.storageIntegration = databaseConfig.get("storage_integration");
+    this.feastTable = databaseConfig.get("table");
   }
 
+  // TODO: change table to feast_table
   @Override
   protected List<String> createEntityTableRowCountQuery(
       String destinationTable, List<FeatureSetQueryInfo> featureSetQueryInfos) {
@@ -45,7 +50,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     Set<String> entities = new HashSet<>();
     List<String> entityColumns = new ArrayList<>();
     for (FeatureSetQueryInfo featureSetQueryInfo : featureSetQueryInfos) {
-      String table = featureSetQueryInfo.getFeatureSetTable();
+      String table = this.feastTable;
       for (String entity : featureSetQueryInfo.getEntities()) {
         if (!entities.contains(entity)) {
           entities.add(entity);
@@ -71,36 +76,29 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   }
 
   @Override
-  protected List<String> createLoadEntityQuery(
-      String destinationTable, String temporaryTable, File filePath) {
+  protected List<String> createLoadEntityQuery(String destinationTable, String entitySourceUri) {
     List<String> queries = new ArrayList<>();
-    queries.add(
-        String.format("CREATE TABLE %s AS (SELECT * FROM %s);", temporaryTable, destinationTable));
-    queries.add(
+    String csvFormatQuey =
         String.format(
-            "create or replace file format CSV_format type = 'CSV' field_delimiter = ',' skip_header=1;"));
-    queries.add(String.format("create or replace stage my_stage file_format = CSV_format;"));
-    queries.add(String.format("put file://%s @my_stage auto_compress=false;", filePath));
-    String fileName = filePath.getName();
-    queries.add(
+            "create or replace file format CSV_format type = 'CSV' field_delimiter = ',' skip_header=1;");
+    String copyIntoDestTable =
         String.format(
-            "COPY INTO %s FROM '@my_stage/%s' FILE_FORMAT = CSV_format on_error = 'skip_file';",
-            temporaryTable, fileName));
-    queries.add(
-        String.format("INSERT INTO %s SELECT * FROM %s;", destinationTable, temporaryTable));
-
-    queries.add(String.format("DROP TABLE %s;", temporaryTable));
-    queries.add(
+            "COPY INTO %s FROM '%s' FILE_FORMAT = CSV_format on_error = 'skip_file' storage_integration = %s;",
+            destinationTable, entitySourceUri, this.storageIntegration);
+    String addRowNum =
         String.format(
             "CREATE OR REPLACE TABLE %s as SELECT *, ROW_NUMBER() OVER (ORDER BY 1) AS row_number FROM %s;",
-            destinationTable, destinationTable));
+            destinationTable, destinationTable);
+    String[] queryArray = new String[] {csvFormatQuey, copyIntoDestTable, addRowNum};
+    queries.addAll(Arrays.asList(queryArray));
+    //    System.out.println(String.format("Entity Table: %s", destinationTable));
     return queries;
   }
 
   @Override
   protected String createFeatureSetPointInTimeQuery(
       FeatureSetQueryInfo featureSetInfo,
-      String leftTableName,
+      String entityTable,
       String minTimestamp,
       String maxTimestamp)
       throws IOException {
@@ -110,10 +108,10 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     Map<String, Object> context = new HashMap<>();
     context.put("variantColumn", VARIANT_COLUMN_NAME);
     context.put("featureSet", featureSetInfo);
-
     context.put("minTimestamp", minTimestamp);
     context.put("maxTimestamp", maxTimestamp);
-    context.put("leftTableName", leftTableName);
+    context.put("leftTableName", entityTable);
+    context.put("feastTable", this.feastTable);
 
     Writer writer = new StringWriter();
     template.evaluate(writer, context);
@@ -146,22 +144,22 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     return writer.toString();
   }
 
-  // TODO: export as decoded csv file
   @Override
-  protected List<String> generateExportTableSqlQuery(String resultTable, String stagingPath) {
-    String exportPath = String.format("%s/", stagingPath.replaceAll("/$", ""));
-
+  protected List<String> generateExportTableSqlQuery(String resultTable, String stagingUri) {
+    // support stagingUri with and without a trailing slash
+    String exportPath;
+    if (stagingUri.substring(stagingUri.length() - 1).equals("/")) {
+      exportPath = String.format("%s%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
+    } else {
+      exportPath = String.format("%s/%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
+    }
     List<String> exportTableSqlQueries = new ArrayList<>();
-    String createStageQuery = String.format("create or replace stage my_stage;");
     String copyIntoStageQuery =
         String.format(
-            "COPY INTO '@my_stage/%s.%s' FROM %s file_format = (type=csv compression='gzip')\n"
-                + "single=true header = true;",
-            resultTable, EXPORT_FILE_FORMAT, resultTable);
-    String downloadTableQuery =
-        String.format(
-            "get @my_stage/%s.%s file://%s;", resultTable, EXPORT_FILE_FORMAT, exportPath);
-    String[] queryArray = new String[] {createStageQuery, copyIntoStageQuery, downloadTableQuery};
+            "COPY INTO '%s' FROM %s file_format = (type=csv compression='gzip')\n"
+                + "single=true header = true storage_integration = %s;",
+            exportPath, resultTable, this.storageIntegration);
+    String[] queryArray = new String[] {copyIntoStageQuery};
     exportTableSqlQueries.addAll(Arrays.asList(queryArray));
     return exportTableSqlQueries;
   }

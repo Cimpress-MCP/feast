@@ -19,7 +19,6 @@ package feast.storage.connectors.jdbc.retriever;
 import com.mitchellbosecke.pebble.PebbleEngine;
 import com.mitchellbosecke.pebble.template.PebbleTemplate;
 import feast.storage.connectors.jdbc.connection.JdbcConnectionProvider;
-import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
@@ -33,8 +32,9 @@ public class PostgresQueryTemplater extends AbstractJdbcQueryTemplater {
       "templates/join_featuresets_postgres.sql";
   private static final String VARIANT_COLUMN_NAME = "feature";
 
-  public PostgresQueryTemplater(JdbcConnectionProvider connectionProvider) {
-    super(connectionProvider);
+  public PostgresQueryTemplater(
+      Map<String, String> databaseConfig, JdbcConnectionProvider connectionProvider) {
+    super(databaseConfig, connectionProvider);
   }
 
   @Override
@@ -71,14 +71,16 @@ public class PostgresQueryTemplater extends AbstractJdbcQueryTemplater {
   }
 
   @Override
-  protected List<String> createLoadEntityQuery(
-      String destinationTable, String temporaryTable, File filePath) {
+  protected List<String> createLoadEntityQuery(String destinationTable, String entitySourceUri) {
+    // TODO: add support s3, gcp entitySourceUri
     List<String> queries = new ArrayList<>();
+    String temporaryTable = this.createTempTableName();
     queries.add(
         String.format("CREATE TABLE %s AS (SELECT * FROM %s);", temporaryTable, destinationTable));
     //      queries.add(String.format("ALTER TABLE %s DROP COLUMN row_number;",temporaryTable));
     queries.add(
-        String.format("COPY %s FROM '%s' DELIMITER ',' CSV HEADER;", temporaryTable, filePath));
+        String.format(
+            "COPY %s FROM '%s' DELIMITER ',' CSV HEADER;", temporaryTable, entitySourceUri));
     queries.add(
         String.format("INSERT INTO %s SELECT * FROM %s;", destinationTable, temporaryTable));
     queries.add(String.format("DROP TABLE %s;", temporaryTable));
@@ -139,6 +141,7 @@ public class PostgresQueryTemplater extends AbstractJdbcQueryTemplater {
 
   @Override
   protected List<String> generateExportTableSqlQuery(String resultTable, String stagingPath) {
+    // TODO: add support for s3 staging location
     String exportPath = String.format("%s/%s.csv", stagingPath.replaceAll("/$", ""), resultTable);
     List<String> exportTableSqlQueries = new ArrayList<>();
     exportTableSqlQueries.add(
