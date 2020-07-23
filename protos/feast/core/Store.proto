@@ -148,6 +148,7 @@ message Store {
     string schema = 8;
     string warehouse = 9;
     string role = 10;
+    string tablename = 11;
   }
 
   message Subscription {

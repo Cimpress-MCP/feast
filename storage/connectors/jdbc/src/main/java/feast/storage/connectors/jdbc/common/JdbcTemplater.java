@@ -17,27 +17,24 @@
 package feast.storage.connectors.jdbc.common;
 
 import feast.proto.core.FeatureSetProto;
+import feast.proto.core.StoreProto.Store.JdbcConfig;
 import java.io.Serializable;
 import java.util.Map;
 
 public interface JdbcTemplater extends Serializable {
   static String getTableName(FeatureSetProto.FeatureSetSpec featureSetSpec) {
-    System.out.println(
-        "featureSetSpec.getProject()"
-            + featureSetSpec.getProject()
-            + "featureSetSpec.getName()"
-            + featureSetSpec.getName());
-
     return String.format("%s_%s", featureSetSpec.getProject(), featureSetSpec.getName())
         .replaceAll("-", "_");
   }
 
-  String getTableCreationSql(FeatureSetProto.FeatureSetSpec featureSetSpec);
+  static String getTableNameFromFeatureSet(String featureSet) {
+    String tablename = featureSet.replaceAll("/", "_");
+    return tablename.replaceAll("-", "_");
+  }
 
-  String getTableMigrationSql(
-      FeatureSetProto.FeatureSetSpec featureSetSpec, Map<String, String> existingColumns);
+  Map<String, String> getRequiredColumns();
 
-  String getFeatureRowInsertSql(FeatureSetProto.FeatureSetSpec featureSetSpec);
+  String getTableCreationSql(JdbcConfig config);
 
-  Map<String, String> getRequiredColumns(FeatureSetProto.FeatureSetSpec featureSet);
+  String getFeatureRowInsertSql(String tableName);
 }
