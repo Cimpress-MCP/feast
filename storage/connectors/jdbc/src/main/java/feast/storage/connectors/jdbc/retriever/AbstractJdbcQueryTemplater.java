@@ -20,6 +20,7 @@ import com.google.protobuf.Duration;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
+import feast.storage.connectors.jdbc.snowflake.TimestampLimits;
 import io.grpc.Status;
 import java.io.IOException;
 import java.sql.*;
@@ -77,26 +78,14 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
     return entityTable;
   }
 
-  private class TimestampLimitResult {
-
-    public Timestamp min;
-    public Timestamp max;
-
-    public TimestampLimitResult(Timestamp min, Timestamp max) {
-      this.min = min;
-      this.max = max;
-    }
-  }
-
   @Override
   public Map<String, Timestamp> getTimestampLimits(String entityTableWithRowCountName) {
     String timestampLimitSqlQuery = this.createTimestampLimitQuery(entityTableWithRowCountName);
     Map<String, Timestamp> timestampLimits = new HashMap<>();
-    TimestampLimitResult result =
+    TimestampLimits result =
         jdbcTemplate.queryForObject(
             timestampLimitSqlQuery,
-            (rs, rownum) ->
-                new TimestampLimitResult(rs.getTimestamp("MIN"), rs.getTimestamp("MAX")));
+            (rs, rownum) -> new TimestampLimits(rs.getTimestamp("MIN"), rs.getTimestamp("MAX")));
     timestampLimits.putIfAbsent("min", result.min);
     timestampLimits.putIfAbsent("max", result.max);
     return timestampLimits;
@@ -257,13 +246,24 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
       String maxTimestamp)
       throws IOException;
 
-  //TODO: jdbcTemplate query as a list
   protected List<String> getEntityTableColumns(String entityTableName) {
     String columnNameQuery = String.format("SELECT * FROM %s WHERE 1 = 0", entityTableName);
-    List<String> resultMap = jdbcTemplate.queryForList(columnNameQuery, String.class);
-    resultMap.remove("event_timestamp");
-    resultMap.remove("row_number");
-    return resultMap;
+    List<String> entityTableColumns =
+        jdbcTemplate.query(
+            columnNameQuery,
+            rs -> {
+              ResultSetMetaData rsmd = rs.getMetaData();
+              List<String> entityTableColumns1 = new ArrayList<>();
+              for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+                String column = rsmd.getColumnName(i);
+                if ("event_timestamp".equals(column) || "row_number".equals(column)) {
+                  continue;
+                }
+                entityTableColumns1.add(column);
+              }
+              return entityTableColumns1;
+            });
+    return entityTableColumns;
   }
   /**
    * @param featureSetInfos List of FeatureSetInfos containing information about the feature set

@@ -101,7 +101,7 @@ public class ServingServiceConfig {
     switch (className) {
       case "net.snowflake.client.jdbc.SnowflakeDriver":
         SnowflakeQueryTemplater snowflakeQueryTemplater =
-            new SnowflakeQueryTemplater(config, jdbcTemplate(feastProperties));
+            new SnowflakeQueryTemplater(config, this.createJdbcTemplate(feastProperties));
         return JdbcHistoricalRetriever.create(config, snowflakeQueryTemplater);
       default:
         throw new IllegalArgumentException(
@@ -112,24 +112,26 @@ public class ServingServiceConfig {
   }
 
   @Bean
-  public DataSource dataSource(FeastProperties feastProperties) {
+  public DataSource createDataSource(FeastProperties feastProperties) {
     FeastProperties.Store store = feastProperties.getActiveStore();
     Map<String, String> config = store.getConfig();
-    String driverClassName = config.get("class_name");
     Properties dsProperties = new Properties();
-    //TODO: do mapping with snowflake config
-    dsProperties.putAll(config);
+    dsProperties.put("user", config.get("username"));
+    dsProperties.put("password", config.get("password"));
+    dsProperties.put("db", config.get("database"));
+    dsProperties.put("schema", config.get("schema"));
+    dsProperties.put("role", config.get("role"));
     HikariConfig hkConfig = new HikariConfig();
     hkConfig.setMaximumPoolSize(100);
-    hkConfig.setDriverClassName(driverClassName);
+    hkConfig.setDriverClassName(config.get("class_name"));
+    hkConfig.setJdbcUrl(config.get("url"));
     hkConfig.setDataSourceProperties(dsProperties);
-    final HikariDataSource ds = new HikariDataSource(hkConfig);
-    return ds;
+    return new HikariDataSource(hkConfig);
   }
 
   @Bean
-  public JdbcTemplate jdbcTemplate(FeastProperties feastProperties) {
-    return new JdbcTemplate(dataSource(feastProperties));
+  public JdbcTemplate createJdbcTemplate(FeastProperties feastProperties) {
+    return new JdbcTemplate(this.createDataSource(feastProperties));
   }
 
   private void validateJobServicePresence(JobService jobService) {
