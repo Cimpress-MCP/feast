@@ -77,18 +77,15 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   @Override
   protected List<String> createLoadEntityQuery(String destinationTable, String entitySourceUri) {
     List<String> queries = new ArrayList<>();
-    String csvFormatQuey =
-        String.format(
-            "create or replace file format CSV_format type = 'CSV' field_delimiter = ',' skip_header=1;");
     String copyIntoDestTable =
         String.format(
-            "COPY INTO %s FROM '%s' FILE_FORMAT = CSV_format on_error = 'skip_file' storage_integration = %s;",
+            "COPY INTO %s FROM '%s' FILE_FORMAT = (type = 'CSV' field_delimiter = ',' skip_header=1) on_error = 'skip_file' storage_integration = %s;",
             destinationTable, entitySourceUri, this.storageIntegration);
     String addRowNum =
         String.format(
             "CREATE OR REPLACE TABLE %s as SELECT *, ROW_NUMBER() OVER (ORDER BY 1) AS row_number FROM %s;",
             destinationTable, destinationTable);
-    String[] queryArray = new String[] {csvFormatQuey, copyIntoDestTable, addRowNum};
+    String[] queryArray = new String[] {copyIntoDestTable, addRowNum};
     queries.addAll(Arrays.asList(queryArray));
     //    System.out.println(String.format("Entity Table: %s", destinationTable));
     return queries;
