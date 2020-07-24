@@ -79,22 +79,20 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
   }
 
   @Override
-  public Map<String, Timestamp> getTimestampLimits(String entityTableWithRowCountName) {
+  public TimestampLimits getTimestampLimits(String entityTableWithRowCountName) {
     String timestampLimitSqlQuery = this.createTimestampLimitQuery(entityTableWithRowCountName);
     Map<String, Timestamp> timestampLimits = new HashMap<>();
     TimestampLimits result =
         jdbcTemplate.queryForObject(
             timestampLimitSqlQuery,
             (rs, rownum) -> new TimestampLimits(rs.getTimestamp("MIN"), rs.getTimestamp("MAX")));
-    timestampLimits.putIfAbsent("min", result.min);
-    timestampLimits.putIfAbsent("max", result.max);
-    return timestampLimits;
+    return result;
   }
 
   @Override
   public List<String> generateFeatureSetQueries(
       String entityTableWithRowCountName,
-      Map<String, Timestamp> timestampLimits,
+      TimestampLimits timestampLimits,
       List<FeatureSetQueryInfo> featureSetQueryInfos) {
     List<String> featureSetQueries = new ArrayList<>();
     try {
@@ -103,8 +101,8 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
             this.createFeatureSetPointInTimeQuery(
                 featureSetInfo,
                 entityTableWithRowCountName,
-                timestampLimits.get("min").toString(),
-                timestampLimits.get("max").toString());
+                timestampLimits.getMin().toString(),
+                timestampLimits.getMax().toString());
         featureSetQueries.add(query);
       }
     } catch (IOException e) {
