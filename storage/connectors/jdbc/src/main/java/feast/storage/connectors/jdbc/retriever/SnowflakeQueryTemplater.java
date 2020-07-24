@@ -70,7 +70,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     // TODO: update to temporary table
     createEntityTableRowCountQueries.add(
         String.format(
-            "CREATE OR REPLACE TEMPORARY TABLE %s AS (SELECT %s FROM %s WHERE 1 = 2);",
+            "CREATE TEMPORARY TABLE %s AS (SELECT %s FROM %s WHERE 1 = 2);",
             destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
     createEntityTableRowCountQueries.add(
         String.format("ALTER TABLE %s ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
