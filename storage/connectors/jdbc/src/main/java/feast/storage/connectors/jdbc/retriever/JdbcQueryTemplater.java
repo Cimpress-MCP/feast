@@ -19,9 +19,8 @@ package feast.storage.connectors.jdbc.retriever;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
-import java.sql.Timestamp;
+import feast.storage.connectors.jdbc.snowflake.TimestampLimits;
 import java.util.List;
-import java.util.Map;
 
 public interface JdbcQueryTemplater {
 
@@ -58,7 +57,7 @@ public interface JdbcQueryTemplater {
    * @param entityTableWithRowCountName entity table name
    * @return a timestamp bounds map with max, and min as keys
    */
-  Map<String, Timestamp> getTimestampLimits(String entityTableWithRowCountName);
+  TimestampLimits getTimestampLimits(String entityTableWithRowCountName);
 
   /**
    * Generate the queries for point in time correctness join of data for the given feature sets to
@@ -72,7 +71,7 @@ public interface JdbcQueryTemplater {
    */
   List<String> generateFeatureSetQueries(
       String entityTableWithRowCountName,
-      Map<String, Timestamp> timestampLimits,
+      TimestampLimits timestampLimits,
       List<FeatureSetQueryInfo> featureSetQueryInfos);
 
   /**

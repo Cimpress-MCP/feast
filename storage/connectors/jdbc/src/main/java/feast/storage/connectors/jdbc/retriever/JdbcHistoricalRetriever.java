@@ -20,6 +20,7 @@ import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
 import feast.storage.api.retriever.HistoricalRetrievalResult;
 import feast.storage.api.retriever.HistoricalRetriever;
+import feast.storage.connectors.jdbc.snowflake.TimestampLimits;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -67,7 +68,7 @@ public class JdbcHistoricalRetriever implements HistoricalRetriever {
         this.queryTemplater.loadEntities(featureSetQueryInfos, fileList, stagingLocation);
 
     // 4. Retrieve the temporal bounds of the entity dataset provided
-    Map<String, Timestamp> timestampLimits =
+    TimestampLimits timestampLimits =
         this.queryTemplater.getTimestampLimits(entityTableWithRowCountName);
 
     // 5. Generate the subqueries
