@@ -32,7 +32,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
   private static final Logger log =
       org.slf4j.LoggerFactory.getLogger(AbstractJdbcQueryTemplater.class);
-  protected static final String EXPORT_FILE_FORMAT = "csv.gz";
+  protected static final String EXPORT_FILE_EXT = "csv.gz";
   private JdbcTemplate jdbcTemplate;
 
   public AbstractJdbcQueryTemplater(Map<String, String> databaseConfig, JdbcTemplate jdbcTemplate) {
@@ -156,15 +156,15 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
     // support stagingUri with and without a trailing slash
     String exportPath;
     if (stagingUri.substring(stagingUri.length() - 1).equals("/")) {
-      exportPath = String.format("%s%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
+      exportPath = String.format("%s%s.%s", stagingUri, resultTable, EXPORT_FILE_EXT);
     } else {
-      exportPath = String.format("%s/%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
+      exportPath = String.format("%s/%s.%s", stagingUri, resultTable, EXPORT_FILE_EXT);
     }
     List<String> exportTableSqlQueries = this.generateExportTableSqlQuery(resultTable, stagingUri);
     for (String query : exportTableSqlQueries) {
       log.debug(
           "Export resulting historical dataset with data format: \n%s \n using query: \n%s",
-          EXPORT_FILE_FORMAT, exportTableSqlQueries);
+          EXPORT_FILE_EXT, exportTableSqlQueries);
       jdbcTemplate.execute(query);
     }
     return exportPath;

@@ -26,6 +26,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   private static final PebbleEngine engine = new PebbleEngine.Builder().build();
+  protected static final String IMPORT_ENTITY_FILE_FORMAT =
+      "(type='CSV' field_delimiter=',' skip_header=1)";
+  protected static final String EXPORT_STAGING_FILE_FORMAT = "(type=csv compression='gzip')";
   private static final String FEATURESET_TEMPLATE_NAME_SNOWFLAKE =
       "templates/single_featureset_pit_join_snowflake.sql";
   private static final String JOIN_TEMPLATE_NAME_SNOWFLAKE =
@@ -67,7 +70,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     // TODO: update to temporary table
     createEntityTableRowCountQueries.add(
         String.format(
-            "CREATE TABLE %s AS (SELECT %s FROM %s WHERE 1 = 2);",
+            "CREATE OR REPLACE TEMPORARY TABLE %s AS (SELECT %s FROM %s WHERE 1 = 2);",
             destinationTable, featureSetTableSelectJoiner, featureSetTableFromJoiner));
     createEntityTableRowCountQueries.add(
         String.format("ALTER TABLE %s ADD COLUMN event_timestamp TIMESTAMP;", destinationTable));
@@ -79,11 +82,11 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     List<String> queries = new ArrayList<>();
     String copyIntoDestTable =
         String.format(
-            "COPY INTO %s FROM '%s' FILE_FORMAT = (type = 'CSV' field_delimiter = ',' skip_header=1) on_error = 'skip_file' storage_integration = %s;",
-            destinationTable, entitySourceUri, this.storageIntegration);
+            "COPY INTO %s FROM '%s' FILE_FORMAT = %s on_error = 'skip_file' storage_integration = %s;",
+            destinationTable, entitySourceUri, IMPORT_ENTITY_FILE_FORMAT, this.storageIntegration);
     String addRowNum =
         String.format(
-            "CREATE OR REPLACE TABLE %s as SELECT *, ROW_NUMBER() OVER (ORDER BY 1) AS row_number FROM %s;",
+            "CREATE OR REPLACE TEMPORARY TABLE %s as (SELECT *, ROW_NUMBER() OVER (ORDER BY 1) AS row_number FROM %s);",
             destinationTable, destinationTable);
     String[] queryArray = new String[] {copyIntoDestTable, addRowNum};
     queries.addAll(Arrays.asList(queryArray));
@@ -145,16 +148,16 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     // support stagingUri with and without a trailing slash
     String exportPath;
     if (stagingUri.substring(stagingUri.length() - 1).equals("/")) {
-      exportPath = String.format("%s%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
+      exportPath = String.format("%s%s.%s", stagingUri, resultTable, EXPORT_FILE_EXT);
     } else {
-      exportPath = String.format("%s/%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
+      exportPath = String.format("%s/%s.%s", stagingUri, resultTable, EXPORT_FILE_EXT);
     }
     List<String> exportTableSqlQueries = new ArrayList<>();
     String copyIntoStageQuery =
         String.format(
-            "COPY INTO '%s' FROM %s file_format = (type=csv compression='gzip')\n"
+            "COPY INTO '%s' FROM %s file_format = %s\n"
                 + "single=true header = true storage_integration = %s;",
-            exportPath, resultTable, this.storageIntegration);
+            exportPath, resultTable, EXPORT_STAGING_FILE_FORMAT, this.storageIntegration);
     String[] queryArray = new String[] {copyIntoStageQuery};
     exportTableSqlQueries.addAll(Arrays.asList(queryArray));
     return exportTableSqlQueries;
