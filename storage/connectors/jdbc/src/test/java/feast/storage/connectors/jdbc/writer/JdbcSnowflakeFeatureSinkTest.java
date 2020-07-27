@@ -91,7 +91,7 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setDatabase(this.database)
                 .setSchema(this.schema)
                 .setWarehouse(this.warehouse)
-                .setTablename(this.tableName)
+                .setTableName(this.tableName)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
 
@@ -133,7 +133,7 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setDatabase(this.database)
                 .setSchema(this.schema)
                 .setWarehouse(this.warehouse)
-                .setTablename(tableName)
+                .setTableName(tableName)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
     List<FeatureRow> featureRows =

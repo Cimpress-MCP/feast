@@ -78,7 +78,7 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
         String.format("WriteFeatureRowToJdbcIO-%s", jobName),
         JdbcIO.<FeatureRowProto.FeatureRow>write()
             .withDataSourceConfiguration(create_dsconfig(this.config))
-            .withStatement(jdbcTemplater.getFeatureRowInsertSql(this.config.getTablename()))
+            .withStatement(jdbcTemplater.getFeatureRowInsertSql(this.config.getTableName()))
             .withBatchSize(batchSize)
             .withPreparedStatementSetter(
                 new JdbcIO.PreparedStatementSetter<FeatureRowProto.FeatureRow>() {
