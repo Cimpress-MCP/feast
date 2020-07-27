@@ -20,20 +20,23 @@ import com.google.protobuf.Duration;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
-import feast.storage.connectors.jdbc.connection.JdbcConnectionProvider;
+import feast.storage.connectors.jdbc.snowflake.TimestampLimits;
 import io.grpc.Status;
 import java.io.IOException;
 import java.sql.*;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
-  protected static final String EXPORT_FILE_FORMAT = "csv.gz";
-  private Connection connection;
+  private static final Logger log =
+      org.slf4j.LoggerFactory.getLogger(AbstractJdbcQueryTemplater.class);
+  protected static final String EXPORT_FILE_EXT = "csv.gz";
+  private JdbcTemplate jdbcTemplate;
 
-  public AbstractJdbcQueryTemplater(
-      Map<String, String> databaseConfig, JdbcConnectionProvider connectionProvider) {
-    this.connection = connectionProvider.getConnection();
+  public AbstractJdbcQueryTemplater(Map<String, String> databaseConfig, JdbcTemplate jdbcTemplate) {
+    this.jdbcTemplate = jdbcTemplate;
   }
 
   protected String createTempTableName() {
@@ -76,33 +79,20 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
   }
 
   @Override
-  public Map<String, Timestamp> getTimestampLimits(String entityTableWithRowCountName) {
+  public TimestampLimits getTimestampLimits(String entityTableWithRowCountName) {
     String timestampLimitSqlQuery = this.createTimestampLimitQuery(entityTableWithRowCountName);
     Map<String, Timestamp> timestampLimits = new HashMap<>();
-    Statement statement;
-    try {
-      statement = this.connection.createStatement();
-      ResultSet rs = statement.executeQuery(timestampLimitSqlQuery);
-
-      while (rs.next()) {
-        Timestamp min_ts = rs.getTimestamp("MIN"); // Get minimum timestamp
-        Timestamp max_ts = rs.getTimestamp("MAX"); // Get maximum timestamp
-        timestampLimits.putIfAbsent("min", min_ts);
-        timestampLimits.putIfAbsent("max", max_ts);
-      }
-      return timestampLimits;
-    } catch (SQLException e) {
-      throw new RuntimeException(
-          String.format(
-              "Could not query entity table %s for timestamp bounds.", entityTableWithRowCountName),
-          e);
-    }
+    TimestampLimits result =
+        jdbcTemplate.queryForObject(
+            timestampLimitSqlQuery,
+            (rs, rownum) -> new TimestampLimits(rs.getTimestamp("MIN"), rs.getTimestamp("MAX")));
+    return result;
   }
 
   @Override
   public List<String> generateFeatureSetQueries(
       String entityTableWithRowCountName,
-      Map<String, Timestamp> timestampLimits,
+      TimestampLimits timestampLimits,
       List<FeatureSetQueryInfo> featureSetQueryInfos) {
     List<String> featureSetQueries = new ArrayList<>();
     try {
@@ -111,8 +101,8 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
             this.createFeatureSetPointInTimeQuery(
                 featureSetInfo,
                 entityTableWithRowCountName,
-                timestampLimits.get("min").toString(),
-                timestampLimits.get("max").toString());
+                timestampLimits.getMin().toString(),
+                timestampLimits.getMax().toString());
         featureSetQueries.add(query);
       }
     } catch (IOException e) {
@@ -136,45 +126,28 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
     for (int i = 0; i < featureSetQueries.size(); i++) {
       String featureSetTempTable = createTempTableName();
       String featureSetQuery = featureSetQueries.get(i);
-
-      Statement statement;
-      try {
-        statement = this.connection.createStatement();
-        String query =
-            String.format("CREATE TABLE %s AS (%s)", featureSetTempTable, featureSetQuery);
-        statement.executeUpdate(query);
-        featureSetQueryInfos.get(i).setJoinedTable(featureSetTempTable);
-      } catch (SQLException e) {
-        throw new RuntimeException(
-            String.format(
-                "Could not create single staged point in time table for feature set: %s.",
-                featureSetQueryInfos.get(i).getName()),
-            e);
-      }
+      String query =
+          String.format("CREATE TEMPORARY TABLE %s AS (%s)", featureSetTempTable, featureSetQuery);
+      log.debug(
+          "Create single staged point in time table for feature set: %s.",
+          featureSetQueryInfos.get(i).getName());
+      jdbcTemplate.execute(query);
+      featureSetQueryInfos.get(i).setJoinedTable(featureSetTempTable);
     }
     // Generate and run a join query to collect the outputs of all the
     // subqueries into a single table.
-    List<String> entityTableColumnNames =
-        this.getEntityTableColumns(this.connection, entityTableName);
+    List<String> entityTableColumnNames = this.getEntityTableColumns(entityTableName);
 
     String joinQuery =
         this.createJoinQuery(featureSetQueryInfos, entityTableColumnNames, entityTableName);
-
     String resultTable = createTempTableName();
-
-    Statement statement;
-    try {
-      statement = this.connection.createStatement();
-      String resultTableQuery = String.format("CREATE TABLE %s AS (%s)", resultTable, joinQuery);
-      statement.executeUpdate(resultTableQuery);
-      return resultTable;
-    } catch (SQLException e) {
-      throw new RuntimeException(
-          String.format(
-              "Failed to create resulting combined point-in-time joined table.\nDestination table: %s\nQuery: %s",
-              resultTable, joinQuery),
-          e);
-    }
+    String resultTableQuery =
+        String.format("CREATE TEMPORARY TABLE %s AS (%s)", resultTable, joinQuery);
+    log.debug(
+        "Create resulting combined point-in-time joined table.\nDestination table: %s\nQuery: %s",
+        resultTable, joinQuery);
+    jdbcTemplate.execute(resultTableQuery);
+    return resultTable;
   }
 
   @Override
@@ -183,24 +156,18 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
     // support stagingUri with and without a trailing slash
     String exportPath;
     if (stagingUri.substring(stagingUri.length() - 1).equals("/")) {
-      exportPath = String.format("%s%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
+      exportPath = String.format("%s%s.%s", stagingUri, resultTable, EXPORT_FILE_EXT);
     } else {
-      exportPath = String.format("%s/%s.%s", stagingUri, resultTable, EXPORT_FILE_FORMAT);
+      exportPath = String.format("%s/%s.%s", stagingUri, resultTable, EXPORT_FILE_EXT);
     }
     List<String> exportTableSqlQueries = this.generateExportTableSqlQuery(resultTable, stagingUri);
-    try {
-      Statement statement = this.connection.createStatement();
-      for (String query : exportTableSqlQueries) {
-        statement.execute(query);
-      }
-      return exportPath;
-    } catch (SQLException e) {
-      throw new RuntimeException(
-          String.format(
-              "Could not export resulting historical dataset with data format: \n%s \n using query: \n%s",
-              EXPORT_FILE_FORMAT, exportTableSqlQueries),
-          e);
+    for (String query : exportTableSqlQueries) {
+      log.debug(
+          "Export resulting historical dataset with data format: \n%s \n using query: \n%s",
+          EXPORT_FILE_EXT, exportTableSqlQueries);
+      jdbcTemplate.execute(query);
     }
+    return exportPath;
   }
 
   /*
@@ -211,20 +178,13 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
     String entityTableWithRowCountName = createTempTableName();
     List<String> entityTableRowCountQueries =
         this.createEntityTableRowCountQuery(entityTableWithRowCountName, featureSetQueryInfos);
-    Statement statement;
-    try {
-      statement = this.connection.createStatement();
-      for (String query : entityTableRowCountQueries) {
-        statement.executeUpdate(query);
-      }
-      return entityTableWithRowCountName;
-    } catch (SQLException e) {
-      throw new RuntimeException(
-          String.format(
-              "Could not create staged entity table with columns from feature sets %s.",
-              featureSetQueryInfos.toString()),
-          e);
+    for (String query : entityTableRowCountQueries) {
+      log.debug(
+          "Create staged entity table with columns from feature sets %s.",
+          featureSetQueryInfos.toString());
+      jdbcTemplate.execute(query);
     }
+    return entityTableWithRowCountName;
   }
   /**
    * Get the query for retrieving the earliest and latest timestamps in the entity dataset.
@@ -247,19 +207,12 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
 
   protected void loadEntitiesFromFile(String entityTable, List<String> entitySourceUris) {
     for (String entitySourceUri : entitySourceUris) {
-      Statement statement;
       List<String> loadEntitiesQueries = this.createLoadEntityQuery(entityTable, entitySourceUri);
-      try {
-        statement = this.connection.createStatement();
-        for (String query : loadEntitiesQueries) {
-          statement.execute(query);
-        }
-      } catch (SQLException e) {
-        throw new RuntimeException(
-            String.format(
-                "Could not load entity data from %s into table %s using query: \n%s",
-                entitySourceUri, entityTable, loadEntitiesQueries),
-            e);
+      for (String query : loadEntitiesQueries) {
+        log.debug(
+            "Load entity data from %s into table %s using query: \n%s",
+            entitySourceUri, entityTable, loadEntitiesQueries);
+        jdbcTemplate.execute(query);
       }
     }
   }
@@ -291,25 +244,23 @@ public abstract class AbstractJdbcQueryTemplater implements JdbcQueryTemplater {
       String maxTimestamp)
       throws IOException;
 
-  protected List<String> getEntityTableColumns(Connection conn, String entityTableName) {
-    List<String> entityTableColumns = new ArrayList<>();
-    try {
-      Statement st = conn.createStatement();
-      ResultSet rs =
-          st.executeQuery(String.format("SELECT * FROM %s WHERE 1 = 0", entityTableName));
-      ResultSetMetaData rsmd = rs.getMetaData();
-      for (int i = 1; i <= rsmd.getColumnCount(); i++) {
-        String column = rsmd.getColumnName(i);
-        if ("event_timestamp".equals(column) || "row_number".equals(column)) {
-          continue;
-        }
-        entityTableColumns.add(column);
-      }
-    } catch (SQLException e) {
-      throw new RuntimeException(
-          String.format("Could not determine columns for table %s", entityTableName), e);
-    }
-
+  protected List<String> getEntityTableColumns(String entityTableName) {
+    String columnNameQuery = String.format("SELECT * FROM %s WHERE 1 = 0", entityTableName);
+    List<String> entityTableColumns =
+        jdbcTemplate.query(
+            columnNameQuery,
+            rs -> {
+              ResultSetMetaData rsmd = rs.getMetaData();
+              List<String> entityTableColumns1 = new ArrayList<>();
+              for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+                String column = rsmd.getColumnName(i);
+                if ("event_timestamp".equals(column) || "row_number".equals(column)) {
+                  continue;
+                }
+                entityTableColumns1.add(column);
+              }
+              return entityTableColumns1;
+            });
     return entityTableColumns;
   }
   /**

@@ -49,6 +49,7 @@ public class FeastProperties {
    */
   @Autowired
   public FeastProperties(BuildProperties buildProperties) {
+	  System.out.println("inside Autowired");
     setVersion(buildProperties.getVersion());
   }
 
@@ -230,6 +231,7 @@ public class FeastProperties {
      */
     public StoreProto.Store toProto()
         throws InvalidProtocolBufferException, JsonProcessingException {
+    	System.out.println("at toProto");
       List<Subscription> subscriptions = getSubscriptions();
       List<StoreProto.Store.Subscription> subscriptionProtos =
           subscriptions.stream().map(Subscription::toProto).collect(Collectors.toList());
@@ -241,7 +243,7 @@ public class FeastProperties {
               .addAllSubscriptions(subscriptionProtos);
 
       ObjectMapper jsonWriter = new ObjectMapper();
-
+      System.out.println(" before case toProto");
       // TODO: All of this logic should be moved to the store layer. Only a Map<String, String>
       // should be sent to a store and it should do its own validation.
       switch (StoreProto.Store.StoreType.valueOf(type)) {
@@ -272,6 +274,7 @@ public class FeastProperties {
         default:
           throw new InvalidProtocolBufferException("Invalid store set");
       }
+      
     }
 
     /**

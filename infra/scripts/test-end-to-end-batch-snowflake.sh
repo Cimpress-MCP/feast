@@ -96,15 +96,17 @@ feast:
     - name: historical
       type: JDBC
       config:
-        url: jdbc:snowflake://ry42518.us-east-2.aws.snowflakecomputing.com
+        url: jdbc:snowflake://kia19877.snowflakecomputing.com
         class_name: net.snowflake.client.jdbc.SnowflakeDriver
         batch_size: 1
-        username: CHIZHANG
-        password: 123456Pw
+        username: SWATIARORA
+        password: Vistaprint1@
         staging_location: ${JOBS_STAGING_LOCATION}
         database: DEMO_DB
         schema: PUBLIC
         warehouse: COMPUTE_WH
+        role: ACCOUNTADMIN
+        tablename: feast_features
       subscriptions:
         - name: "*"
           project: "*"
