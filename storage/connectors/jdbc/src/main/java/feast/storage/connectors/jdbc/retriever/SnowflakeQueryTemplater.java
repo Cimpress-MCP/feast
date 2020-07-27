@@ -77,7 +77,6 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     return createEntityTableRowCountQueries;
   }
 
-  //TODO: File -> URI
   @Override
   protected List<String> createLoadEntityQuery(String destinationTable, String entitySourceUri) {
     List<String> queries = new ArrayList<>();
