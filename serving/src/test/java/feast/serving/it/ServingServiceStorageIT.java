@@ -18,6 +18,12 @@ package feast.serving.it;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import feast.proto.serving.ServingAPIProto.*;
+import feast.proto.serving.ServingAPIProto.DatasetSource.FileSource;
+import feast.proto.serving.ServingServiceGrpc;
+import feast.proto.serving.ServingServiceGrpc.ServingServiceBlockingStub;
+import io.grpc.Channel;
+import io.grpc.ManagedChannelBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -46,6 +52,7 @@ public class ServingServiceStorageIT {
   static final int CORE_START_MAX_WAIT_TIME_IN_MINUTES = 3;
   static final int FEAST_CORE_PORT = 6565;
   static final int FEAST_SERVING_PORT = 6566;
+  static final String STAGING_LOCATION = "s3://feast-snowflake-staging/test/";
 
   @DynamicPropertySource
   static void initialize(DynamicPropertyRegistry registry) throws UnknownHostException {
@@ -88,5 +95,40 @@ public class ServingServiceStorageIT {
   @Test
   public void testdummy() {
     assertTrue(1 == 1);
+  }
+
+  @Test
+  public void shouldRetrieveFromSnowflake() {
+    String entitySourceUri = "s3://feast-snowflake-staging/test/entity_tables/entities_3dates.csv";
+    FileSource fileSource =
+        FileSource.newBuilder()
+            .addFileUris(entitySourceUri)
+            .setDataFormat(DataFormat.DATA_FORMAT_CSV)
+            .build();
+    FeatureReference pr4_fs_fr1 =
+        FeatureReference.newBuilder()
+            .setName("feature_1")
+            .setFeatureSet("feature_set")
+            .setProject("myproject4")
+            .build();
+    GetBatchFeaturesRequest getBatchFeaturesRequest =
+        GetBatchFeaturesRequest.newBuilder()
+            .addFeatures(0, pr4_fs_fr1)
+            .setDatasetSource(DatasetSource.newBuilder().setFileSource(fileSource).build())
+            .build();
+
+    // TODO: Serving
+    ServingServiceBlockingStub servingStub = this.getServingServiceStub(FEAST_SERVING_PORT);
+    GetBatchFeaturesResponse response = servingStub.getBatchFeatures(getBatchFeaturesRequest);
+    System.out.println(response);
+    assertTrue(1 == 1);
+  }
+
+  public static ServingServiceGrpc.ServingServiceBlockingStub getServingServiceStub(
+      int feastServingPort) {
+    Channel secureChannel =
+        ManagedChannelBuilder.forAddress("localhost", feastServingPort).usePlaintext().build();
+
+    return ServingServiceGrpc.newBlockingStub(secureChannel);
   }
 }
