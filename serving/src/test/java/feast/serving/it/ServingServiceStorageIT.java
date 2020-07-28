@@ -17,24 +17,13 @@
 package feast.serving.it;
 
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.testcontainers.containers.wait.strategy.Wait.forHttp;
 
-import feast.proto.serving.ServingAPIProto.GetOnlineFeaturesRequest;
-import feast.proto.serving.ServingAPIProto.GetOnlineFeaturesResponse;
-import feast.proto.serving.ServingServiceGrpc.ServingServiceBlockingStub;
-import feast.proto.types.ValueProto.Value;
-import io.grpc.StatusRuntimeException;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
-
 import org.junit.ClassRule;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -48,42 +37,39 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-
 @ActiveProfiles("it")
 @SpringBootTest()
 @Testcontainers
 public class ServingServiceStorageIT {
 
-	
-	  static final int REDIS_PORT = 6379;
-	  static final String CORE = "core_1";
-	  static final int CORE_START_MAX_WAIT_TIME_IN_MINUTES = 3;
-	  static final int FEAST_CORE_PORT = 6565;
-	  static final int FEAST_SERVING_PORT = 6566;
-	
-	@DynamicPropertySource
-	  static void initialize(DynamicPropertyRegistry registry) throws UnknownHostException {
-		
-		System.out.print("initializing");
-	    registry.add("feast.stores[0].name", () -> "online");
-	    registry.add("feast.stores[0].type", () -> "REDIS");
-	    // Redis needs to accessible by both core and serving, hence using host address
-	    registry.add(
-	        "feast.stores[0].config.host",
-	        () -> {
-	          try {
-	            return InetAddress.getLocalHost().getHostAddress();
-	          } catch (UnknownHostException e) {
-	            // TODO Auto-generated catch block
-	            e.printStackTrace();
-	            return "";
-	          }
-	        });
-	    registry.add("feast.stores[0].config.port", () -> REDIS_PORT);
-	    registry.add("feast.stores[0].subscriptions[0].name", () -> "*");
-	    registry.add("feast.stores[0].subscriptions[0].project", () -> "*");
-	}
+  static final int REDIS_PORT = 6379;
+  static final String CORE = "core_1";
+  static final int CORE_START_MAX_WAIT_TIME_IN_MINUTES = 3;
+  static final int FEAST_CORE_PORT = 6565;
+  static final int FEAST_SERVING_PORT = 6566;
 
+  @DynamicPropertySource
+  static void initialize(DynamicPropertyRegistry registry) throws UnknownHostException {
+
+    System.out.print("initializing");
+    registry.add("feast.stores[0].name", () -> "online");
+    registry.add("feast.stores[0].type", () -> "REDIS");
+    // Redis needs to accessible by both core and serving, hence using host address
+    registry.add(
+        "feast.stores[0].config.host",
+        () -> {
+          try {
+            return InetAddress.getLocalHost().getHostAddress();
+          } catch (UnknownHostException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            return "";
+          }
+        });
+    registry.add("feast.stores[0].config.port", () -> REDIS_PORT);
+    registry.add("feast.stores[0].subscriptions[0].name", () -> "*");
+    registry.add("feast.stores[0].subscriptions[0].project", () -> "*");
+  }
 
   @ClassRule @Container
   public static DockerComposeContainer environment =
@@ -106,4 +92,3 @@ public class ServingServiceStorageIT {
     assertTrue(1 == 1);
   }
 }
-

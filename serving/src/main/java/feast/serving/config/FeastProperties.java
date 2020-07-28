@@ -49,7 +49,7 @@ public class FeastProperties {
    */
   @Autowired
   public FeastProperties(BuildProperties buildProperties) {
-	  System.out.println("inside Autowired");
+    System.out.println("inside Autowired");
     setVersion(buildProperties.getVersion());
   }
 
@@ -231,7 +231,7 @@ public class FeastProperties {
      */
     public StoreProto.Store toProto()
         throws InvalidProtocolBufferException, JsonProcessingException {
-    	System.out.println("at toProto");
+      System.out.println("at toProto");
       List<Subscription> subscriptions = getSubscriptions();
       List<StoreProto.Store.Subscription> subscriptionProtos =
           subscriptions.stream().map(Subscription::toProto).collect(Collectors.toList());
@@ -274,7 +274,6 @@ public class FeastProperties {
         default:
           throw new InvalidProtocolBufferException("Invalid store set");
       }
-      
     }
 
     /**

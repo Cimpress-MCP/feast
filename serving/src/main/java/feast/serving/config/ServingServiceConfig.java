@@ -93,7 +93,6 @@ public class ServingServiceConfig {
     return servingService;
   }
 
- 
   public HistoricalRetriever createJdbcHistoricalRetriever(FeastProperties feastProperties) {
     FeastProperties.Store store = feastProperties.getActiveStore();
     Map<String, String> config = store.getConfig();
@@ -111,7 +110,6 @@ public class ServingServiceConfig {
     }
   }
 
-
   public DataSource createDataSource(FeastProperties feastProperties) {
     FeastProperties.Store store = feastProperties.getActiveStore();
     Map<String, String> config = store.getConfig();
@@ -128,7 +126,6 @@ public class ServingServiceConfig {
     hkConfig.setDataSourceProperties(dsProperties);
     return new HikariDataSource(hkConfig);
   }
-
 
   public JdbcTemplate createJdbcTemplate(FeastProperties feastProperties) {
     return new JdbcTemplate(this.createDataSource(feastProperties));
