@@ -16,6 +16,7 @@
  */
 package feast.serving.it;
 
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
@@ -33,7 +34,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
-import java.util.Map;
+
 import org.junit.ClassRule;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -48,11 +49,11 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 
-
 @ActiveProfiles("it")
 @SpringBootTest()
 @Testcontainers
 public class ServingServiceStorageIT {
+
 	
 	  static final int REDIS_PORT = 6379;
 	  static final String CORE = "core_1";
@@ -83,6 +84,7 @@ public class ServingServiceStorageIT {
 	    registry.add("feast.stores[0].subscriptions[0].project", () -> "*");
 	}
 
+
   @ClassRule @Container
   public static DockerComposeContainer environment =
       new DockerComposeContainer(
@@ -95,13 +97,13 @@ public class ServingServiceStorageIT {
 
   @BeforeAll
   static void globalSetup() throws IOException, InitializationError, InterruptedException {
-	  System.out.print("global setup");
-  }
-  
-  @Test
-  public void testdummy() {
-	  assertTrue(1==1);
+
+    System.out.print("global setup");
   }
 
- 
+  @Test
+  public void testdummy() {
+    assertTrue(1 == 1);
+  }
 }
+

@@ -111,7 +111,7 @@ public class ServingServiceConfig {
     }
   }
 
- 
+
   public DataSource createDataSource(FeastProperties feastProperties) {
     FeastProperties.Store store = feastProperties.getActiveStore();
     Map<String, String> config = store.getConfig();

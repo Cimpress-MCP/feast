@@ -106,7 +106,12 @@ feast:
         schema: PUBLIC
         warehouse: COMPUTE_WH
         role: ACCOUNTADMIN
+<<<<<<< HEAD
         tablename: feast_features
+=======
+        table_name: feast_features
+        storage_integration: s3_int
+>>>>>>> 6720a3d1add02942297b69421b8f4474300f9c12
       subscriptions:
         - name: "*"
           project: "*"

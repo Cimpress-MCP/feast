@@ -3,7 +3,7 @@ version: '3'
 services:
   core:
     image: gcr.io/kf-feast/feast-core:latest
-    volumes: 
+    volumes:
       - ./core-it.yml:/etc/feast/application.yml
     environment:
       DB_HOST: db
@@ -18,7 +18,7 @@ services:
       - -jar
       - /opt/feast/feast-core.jar
       - --spring.config.location=classpath:/application.yml,file:/etc/feast/application.yml
-  
+
   kafka:
     image: confluentinc/cp-kafka:5.2.1
     environment:
@@ -46,7 +46,7 @@ services:
       POSTGRES_PASSWORD: password
     ports:
       - "5432:5432"
-      
+
   redis:
     image: redis:5-alpine
     ports:

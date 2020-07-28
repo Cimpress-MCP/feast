@@ -40,7 +40,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   public SnowflakeQueryTemplater(Map<String, String> databaseConfig, JdbcTemplate jdbcTemplate) {
     super(databaseConfig, jdbcTemplate);
     this.storageIntegration = databaseConfig.get("storage_integration");
-    this.feastTable = databaseConfig.get("table");
+    this.feastTable = databaseConfig.get("table_name");
   }
 
   @Override
@@ -77,7 +77,6 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
     return createEntityTableRowCountQueries;
   }
 
-  //TODO: File -> URI
   @Override
   protected List<String> createLoadEntityQuery(String destinationTable, String entitySourceUri) {
     List<String> queries = new ArrayList<>();

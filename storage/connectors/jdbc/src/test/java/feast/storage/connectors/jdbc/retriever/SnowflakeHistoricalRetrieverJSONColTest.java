@@ -62,7 +62,8 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
     snowflakeConfig.put("staging_location", staging_location);
     snowflakeConfig.put("role", SFRole);
     snowflakeConfig.put("storage_integration", SFStorageIntegration);
-    snowflakeConfig.put("table", SFTable);
+    snowflakeConfig.put("table_name", SFTable);
+
     Properties dsProperties = new Properties();
     dsProperties.put("user", this.snowflakeConfig.get("username"));
     dsProperties.put("password", this.snowflakeConfig.get("password"));
