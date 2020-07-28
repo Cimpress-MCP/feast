@@ -20,13 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import feast.proto.serving.ServingAPIProto.*;
 import feast.proto.serving.ServingAPIProto.DatasetSource.FileSource;
-import feast.proto.serving.ServingServiceGrpc;
 import feast.proto.serving.ServingServiceGrpc.ServingServiceBlockingStub;
-import io.grpc.Channel;
-import io.grpc.ManagedChannelBuilder;
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
 import org.junit.ClassRule;
@@ -43,7 +39,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @ActiveProfiles("it")
-@SpringBootTest()
+@SpringBootTest(properties = {"feast.active_store=historical_snowflake"})
 @Testcontainers
 public class ServingServiceStorageIT {
 
@@ -52,29 +48,28 @@ public class ServingServiceStorageIT {
   static final int CORE_START_MAX_WAIT_TIME_IN_MINUTES = 3;
   static final int FEAST_CORE_PORT = 6565;
   static final int FEAST_SERVING_PORT = 6566;
-  static final String STAGING_LOCATION = "s3://feast-snowflake-staging/test/";
 
   @DynamicPropertySource
   static void initialize(DynamicPropertyRegistry registry) throws UnknownHostException {
-
-    System.out.print("initializing");
-    registry.add("feast.stores[0].name", () -> "online");
-    registry.add("feast.stores[0].type", () -> "REDIS");
+    //
+    //    System.out.print("initializing");
+    //    registry.add("feast.stores[0].name", () -> "online");
+    //    registry.add("feast.stores[0].type", () -> "REDIS");
     // Redis needs to accessible by both core and serving, hence using host address
-    registry.add(
-        "feast.stores[0].config.host",
-        () -> {
-          try {
-            return InetAddress.getLocalHost().getHostAddress();
-          } catch (UnknownHostException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            return "";
-          }
-        });
-    registry.add("feast.stores[0].config.port", () -> REDIS_PORT);
-    registry.add("feast.stores[0].subscriptions[0].name", () -> "*");
-    registry.add("feast.stores[0].subscriptions[0].project", () -> "*");
+    //    registry.add(
+    //        "feast.stores[0].config.host",
+    //        () -> {
+    //          try {
+    //            return InetAddress.getLocalHost().getHostAddress();
+    //          } catch (UnknownHostException e) {
+    //            // TODO Auto-generated catch block
+    //            e.printStackTrace();
+    //            return "";
+    //          }
+    //        });
+    //    registry.add("feast.stores[0].config.port", () -> REDIS_PORT);
+    //    registry.add("feast.stores[0].subscriptions[0].name", () -> "*");
+    //    registry.add("feast.stores[0].subscriptions[0].project", () -> "*");
   }
 
   @ClassRule @Container
@@ -99,6 +94,7 @@ public class ServingServiceStorageIT {
 
   @Test
   public void shouldRetrieveFromSnowflake() {
+
     String entitySourceUri = "s3://feast-snowflake-staging/test/entity_tables/entities_3dates.csv";
     FileSource fileSource =
         FileSource.newBuilder()
@@ -115,20 +111,18 @@ public class ServingServiceStorageIT {
         GetBatchFeaturesRequest.newBuilder()
             .addFeatures(0, pr4_fs_fr1)
             .setDatasetSource(DatasetSource.newBuilder().setFileSource(fileSource).build())
+            .setComputeStatistics(false)
             .build();
-
+    // TODO: Core
+    CoreSimpleAPIClient coreClient = SnowflakeTestUtils.getApiClientForCore(FEAST_CORE_PORT);
+    SnowflakeTestUtils.applyFeatureSet(
+        coreClient, "myproject4", "feature_set", "ENTITY_ID_PRIMARY", "feature_1");
     // TODO: Serving
-    ServingServiceBlockingStub servingStub = this.getServingServiceStub(FEAST_SERVING_PORT);
+    ServingServiceBlockingStub servingStub =
+        SnowflakeTestUtils.getServingServiceStub(FEAST_SERVING_PORT);
+
     GetBatchFeaturesResponse response = servingStub.getBatchFeatures(getBatchFeaturesRequest);
     System.out.println(response);
     assertTrue(1 == 1);
-  }
-
-  public static ServingServiceGrpc.ServingServiceBlockingStub getServingServiceStub(
-      int feastServingPort) {
-    Channel secureChannel =
-        ManagedChannelBuilder.forAddress("localhost", feastServingPort).usePlaintext().build();
-
-    return ServingServiceGrpc.newBlockingStub(secureChannel);
   }
 }
