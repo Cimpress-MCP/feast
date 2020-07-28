@@ -6,18 +6,18 @@ feast:
       type: JDBC
       config:  # Store specific configuration.
         # Snowflake Project
-        url: jdbc:snowflake://ry42518.us-east-2.aws.snowflakecomputing.com
+        url: jdbc:snowflake://kia19877.snowflakecomputing.com
         class_name: net.snowflake.client.jdbc.SnowflakeDriver
         # JdbcFeatureSink This must be set to 1 for DirectRunner
         batch_size: 1
-        username: CHIZHANG
-        password: 123456Pw
+        username: SWATIARORA
+        password: Vistaprint1@
         # staging-location specifies the URI to store intermediate files for batch serving.
         # Feast Serving client is expected to have read access to this staging location
         # to download the batch features.
         # Please omit the trailing slash in the URI.
         # TODO: s3 location
-        staging_location: /Users/e10117390/2020Summer/FeastStagingFolder
+        staging_location: /Users/e10111066/FeastStagingFolder
         database: DEMO_DB
         schema: PUBLIC
         warehouse: COMPUTE_WH

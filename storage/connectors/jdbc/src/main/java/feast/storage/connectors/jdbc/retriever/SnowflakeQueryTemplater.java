@@ -40,7 +40,7 @@ public class SnowflakeQueryTemplater extends AbstractJdbcQueryTemplater {
   public SnowflakeQueryTemplater(Map<String, String> databaseConfig, JdbcTemplate jdbcTemplate) {
     super(databaseConfig, jdbcTemplate);
     this.storageIntegration = databaseConfig.get("storage_integration");
-    this.feastTable = databaseConfig.get("table");
+    this.feastTable = databaseConfig.get("table_name");
   }
 
   @Override
