@@ -16,15 +16,26 @@
  */
 package feast.serving.it;
 
-import feast.proto.core.CoreServiceGrpc;
-import feast.proto.core.CoreServiceProto;
-import feast.proto.core.FeatureSetProto;
+import feast.proto.core.*;
+
+import java.util.List;
 
 public class CoreSimpleAPIClient {
   private CoreServiceGrpc.CoreServiceBlockingStub stub;
 
   public CoreSimpleAPIClient(CoreServiceGrpc.CoreServiceBlockingStub stub) {
     this.stub = stub;
+  }
+
+
+  // TODO:
+  public void ingestFeatureSet(String id, IngestionJobProto.IngestionJobStatus status, List<FeatureSetProto.FeatureSet> featureSet) {
+    IngestionJobProto.IngestionJob.newBuilder()
+            .setId("123")
+            .setExternalId("123")
+            .setStatus(status)
+            .addAllFeatureSets(featureSet).
+            build();
   }
 
   public void simpleApplyFeatureSet(FeatureSetProto.FeatureSet featureSet) {
