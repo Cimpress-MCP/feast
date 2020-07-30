@@ -79,6 +79,7 @@ class RetrievalJob:
             metadata=self.auth_metadata.get_signed_meta() if self.auth_metadata else (),
         ).job
 
+    # TODO: get files to support csv
     def get_avro_files(self, timeout_sec: int = int(defaults[CONFIG_TIMEOUT_KEY])):
         """
         Wait until job is done to get the file uri to Avro result files on
@@ -132,6 +133,7 @@ class RetrievalJob:
         for file_uri in uris:
             file_obj = get_staging_client(file_uri.scheme).download_file(file_uri)
             file_obj.seek(0)
+            # todo: reader to support obj in s3
             avro_reader = fastavro.reader(file_obj)
 
             for record in avro_reader:
