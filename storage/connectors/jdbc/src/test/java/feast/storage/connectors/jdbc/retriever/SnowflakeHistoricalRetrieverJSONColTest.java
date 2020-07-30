@@ -96,11 +96,11 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
         ServingAPIProto.DatasetSource.newBuilder().setFileSource(fileSource).build();
     String retrievalId = "1234";
     List<FeatureSetRequest> featureSetRequests = this.createFeatureSetRequestsWithMaxAge();
-    HistoricalRetrievalResult postgresHisRetrievalResult =
+    HistoricalRetrievalResult snowflakeHisRetrievalResult =
         snowflakeFeatureRetriever.getHistoricalFeatures(
             retrievalId, datasetSource, featureSetRequests, false);
 
-    List<String> files = postgresHisRetrievalResult.getFileUris();
+    List<String> files = snowflakeHisRetrievalResult.getFileUris();
     /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,null 2,100 3,300 */
     Assert.assertTrue(files.get(0).contains(staging_location));
   }
@@ -123,11 +123,11 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
 
     String retrievalId = "1234";
     List<FeatureSetRequest> featureSetRequests = this.createFeatureSetRequests();
-    HistoricalRetrievalResult postgresHisRetrievalResult =
+    HistoricalRetrievalResult snowflakeHisRetrievalResult =
         snowflakeFeatureRetriever.getHistoricalFeatures(
             retrievalId, datasetSource, featureSetRequests, false);
 
-    List<String> files = postgresHisRetrievalResult.getFileUris();
+    List<String> files = snowflakeHisRetrievalResult.getFileUris();
     /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,410 2,220 3,300 */
     Assert.assertTrue(files.get(0).contains(staging_location));
   }
@@ -151,11 +151,11 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
 
     String retrievalId = "1234";
     List<FeatureSetRequest> featureSetRequests = this.createFeatureSetRequests();
-    HistoricalRetrievalResult postgresHisRetrievalResult =
+    HistoricalRetrievalResult snowflakeHisRetrievalResult =
         snowflakeFeatureRetriever.getHistoricalFeatures(
             retrievalId, datasetSource, featureSetRequests, false);
 
-    List<String> files = postgresHisRetrievalResult.getFileUris();
+    List<String> files = snowflakeHisRetrievalResult.getFileUris();
     /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,410 2,100 3,null */
     Assert.assertTrue(files.get(0).contains(staging_location));
   }
@@ -177,11 +177,11 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
         ServingAPIProto.DatasetSource.newBuilder().setFileSource(fileSource).build();
     String retrievalId = "1234";
     List<FeatureSetRequest> featureSetRequests = this.createFeatureSetRequestsWithMaxAge();
-    HistoricalRetrievalResult postgresHisRetrievalResult =
+    HistoricalRetrievalResult snowflakeHisRetrievalResult =
         snowflakeFeatureRetriever.getHistoricalFeatures(
             retrievalId, datasetSource, featureSetRequests, false);
 
-    List<String> files = postgresHisRetrievalResult.getFileUris();
+    List<String> files = snowflakeHisRetrievalResult.getFileUris();
     /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,null 2,100 3,300 1,410 */
     Assert.assertTrue(files.get(0).contains(staging_location));
   }
