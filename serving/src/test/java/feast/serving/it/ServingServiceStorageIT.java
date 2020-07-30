@@ -16,15 +16,20 @@
  */
 package feast.serving.it;
 
+import static org.awaitility.Awaitility.waitAtMost;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.beans.HasPropertyWithValue.hasProperty;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.protobuf.ProtocolStringList;
 import feast.proto.serving.ServingAPIProto.*;
-import feast.proto.serving.ServingAPIProto.DatasetSource.FileSource;
 import feast.proto.serving.ServingServiceGrpc.ServingServiceBlockingStub;
 import java.io.File;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.junit.ClassRule;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -48,29 +53,10 @@ public class ServingServiceStorageIT {
   static final int CORE_START_MAX_WAIT_TIME_IN_MINUTES = 3;
   static final int FEAST_CORE_PORT = 6565;
   static final int FEAST_SERVING_PORT = 6566;
+  static final int MAX_AGE_SECOND = 30;
 
   @DynamicPropertySource
-  static void initialize(DynamicPropertyRegistry registry) throws UnknownHostException {
-    //
-    //    System.out.print("initializing");
-    //    registry.add("feast.stores[0].name", () -> "online");
-    //    registry.add("feast.stores[0].type", () -> "REDIS");
-    // Redis needs to accessible by both core and serving, hence using host address
-    //    registry.add(
-    //        "feast.stores[0].config.host",
-    //        () -> {
-    //          try {
-    //            return InetAddress.getLocalHost().getHostAddress();
-    //          } catch (UnknownHostException e) {
-    //            // TODO Auto-generated catch block
-    //            e.printStackTrace();
-    //            return "";
-    //          }
-    //        });
-    //    registry.add("feast.stores[0].config.port", () -> REDIS_PORT);
-    //    registry.add("feast.stores[0].subscriptions[0].name", () -> "*");
-    //    registry.add("feast.stores[0].subscriptions[0].project", () -> "*");
-  }
+  static void initialize(DynamicPropertyRegistry registry) throws UnknownHostException {}
 
   @ClassRule @Container
   public static DockerComposeContainer environment =
@@ -88,42 +74,39 @@ public class ServingServiceStorageIT {
   }
 
   @Test
-  public void testdummy() {
-    assertTrue(1 == 1);
-  }
-
-  @Test
-  public void shouldRetrieveFromSnowflake() {
+  public void shouldRetrieveFromSnowflakeTest3DatesWithMaxAge() throws IOException {
 
     String entitySourceUri = "s3://feast-snowflake-staging/test/entity_tables/entities_3dates.csv";
-    FileSource fileSource =
-        FileSource.newBuilder()
-            .addFileUris(entitySourceUri)
-            .setDataFormat(DataFormat.DATA_FORMAT_CSV)
-            .build();
-    FeatureReference pr4_fs_fr1 =
-        FeatureReference.newBuilder()
-            .setName("feature_1")
-            .setFeatureSet("feature_set")
-            .setProject("myproject4")
-            .build();
     GetBatchFeaturesRequest getBatchFeaturesRequest =
-        GetBatchFeaturesRequest.newBuilder()
-            .addFeatures(0, pr4_fs_fr1)
-            .setDatasetSource(DatasetSource.newBuilder().setFileSource(fileSource).build())
-            .setComputeStatistics(false)
-            .build();
-    // TODO: Core
+        SnowflakeTestUtils.createGetBatchFeaturesRequest(
+            entitySourceUri, "feature_1", "feature_set", "myproject4");
+    // TODO: start Core and ingest data
     CoreSimpleAPIClient coreClient = SnowflakeTestUtils.getApiClientForCore(FEAST_CORE_PORT);
     SnowflakeTestUtils.applyFeatureSet(
-        coreClient, "myproject4", "feature_set", "ENTITY_ID_PRIMARY", "feature_1");
-    // TODO: Serving
+        coreClient, "myproject4", "feature_set", "ENTITY_ID_PRIMARY", "feature_1", MAX_AGE_SECOND);
+    // Run getBatchFeatures on Serving
     ServingServiceBlockingStub servingStub =
         SnowflakeTestUtils.getServingServiceStub(FEAST_SERVING_PORT);
-
-
     GetBatchFeaturesResponse response = servingStub.getBatchFeatures(getBatchFeaturesRequest);
-    System.out.println(response);
+    Job resultJob = response.getJob();
+    GetJobRequest jobRequest = GetJobRequest.newBuilder().setJob(resultJob).build();
+    servingStub.getJob(jobRequest).getJob();
+    waitAtMost(2, TimeUnit.MINUTES)
+        .until(
+            () -> servingStub.getJob(jobRequest).getJob(),
+            hasProperty("status", equalTo(JobStatus.JOB_STATUS_DONE)));
+    resultJob = servingStub.getJob(jobRequest).getJob();
+    ProtocolStringList resultUris = resultJob.getFileUrisList();
+
+    // get csv.gz file from s3
+    List<String> resultLines = SnowflakeTestUtils.readFromS3(resultUris.get(0));
+    for (String line : resultLines) {
+      System.out.println(line);
+    }
+    // TODO: uncomment when ingestion is done
+    //    Assert.assertEquals("\\" + "\\N", resultLines.get(1).split(",")[3]);
+    //    Assert.assertEquals("100", resultLines.get(2).split(",")[3]);
+    //    Assert.assertEquals("300", resultLines.get(3).split(",")[3]);
     assertTrue(1 == 1);
   }
 }

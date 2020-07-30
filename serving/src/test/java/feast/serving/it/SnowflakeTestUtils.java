@@ -21,18 +21,29 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.beans.HasPropertyWithValue.hasProperty;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.AmazonS3URI;
+import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.S3Object;
+import com.google.protobuf.Duration;
 import feast.proto.core.CoreServiceGrpc;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.FeatureSetProto.FeatureSetStatus;
 import feast.proto.core.SourceProto;
+import feast.proto.serving.ServingAPIProto;
 import feast.proto.serving.ServingServiceGrpc;
 import feast.proto.types.ValueProto;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 import org.apache.commons.lang3.tuple.Pair;
 
 public class SnowflakeTestUtils {
@@ -59,14 +70,27 @@ public class SnowflakeTestUtils {
       String projectName,
       String featureSetName,
       String entityId,
-      String featureName) {
+      String featureName,
+      Integer maxAgeSec) {
     List<Pair<String, ValueProto.ValueType.Enum>> entities = new ArrayList<>();
     entities.add(Pair.of(entityId, ValueProto.ValueType.Enum.INT64));
     List<Pair<String, ValueProto.ValueType.Enum>> features = new ArrayList<>();
     features.add(Pair.of(featureName, ValueProto.ValueType.Enum.INT64));
+    // create a feature set
     FeatureSetProto.FeatureSet expectedFeatureSet =
         SnowflakeTestUtils.createFeatureSet(
             SnowflakeTestUtils.getDefaultSource(), projectName, featureSetName, entities, features);
+    if (maxAgeSec != null) {
+      expectedFeatureSet =
+          SnowflakeTestUtils.createFeatureSetWithMaxAge(
+              SnowflakeTestUtils.getDefaultSource(),
+              projectName,
+              featureSetName,
+              entities,
+              features,
+              maxAgeSec);
+    }
+
     secureApiClient.simpleApplyFeatureSet(expectedFeatureSet);
     waitAtMost(2, TimeUnit.MINUTES)
         .until(
@@ -117,6 +141,42 @@ public class SnowflakeTestUtils {
         .build();
   }
 
+  public static FeatureSetProto.FeatureSet createFeatureSetWithMaxAge(
+      SourceProto.Source source,
+      String projectName,
+      String name,
+      List<Pair<String, ValueProto.ValueType.Enum>> entities,
+      List<Pair<String, ValueProto.ValueType.Enum>> features,
+      Integer maxAgeSec) {
+    return FeatureSetProto.FeatureSet.newBuilder()
+        .setSpec(
+            FeatureSetProto.FeatureSetSpec.newBuilder()
+                .setMaxAge(Duration.newBuilder().setSeconds(maxAgeSec))
+                .setSource(source)
+                .setName(name)
+                .setProject(projectName)
+                .addAllEntities(
+                    entities.stream()
+                        .map(
+                            pair ->
+                                FeatureSetProto.EntitySpec.newBuilder()
+                                    .setName(pair.getLeft())
+                                    .setValueType(pair.getRight())
+                                    .build())
+                        .collect(Collectors.toList()))
+                .addAllFeatures(
+                    features.stream()
+                        .map(
+                            pair ->
+                                FeatureSetProto.FeatureSpec.newBuilder()
+                                    .setName(pair.getLeft())
+                                    .setValueType(pair.getRight())
+                                    .build())
+                        .collect(Collectors.toList()))
+                .build())
+        .build();
+  }
+
   public static ServingServiceGrpc.ServingServiceBlockingStub getServingServiceStub(
       int feastServingPort) {
     Channel secureChannel =
@@ -132,5 +192,60 @@ public class SnowflakeTestUtils {
     CoreServiceGrpc.CoreServiceBlockingStub secureCoreService =
         CoreServiceGrpc.newBlockingStub(secureChannel);
     return new CoreSimpleAPIClient(secureCoreService);
+  }
+
+  /**
+   * create GetBatchFeaturesRequest with single feature
+   *
+   * @param entitySourceUri
+   * @param feature
+   * @param featureSet
+   * @param project
+   * @return
+   */
+  public static ServingAPIProto.GetBatchFeaturesRequest createGetBatchFeaturesRequest(
+      String entitySourceUri, String feature, String featureSet, String project) {
+    ServingAPIProto.DatasetSource.FileSource fileSource =
+        ServingAPIProto.DatasetSource.FileSource.newBuilder()
+            .addFileUris(entitySourceUri)
+            .setDataFormat(ServingAPIProto.DataFormat.DATA_FORMAT_CSV)
+            .build();
+    ServingAPIProto.FeatureReference featureReference =
+        ServingAPIProto.FeatureReference.newBuilder()
+            .setName(feature)
+            .setFeatureSet(featureSet)
+            .setProject(project)
+            .build();
+    ServingAPIProto.GetBatchFeaturesRequest getBatchFeaturesRequest =
+        ServingAPIProto.GetBatchFeaturesRequest.newBuilder()
+            .addFeatures(0, featureReference)
+            .setDatasetSource(
+                ServingAPIProto.DatasetSource.newBuilder().setFileSource(fileSource).build())
+            .setComputeStatistics(false)
+            .build();
+    return getBatchFeaturesRequest;
+  }
+
+  /**
+   * get the result feature set in s3 as a list of lines
+   *
+   * @param fileUri
+   * @return
+   * @throws IOException
+   */
+  public static List<String> readFromS3(String fileUri) throws IOException {
+    AmazonS3 s3client =
+        AmazonS3ClientBuilder.standard().withCredentials(new ProfileCredentialsProvider()).build();
+    String bucket = new AmazonS3URI(fileUri).getBucket();
+    String key = new AmazonS3URI(fileUri).getKey();
+    S3Object fileObj = s3client.getObject(new GetObjectRequest(bucket, key));
+    Scanner fileIn = new Scanner(new GZIPInputStream(fileObj.getObjectContent()));
+    List<String> resultLines = new ArrayList<>();
+    if (null != fileIn) {
+      while (fileIn.hasNext()) {
+        resultLines.add(fileIn.nextLine());
+      }
+    }
+    return resultLines;
   }
 }

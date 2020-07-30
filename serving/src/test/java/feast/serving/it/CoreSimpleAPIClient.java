@@ -17,7 +17,6 @@
 package feast.serving.it;
 
 import feast.proto.core.*;
-import
 import java.util.List;
 
 public class CoreSimpleAPIClient {
@@ -37,25 +36,27 @@ public class CoreSimpleAPIClient {
     this.stub = stub;
   }
 
-
   // TODO:
-  public void ingestFeatureSet(String id, IngestionJobProto.IngestionJobStatus status, List<FeatureSetProto.FeatureSet> featureSet) {
+  public void ingestFeatureSet(
+      String id,
+      IngestionJobProto.IngestionJobStatus status,
+      List<FeatureSetProto.FeatureSet> featureSet) {
     IngestionJobProto.SpecsStreamingUpdateConfig specsStreamingUpdateConfig =
-            IngestionJobProto.SpecsStreamingUpdateConfig.newBuilder()
-                    .setSource(
-                            SourceProto.KafkaSourceConfig.newBuilder()
-                                    .setBootstrapServers(KAFKA_BOOTSTRAP_SERVERS)
-                                    .setTopic(KAFKA_SPECS_TOPIC)
-                                    .build())
-                    .build();
+        IngestionJobProto.SpecsStreamingUpdateConfig.newBuilder()
+            .setSource(
+                SourceProto.KafkaSourceConfig.newBuilder()
+                    .setBootstrapServers(KAFKA_BOOTSTRAP_SERVERS)
+                    .setTopic(KAFKA_SPECS_TOPIC)
+                    .build())
+            .build();
 
-    specsStreamingUpdateConfig.writeTo();
+    //    specsStreamingUpdateConfig.writeTo();
     IngestionJobProto.IngestionJob.newBuilder()
-            .setId("123")
-            .setExternalId("123")
-            .setStatus(status)
-            .addAllFeatureSets(featureSet).
-            build();
+        .setId("123")
+        .setExternalId("123")
+        .setStatus(status)
+        .addAllFeatureSets(featureSet)
+        .build();
   }
 
   public void simpleApplyFeatureSet(FeatureSetProto.FeatureSet featureSet) {

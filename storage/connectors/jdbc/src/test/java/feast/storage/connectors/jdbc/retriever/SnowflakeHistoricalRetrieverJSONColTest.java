@@ -16,6 +16,12 @@
  */
 package feast.storage.connectors.jdbc.retriever;
 
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.AmazonS3URI;
+import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.S3Object;
 import com.google.protobuf.Duration;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -23,11 +29,9 @@ import feast.proto.core.FeatureSetProto;
 import feast.proto.serving.ServingAPIProto;
 import feast.storage.api.retriever.FeatureSetRequest;
 import feast.storage.api.retriever.HistoricalRetrievalResult;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.io.IOException;
+import java.util.*;
+import java.util.zip.GZIPInputStream;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -84,7 +88,7 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
   }
 
   @Test
-  public void shouldRetrieveFromSnowflakeTest3DatesWithMaxAge() {
+  public void shouldRetrieveFromSnowflakeTest3DatesWithMaxAge() throws IOException {
     String entitySourceUri = "s3://feast-snowflake-staging/test/entity_tables/entities_3dates.csv";
     ServingAPIProto.DatasetSource.FileSource fileSource =
         ServingAPIProto.DatasetSource.FileSource.newBuilder()
@@ -102,11 +106,15 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
 
     List<String> files = postgresHisRetrievalResult.getFileUris();
     /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,null 2,100 3,300 */
+    List<String> resultLines = this.readFromS3(files.get(0));
+    Assert.assertEquals("\\" + "\\N", resultLines.get(1).split(",")[3]);
+    Assert.assertEquals("100", resultLines.get(2).split(",")[3]);
+    Assert.assertEquals("300", resultLines.get(3).split(",")[3]);
     Assert.assertTrue(files.get(0).contains(staging_location));
   }
 
   @Test
-  public void shouldRetrieveFromSnowflakeTest1Date() {
+  public void shouldRetrieveFromSnowflakeTest1Date() throws IOException {
     //      Set CSV format DATA_FORMAT_CSV = 2; where the first column of the csv file must be
     // entity_id
     //      file_uri is under
@@ -129,11 +137,15 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
 
     List<String> files = postgresHisRetrievalResult.getFileUris();
     /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,410 2,220 3,300 */
+    List<String> resultLines = this.readFromS3(files.get(0));
+    Assert.assertEquals("410", resultLines.get(1).split(",")[3]);
+    Assert.assertEquals("220", resultLines.get(2).split(",")[3]);
+    Assert.assertEquals("300", resultLines.get(3).split(",")[3]);
     Assert.assertTrue(files.get(0).contains(staging_location));
   }
 
   @Test
-  public void shouldRetrieveFromSnowflakeTest1DateWithNull() {
+  public void shouldRetrieveFromSnowflakeTest1DateWithNull() throws IOException {
     //      Set CSV format DATA_FORMAT_CSV = 2; where the first column of the csv file must be
     // entity_id
     //      file_uri is under
@@ -157,11 +169,15 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
 
     List<String> files = postgresHisRetrievalResult.getFileUris();
     /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,410 2,100 3,null */
+    List<String> resultLines = this.readFromS3(files.get(0));
+    Assert.assertEquals("410", resultLines.get(1).split(",")[3]);
+    Assert.assertEquals("100", resultLines.get(2).split(",")[3]);
+    Assert.assertEquals("\\" + "\\N", resultLines.get(3).split(",")[3]);
     Assert.assertTrue(files.get(0).contains(staging_location));
   }
 
   @Test
-  public void shouldRetrieveFromSnowflakeTestSameIdsWithMaxAge() {
+  public void shouldRetrieveFromSnowflakeTestSameIdsWithMaxAge() throws IOException {
     //      Set CSV format DATA_FORMAT_CSV = 2; where the first column of the csv file must be
     // entity_id
     //      file_uri is under
@@ -183,6 +199,11 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
 
     List<String> files = postgresHisRetrievalResult.getFileUris();
     /** Should return ENTITY_ID_PRIMARY, FEATURE_SET__FEATURE_1 1,null 2,100 3,300 1,410 */
+    List<String> resultLines = this.readFromS3(files.get(0));
+    Assert.assertEquals("\\" + "\\N", resultLines.get(1).split(",")[3]);
+    Assert.assertEquals("100", resultLines.get(2).split(",")[3]);
+    Assert.assertEquals("300", resultLines.get(3).split(",")[3]);
+    Assert.assertEquals("410", resultLines.get(4).split(",")[3]);
     Assert.assertTrue(files.get(0).contains(staging_location));
   }
 
@@ -249,5 +270,21 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
         .addFeatures(FeatureSetProto.FeatureSpec.newBuilder().setName("feature_1"))
         .addFeatures(FeatureSetProto.FeatureSpec.newBuilder().setName("feature_2"))
         .build();
+  }
+
+  private List<String> readFromS3(String fileUri) throws IOException {
+    AmazonS3 s3client =
+        AmazonS3ClientBuilder.standard().withCredentials(new ProfileCredentialsProvider()).build();
+    String bucket = new AmazonS3URI(fileUri).getBucket();
+    String key = new AmazonS3URI(fileUri).getKey();
+    S3Object fileObj = s3client.getObject(new GetObjectRequest(bucket, key));
+    Scanner fileIn = new Scanner(new GZIPInputStream(fileObj.getObjectContent()));
+    List<String> resultLines = new ArrayList<>();
+    if (null != fileIn) {
+      while (fileIn.hasNext()) {
+        resultLines.add(fileIn.nextLine());
+      }
+    }
+    return resultLines;
   }
 }
