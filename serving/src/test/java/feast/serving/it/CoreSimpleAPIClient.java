@@ -17,11 +17,21 @@
 package feast.serving.it;
 
 import feast.proto.core.*;
-
+import
 import java.util.List;
 
 public class CoreSimpleAPIClient {
   private CoreServiceGrpc.CoreServiceBlockingStub stub;
+  private static final String KAFKA_HOST = "localhost";
+  private static final int KAFKA_PORT = 9092;
+  private static final String KAFKA_BOOTSTRAP_SERVERS = KAFKA_HOST + ":" + KAFKA_PORT;
+  private static final short KAFKA_REPLICATION_FACTOR = 1;
+  private static final String KAFKA_TOPIC = "topic";
+  private static final String KAFKA_SPECS_TOPIC = "topic_specs";
+  private static final String KAFKA_SPECS_ACK_TOPIC = "topic_specs_ack";
+
+  private static final long KAFKA_PUBLISH_TIMEOUT_SEC = 10;
+  private static final long KAFKA_POLL_TIMEOUT_SEC = 10;
 
   public CoreSimpleAPIClient(CoreServiceGrpc.CoreServiceBlockingStub stub) {
     this.stub = stub;
@@ -30,6 +40,16 @@ public class CoreSimpleAPIClient {
 
   // TODO:
   public void ingestFeatureSet(String id, IngestionJobProto.IngestionJobStatus status, List<FeatureSetProto.FeatureSet> featureSet) {
+    IngestionJobProto.SpecsStreamingUpdateConfig specsStreamingUpdateConfig =
+            IngestionJobProto.SpecsStreamingUpdateConfig.newBuilder()
+                    .setSource(
+                            SourceProto.KafkaSourceConfig.newBuilder()
+                                    .setBootstrapServers(KAFKA_BOOTSTRAP_SERVERS)
+                                    .setTopic(KAFKA_SPECS_TOPIC)
+                                    .build())
+                    .build();
+
+    specsStreamingUpdateConfig.writeTo();
     IngestionJobProto.IngestionJob.newBuilder()
             .setId("123")
             .setExternalId("123")

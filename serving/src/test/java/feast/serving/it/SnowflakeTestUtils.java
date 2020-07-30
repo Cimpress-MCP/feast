@@ -68,19 +68,19 @@ public class SnowflakeTestUtils {
         SnowflakeTestUtils.createFeatureSet(
             SnowflakeTestUtils.getDefaultSource(), projectName, featureSetName, entities, features);
     secureApiClient.simpleApplyFeatureSet(expectedFeatureSet);
-//    waitAtMost(2, TimeUnit.MINUTES)
-//        .until(
-//            () -> {
-//              return secureApiClient.simpleGetFeatureSet(projectName, featureSetName).getMeta();
-//            },
-//            hasProperty("status", equalTo(FeatureSetStatus.STATUS_READY)));
-//    FeatureSetProto.FeatureSet actualFeatureSet =
-//        secureApiClient.simpleGetFeatureSet(projectName, featureSetName);
-//    assertEquals(
-//        expectedFeatureSet.getSpec().getProject(), actualFeatureSet.getSpec().getProject());
-//    assertEquals(expectedFeatureSet.getSpec().getName(), actualFeatureSet.getSpec().getName());
-//    assertEquals(expectedFeatureSet.getSpec().getSource(), actualFeatureSet.getSpec().getSource());
-//    assertEquals(FeatureSetStatus.STATUS_READY, actualFeatureSet.getMeta().getStatus());
+    waitAtMost(2, TimeUnit.MINUTES)
+        .until(
+            () -> {
+              return secureApiClient.simpleGetFeatureSet(projectName, featureSetName).getMeta();
+            },
+            hasProperty("status", equalTo(FeatureSetStatus.STATUS_READY)));
+    FeatureSetProto.FeatureSet actualFeatureSet =
+        secureApiClient.simpleGetFeatureSet(projectName, featureSetName);
+    assertEquals(
+        expectedFeatureSet.getSpec().getProject(), actualFeatureSet.getSpec().getProject());
+    assertEquals(expectedFeatureSet.getSpec().getName(), actualFeatureSet.getSpec().getName());
+    assertEquals(expectedFeatureSet.getSpec().getSource(), actualFeatureSet.getSpec().getSource());
+    assertEquals(FeatureSetStatus.STATUS_READY, actualFeatureSet.getMeta().getStatus());
   }
 
   public static FeatureSetProto.FeatureSet createFeatureSet(

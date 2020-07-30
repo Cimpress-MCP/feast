@@ -121,6 +121,7 @@ public class ServingServiceStorageIT {
     ServingServiceBlockingStub servingStub =
         SnowflakeTestUtils.getServingServiceStub(FEAST_SERVING_PORT);
 
+
     GetBatchFeaturesResponse response = servingStub.getBatchFeatures(getBatchFeaturesRequest);
     System.out.println(response);
     assertTrue(1 == 1);
