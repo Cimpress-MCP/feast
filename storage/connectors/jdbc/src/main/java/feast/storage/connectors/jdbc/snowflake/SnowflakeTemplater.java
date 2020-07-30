@@ -29,7 +29,7 @@ public class SnowflakeTemplater implements JdbcTemplater {
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(SnowflakeTemplater.class);
 
   @Override
-  public String getTableCreationSql(StoreProto.Store.JdbcConfig config) {
+  public String getTableCreationSql(StoreProto.Store.SnowflakeConfig config) {
     StringJoiner columnsAndTypesSQL = new StringJoiner(", ");
     Map<String, String> requiredColumns = getRequiredColumns();
     for (String column : requiredColumns.keySet()) {

@@ -19,7 +19,7 @@ package feast.storage.connectors.jdbc.writer;
 import feast.common.models.FeatureSetReference;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.StoreProto;
-import feast.proto.core.StoreProto.Store.JdbcConfig;
+import feast.proto.core.StoreProto.Store.SnowflakeConfig;
 import feast.storage.api.writer.FeatureSink;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
 import feast.storage.connectors.jdbc.snowflake.SnowflakeTemplater;
@@ -41,7 +41,7 @@ public class JdbcFeatureSink implements FeatureSink {
 
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcFeatureSink.class);
 
-  private final StoreProto.Store.JdbcConfig config;
+  private final StoreProto.Store.SnowflakeConfig config;
 
   public JdbcTemplater getJdbcTemplater() {
     return jdbcTemplater;
@@ -49,7 +49,7 @@ public class JdbcFeatureSink implements FeatureSink {
 
   private JdbcTemplater jdbcTemplater;
 
-  public JdbcFeatureSink(JdbcConfig config) {
+  public JdbcFeatureSink(SnowflakeConfig config) {
     this.config = config;
     this.jdbcTemplater = getJdbcTemplaterForClass(config.getClassName());
   }
@@ -64,11 +64,11 @@ public class JdbcFeatureSink implements FeatureSink {
     }
   }
 
-  public static FeatureSink fromConfig(JdbcConfig config) {
+  public static FeatureSink fromConfig(SnowflakeConfig config) {
     return new JdbcFeatureSink(config);
   }
 
-  public JdbcConfig getConfig() {
+  public SnowflakeConfig getConfig() {
     return config;
   }
 

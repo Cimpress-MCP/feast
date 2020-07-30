@@ -87,7 +87,7 @@ public class StoreUtil {
         return RedisFeatureSink.fromConfig(store.getRedisConfig());
       case BIGQUERY:
         return BigQueryFeatureSink.fromConfig(store.getBigqueryConfig());
-      case JDBC:
+      case Snowflake:
         return JdbcFeatureSink.fromConfig(store.getJdbcConfig());
       default:
         throw new RuntimeException(String.format("Store type '%s' is unsupported", storeType));

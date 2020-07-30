@@ -81,7 +81,7 @@ public class Store {
       case REDIS_CLUSTER:
         config = storeProto.getRedisClusterConfig().toByteArray();
         break;
-      case JDBC:
+      case Snowflake:
         config = storeProto.getJdbcConfig().toByteArray();
         break;
       default:
@@ -111,9 +111,9 @@ public class Store {
       case REDIS_CLUSTER:
         RedisClusterConfig redisClusterConfig = RedisClusterConfig.parseFrom(config);
         return storeProtoBuilder.setRedisClusterConfig(redisClusterConfig).build();
-      case JDBC:
-        JdbcConfig jdbcConfig = JdbcConfig.parseFrom(config);
-        return storeProtoBuilder.setJdbcConfig(jdbcConfig).build();
+      case Snowflake:
+        SnowflakeConfig snowflakeConfig = SnowflakeConfig.parseFrom(config);
+        return storeProtoBuilder.setJdbcConfig(snowflakeConfig).build();
       default:
         throw new InvalidProtocolBufferException("Invalid store set");
     }

@@ -17,7 +17,7 @@
 package feast.storage.connectors.jdbc.writer;
 
 import feast.proto.core.StoreProto;
-import feast.proto.core.StoreProto.Store.JdbcConfig;
+import feast.proto.core.StoreProto.Store.SnowflakeConfig;
 import feast.proto.types.FeatureRowProto;
 import feast.proto.types.FeatureRowProto.FeatureRow;
 import feast.proto.types.FieldProto;
@@ -49,15 +49,15 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
 
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcWrite.class);
   private final JdbcTemplater jdbcTemplater;
-  private final StoreProto.Store.JdbcConfig config;
+  private final StoreProto.Store.SnowflakeConfig config;
 
-  public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
+  public JdbcWrite(SnowflakeConfig config, JdbcTemplater jdbcTemplater) {
 
     this.config = config;
     this.jdbcTemplater = jdbcTemplater;
   }
 
-  public StoreProto.Store.JdbcConfig getConfig() {
+  public StoreProto.Store.SnowflakeConfig getConfig() {
     return config;
   }
 
@@ -243,7 +243,7 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
   }
 
   public static JdbcIO.DataSourceConfiguration create_dsconfig(
-      StoreProto.Store.JdbcConfig jdbcConfig) {
+      StoreProto.Store.SnowflakeConfig jdbcConfig) {
     String username = jdbcConfig.getUsername();
     String password = jdbcConfig.getPassword();
     String className = jdbcConfig.getClassName();

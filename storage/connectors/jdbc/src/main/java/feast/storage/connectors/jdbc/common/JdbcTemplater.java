@@ -17,7 +17,7 @@
 package feast.storage.connectors.jdbc.common;
 
 import feast.proto.core.FeatureSetProto;
-import feast.proto.core.StoreProto.Store.JdbcConfig;
+import feast.proto.core.StoreProto.Store.SnowflakeConfig;
 import java.io.Serializable;
 import java.util.Map;
 
@@ -34,7 +34,7 @@ public interface JdbcTemplater extends Serializable {
 
   Map<String, String> getRequiredColumns();
 
-  String getTableCreationSql(JdbcConfig config);
+  String getTableCreationSql(SnowflakeConfig config);
 
   String getFeatureRowInsertSql(String tableName);
 }

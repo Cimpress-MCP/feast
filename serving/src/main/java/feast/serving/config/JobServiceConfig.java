@@ -32,7 +32,7 @@ public class JobServiceConfig {
   public JobService jobService(FeastProperties feastProperties)
       throws InvalidProtocolBufferException, JsonProcessingException {
     StoreType activeStoreType = feastProperties.getActiveStore().toProto().getType();
-    if (activeStoreType.equals(StoreType.BIGQUERY) || activeStoreType.equals(StoreType.JDBC)) {
+    if (activeStoreType.equals(StoreType.BIGQUERY) || activeStoreType.equals(StoreType.Snowflake)) {
       return new RedisBackedJobService(feastProperties.getJobStore());
     }
     return new NoopJobService();
