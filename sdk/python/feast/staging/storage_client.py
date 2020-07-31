@@ -159,6 +159,7 @@ class S3Client(AbstractStagingClient):
         url = uri.path.lstrip("/")
         bucket = uri.hostname
         file_obj = TemporaryFile()
+        # TODO: why using "download_fileobj" not "get_object", only for avro
         self.s3_client.download_fileobj(bucket, url, file_obj)
         return file_obj
 

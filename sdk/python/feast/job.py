@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, IO
 from urllib.parse import urlparse
 
 import fastavro
@@ -16,6 +16,7 @@ from feast.core.Store_pb2 import Store
 from feast.feature_set import FeatureSet
 from feast.serving.ServingService_pb2 import (
     DATA_FORMAT_AVRO,
+    DATA_FORMAT_CSV,
     JOB_STATUS_DONE,
     GetJobRequest,
 )
@@ -80,7 +81,7 @@ class RetrievalJob:
         ).job
 
     # TODO: get files to support csv
-    def get_avro_files(self, timeout_sec: int = int(defaults[CONFIG_TIMEOUT_KEY])):
+    def get_files(self, timeout_sec: int = int(defaults[CONFIG_TIMEOUT_KEY])):
         """
         Wait until job is done to get the file uri to Avro result files on
         Google Cloud Storage.
@@ -91,7 +92,7 @@ class RetrievalJob:
                 is exceeded, an exception will be raised.
 
         Returns:
-            str: Google Cloud Storage file uris of the returned Avro files.
+            str: Google Cloud Storage file uris of the returned Avro files or CSV files.
         """
 
         def try_retrieve():
@@ -108,14 +109,15 @@ class RetrievalJob:
         if self.job_proto.error:
             raise Exception(self.job_proto.error)
 
-        if self.job_proto.data_format != DATA_FORMAT_AVRO:
+        if self.job_proto.data_format != DATA_FORMAT_AVRO or self.job_proto.data_format != DATA_FORMAT_CSV:
             raise Exception(
-                "Feast only supports Avro data format for now. Please check "
+                "Feast only supports Avro and CSV data format for now. Please check "
                 "your Feast Serving deployment."
             )
 
         return [urlparse(uri) for uri in self.job_proto.file_uris]
 
+    # TODO: reader to support obj in s3
     def result(self, timeout_sec: int = int(defaults[CONFIG_TIMEOUT_KEY])):
         """
         Wait until job is done to get an iterable rows of result. The row can
@@ -129,15 +131,23 @@ class RetrievalJob:
         Returns:
             Iterable of Avro rows.
         """
-        uris = self.get_avro_files(timeout_sec)
+        uris = self.get_files(timeout_sec)
         for file_uri in uris:
+            # TODO: double check download_file can download csv.gz file from s3
             file_obj = get_staging_client(file_uri.scheme).download_file(file_uri)
             file_obj.seek(0)
-            # todo: reader to support obj in s3
+            # todo: reader to support csv.gz in s3
+
             avro_reader = fastavro.reader(file_obj)
 
             for record in avro_reader:
                 yield record
+
+    def object_reader(self, file_obj: IO[bytes]):
+
+
+
+
 
     def to_dataframe(
         self, timeout_sec: int = int(defaults[CONFIG_TIMEOUT_KEY])
@@ -218,7 +228,7 @@ class RetrievalJob:
         Returns:
             DatasetFeatureStatisticsList containing statistics of Feast features over the retrieved dataset.
         """
-        self.get_avro_files(timeout_sec)  # wait for job completion
+        self.get_files(timeout_sec)  # wait for job completion
         if self.job_proto.error:
             raise Exception(self.job_proto.error)
         return self.job_proto.dataset_feature_statistics_list
