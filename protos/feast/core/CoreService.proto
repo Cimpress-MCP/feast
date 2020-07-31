@@ -27,8 +27,12 @@ import "feast/core/FeatureSet.proto";
 import "feast/core/Store.proto";
 import "feast/core/FeatureSetReference.proto";
 import "feast/core/IngestionJob.proto";
+import "feast/types/FeatureRow.proto";
 
 service CoreService {
+    // Ingest feature into feast
+    rpc IngestFeatures (IngestFeaturesRequest) returns (IngestFeaturesResponse);
+
     // Retrieve version information about this Feast deployment
     rpc GetFeastCoreVersion (GetFeastCoreVersionRequest) returns (GetFeastCoreVersionResponse);
 
@@ -365,3 +369,9 @@ message UpdateFeatureSetStatusRequest {
 }
 
 message UpdateFeatureSetStatusResponse {}
+message IngestFeaturesRequest {
+    feast.core.FeatureSet feature_set = 1;
+    repeated feast.types.FeatureRow feature_rows = 2;
+}
+
+message IngestFeaturesResponse {}
