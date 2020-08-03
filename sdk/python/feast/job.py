@@ -172,11 +172,6 @@ class RetrievalJob:
                     "Feast only supports CSV data format with .csv or .csv.gz extension for now. Please check "
                     "your Feast Serving deployment."
                 )
-        else:
-            raise Exception(
-                "Feast only supports Avro, csv and csv.gz data format for now. Please check "
-                "your Feast Serving deployment."
-            )
 
     def to_dataframe(
         self, timeout_sec: int = int(defaults[CONFIG_TIMEOUT_KEY])
