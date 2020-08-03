@@ -1,5 +1,8 @@
+import csv
+import gzip
+from tempfile import TemporaryFile
 from typing import List, IO
-from urllib.parse import urlparse
+from urllib.parse import urlparse, ParseResult
 
 import fastavro
 import grpc
@@ -80,7 +83,7 @@ class RetrievalJob:
             metadata=self.auth_metadata.get_signed_meta() if self.auth_metadata else (),
         ).job
 
-    # TODO: get files to support csv
+    # TODO: get files to support gzip csv
     def get_files(self, timeout_sec: int = int(defaults[CONFIG_TIMEOUT_KEY])):
         """
         Wait until job is done to get the file uri to Avro result files on
@@ -131,22 +134,47 @@ class RetrievalJob:
         Returns:
             Iterable of Avro rows.
         """
+        # list of parseResult
         uris = self.get_files(timeout_sec)
         for file_uri in uris:
-            # TODO: double check download_file can download csv.gz file from s3
             file_obj = get_staging_client(file_uri.scheme).download_file(file_uri)
             file_obj.seek(0)
-            # todo: reader to support csv.gz in s3
+            self.result_object_reader(file_obj, file_uri)
 
+    # todo:
+    def result_object_reader(self, file_obj: TemporaryFile, file_uri: ParseResult):
+        """
+        iterable of result object rows
+        :param file_obj: TemporaryFile: result object
+        :return: Iterable of Avro or csv rows.
+        """
+        if self.job_proto.data_format == DATA_FORMAT_AVRO:
             avro_reader = fastavro.reader(file_obj)
-
             for record in avro_reader:
                 yield record
-
-    def object_reader(self, file_obj: IO[bytes]):
-
-
-
+        elif self.job_proto.data_format == DATA_FORMAT_CSV:
+            # check file format only support csv and gz compression files
+            ext = file_uri.path.lstrip('/').split('.')[-1]
+            if ext == 'csv':
+                decode_obj = file_obj.read().decode("utf-8")
+                csv_reader = csv.reader(decode_obj.splitlines(), delimiter=',')
+                for record in csv_reader:
+                    yield record
+            elif ext == 'gz':
+                with gzip.open(file_obj, mode='rt') as f:
+                    csv_reader = csv.reader(f, delimiter=',')
+                    for record in csv_reader:
+                        yield record
+            else:
+                raise Exception(
+                    "Feast only supports CSV data format with .csv or .csv.gz extension for now. Please check "
+                    "your Feast Serving deployment."
+                )
+        else:
+            raise Exception(
+                "Feast only supports Avro and CSV data format for now. Please check "
+                "your Feast Serving deployment."
+            )
 
 
     def to_dataframe(
@@ -172,6 +200,7 @@ class RetrievalJob:
         records = [r for r in self.result(timeout_sec=timeout_sec)]
         return pd.DataFrame.from_records(records)
 
+    # TODO: update with csv, gzip
     def to_chunked_dataframe(
         self,
         max_chunk_size: int = -1,
