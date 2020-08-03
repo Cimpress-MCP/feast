@@ -111,7 +111,7 @@ class RetrievalJob:
         if self.job_proto.error:
             raise Exception(self.job_proto.error)
 
-        if self.job_proto.data_format != DATA_FORMAT_AVRO or self.job_proto.data_format != DATA_FORMAT_CSV:
+        if self.job_proto.data_format != DATA_FORMAT_AVRO and self.job_proto.data_format != DATA_FORMAT_CSV:
             raise Exception(
                 "Feast only supports Avro and CSV data format for now. Please check "
                 "your Feast Serving deployment."
@@ -137,9 +137,8 @@ class RetrievalJob:
         for file_uri in uris:
             file_obj = get_staging_client(file_uri.scheme).download_file(file_uri)
             file_obj.seek(0)
-            print("===============In result============")
-            print("===============self.job_proto.data_format:", self.job_proto.data_format)
-            self.result_object_reader(file_obj, file_uri)
+            for row in self.result_object_reader(file_obj, file_uri):
+                yield row
 
     def result_object_reader(self, file_obj: BufferedRandom, file_uri: ParseResult):
         """
@@ -147,8 +146,6 @@ class RetrievalJob:
         :param file_obj: BufferedRandom: result object
         :return: Iterable of Avro or csv rows.
         """
-        print("===============In result_object_reader============")
-        print("===============self.job_proto.data_format:", self.job_proto.data_format)
         if self.job_proto.data_format == DATA_FORMAT_AVRO:
             avro_reader = fastavro.reader(file_obj)
             for record in avro_reader:
