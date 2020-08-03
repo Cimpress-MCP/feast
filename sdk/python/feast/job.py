@@ -122,7 +122,7 @@ class RetrievalJob:
     def result(self, timeout_sec: int = int(defaults[CONFIG_TIMEOUT_KEY])):
         """
         Wait until job is done to get an iterable rows of result. The row can
-        only represent an Avro row in Feast 0.3.
+        only represent an Avro or CSV row in Feast 0.3.
 
         Args:
             timeout_sec (int):
@@ -130,7 +130,7 @@ class RetrievalJob:
                 is exceeded, an exception will be raised.
 
         Returns:
-            Iterable of Avro rows.
+            Iterable of Avro or CSV rows.
         """
         # list of parseResult
         uris = self.get_files(timeout_sec)
