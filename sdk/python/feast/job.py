@@ -2,13 +2,14 @@ import csv
 import gzip
 from io import BufferedRandom
 from tempfile import TemporaryFile
-from typing import List, IO
-from urllib.parse import urlparse, ParseResult
+from typing import IO, List
+from urllib.parse import ParseResult, urlparse
 
 import fastavro
 import grpc
 import pandas as pd
 from google.protobuf.json_format import MessageToJson
+
 from feast.constants import CONFIG_TIMEOUT_KEY
 from feast.constants import FEAST_DEFAULT_OPTIONS as defaults
 from feast.core.CoreService_pb2 import ListIngestionJobsRequest
@@ -111,7 +112,10 @@ class RetrievalJob:
         if self.job_proto.error:
             raise Exception(self.job_proto.error)
 
-        if self.job_proto.data_format != DATA_FORMAT_AVRO and self.job_proto.data_format != DATA_FORMAT_CSV:
+        if (
+            self.job_proto.data_format != DATA_FORMAT_AVRO
+            and self.job_proto.data_format != DATA_FORMAT_CSV
+        ):
             raise Exception(
                 "Feast only supports Avro and CSV data format for now. Please check "
                 "your Feast Serving deployment."
@@ -152,15 +156,15 @@ class RetrievalJob:
                 yield record
         elif self.job_proto.data_format == DATA_FORMAT_CSV:
             # check file format only support csv and gz compression files
-            ext = file_uri.path.lstrip('/').split('.')[-1]
-            if ext.lower() == 'csv':
+            ext = file_uri.path.lstrip("/").split(".")[-1]
+            if ext.lower() == "csv":
                 decode_obj = file_obj.read().decode("utf-8")
-                csv_reader = csv.DictReader(decode_obj.splitlines(), delimiter=',')
+                csv_reader = csv.DictReader(decode_obj.splitlines(), delimiter=",")
                 for record in csv_reader:
                     yield record
-            elif ext.lower() == 'gz':
-                with gzip.open(file_obj, mode='rt') as f:
-                    csv_reader = csv.DictReader(f, delimiter=',')
+            elif ext.lower() == "gz":
+                with gzip.open(file_obj, mode="rt") as f:
+                    csv_reader = csv.DictReader(f, delimiter=",")
                     for record in csv_reader:
                         yield record
             else:
@@ -170,10 +174,9 @@ class RetrievalJob:
                 )
         else:
             raise Exception(
-                "Feast only supports Avro and CSV data format for now. Please check "
+                "Feast only supports Avro, csv and csv.gz data format for now. Please check "
                 "your Feast Serving deployment."
             )
-
 
     def to_dataframe(
         self, timeout_sec: int = int(defaults[CONFIG_TIMEOUT_KEY])
