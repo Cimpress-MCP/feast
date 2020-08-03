@@ -26,8 +26,6 @@ from pandavro import to_avro
 from feast.serving.ServingService_pb2 import DataFormat
 from feast.staging.storage_client import get_staging_client
 
-from feast.serving.ServingService_pb2 import DataFormat
-
 
 def export_source_to_staging_location(
     source: Union[pd.DataFrame, str], staging_location_uri: str, data_format: DataFormat
