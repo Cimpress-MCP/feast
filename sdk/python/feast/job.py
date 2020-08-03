@@ -9,7 +9,6 @@ import fastavro
 import grpc
 import pandas as pd
 from google.protobuf.json_format import MessageToJson
-
 from feast.constants import CONFIG_TIMEOUT_KEY
 from feast.constants import FEAST_DEFAULT_OPTIONS as defaults
 from feast.core.CoreService_pb2 import ListIngestionJobsRequest
@@ -138,6 +137,8 @@ class RetrievalJob:
         for file_uri in uris:
             file_obj = get_staging_client(file_uri.scheme).download_file(file_uri)
             file_obj.seek(0)
+            print("===============In result============")
+            print("===============self.job_proto.data_format:", self.job_proto.data_format)
             self.result_object_reader(file_obj, file_uri)
 
     def result_object_reader(self, file_obj: BufferedRandom, file_uri: ParseResult):
@@ -146,6 +147,8 @@ class RetrievalJob:
         :param file_obj: BufferedRandom: result object
         :return: Iterable of Avro or csv rows.
         """
+        print("===============In result_object_reader============")
+        print("===============self.job_proto.data_format:", self.job_proto.data_format)
         if self.job_proto.data_format == DATA_FORMAT_AVRO:
             avro_reader = fastavro.reader(file_obj)
             for record in avro_reader:
