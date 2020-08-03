@@ -94,7 +94,7 @@ class RetrievalJob:
                 is exceeded, an exception will be raised.
 
         Returns:
-            str: Google Cloud Storage file uris of the returned Avro files or CSV files.
+            str: Google Cloud Storage or S3 file uris of the returned Avro/CSV/CSV.GZ files.
         """
 
         def try_retrieve():
@@ -153,12 +153,12 @@ class RetrievalJob:
         elif self.job_proto.data_format == DATA_FORMAT_CSV:
             # check file format only support csv and gz compression files
             ext = file_uri.path.lstrip('/').split('.')[-1]
-            if ext == 'csv':
+            if ext.lower() == 'csv':
                 decode_obj = file_obj.read().decode("utf-8")
                 csv_reader = csv.DictReader(decode_obj.splitlines(), delimiter=',')
                 for record in csv_reader:
                     yield record
-            elif ext == 'gz':
+            elif ext.lower() == 'gz':
                 with gzip.open(file_obj, mode='rt') as f:
                     csv_reader = csv.DictReader(f, delimiter=',')
                     for record in csv_reader:
