@@ -219,8 +219,8 @@ class TestClient:
             root_certificates=root_certificate_credentials
         )
         with mock.patch(
-            "grpc.ssl_channel_credentials",
-            MagicMock(return_value=ssl_channel_credentials),
+                "grpc.ssl_channel_credentials",
+                MagicMock(return_value=ssl_channel_credentials),
         ):
             yield Client(
                 core_url="localhost:50053",
@@ -238,8 +238,8 @@ class TestClient:
             root_certificates=root_certificate_credentials
         )
         with mock.patch(
-            "grpc.ssl_channel_credentials",
-            MagicMock(return_value=ssl_channel_credentials),
+                "grpc.ssl_channel_credentials",
+                MagicMock(return_value=ssl_channel_credentials),
         ):
             yield Client(
                 core_url="localhost:50055",
@@ -278,10 +278,10 @@ class TestClient:
 
         status = mocked_client.version()
         assert (
-            status["core"]["url"] == CORE_URL
-            and status["core"]["version"] == "0.3.2"
-            and status["serving"]["url"] == SERVING_URL
-            and status["serving"]["version"] == "0.3.2"
+                status["core"]["url"] == CORE_URL
+                and status["core"]["version"] == "0.3.2"
+                and status["serving"]["url"] == SERVING_URL
+                and status["serving"]["version"] == "0.3.2"
         )
 
     @pytest.mark.parametrize(
@@ -357,17 +357,17 @@ class TestClient:
         got_fields = got_response.field_values[0].fields
         got_statuses = got_response.field_values[0].statuses
         assert (
-            got_fields["driver_id"] == int_val(1)
-            and got_statuses["driver_id"]
-            == GetOnlineFeaturesResponse.FieldStatus.PRESENT
-            and got_fields["driver:age"] == int_val(1)
-            and got_statuses["driver:age"]
-            == GetOnlineFeaturesResponse.FieldStatus.PRESENT
-            and got_fields["rating"] == int_val(9)
-            and got_statuses["rating"] == GetOnlineFeaturesResponse.FieldStatus.PRESENT
-            and got_fields["null_value"] == ValueProto.Value()
-            and got_statuses["null_value"]
-            == GetOnlineFeaturesResponse.FieldStatus.NULL_VALUE
+                got_fields["driver_id"] == int_val(1)
+                and got_statuses["driver_id"]
+                == GetOnlineFeaturesResponse.FieldStatus.PRESENT
+                and got_fields["driver:age"] == int_val(1)
+                and got_statuses["driver:age"]
+                == GetOnlineFeaturesResponse.FieldStatus.PRESENT
+                and got_fields["rating"] == int_val(9)
+                and got_statuses["rating"] == GetOnlineFeaturesResponse.FieldStatus.PRESENT
+                and got_fields["null_value"] == ValueProto.Value()
+                and got_statuses["null_value"]
+                == GetOnlineFeaturesResponse.FieldStatus.NULL_VALUE
         )
 
     @pytest.mark.parametrize(
@@ -421,17 +421,17 @@ class TestClient:
         feature_set = mocked_client.get_feature_set("my_feature_set")
 
         assert (
-            feature_set.name == "my_feature_set"
-            and "key1" in feature_set.labels
-            and feature_set.labels["key1"] == "val1"
-            and "key2" in feature_set.labels
-            and feature_set.labels["key2"] == "val2"
-            and feature_set.fields["my_feature_1"].name == "my_feature_1"
-            and feature_set.fields["my_feature_1"].dtype == ValueType.FLOAT
-            and feature_set.fields["my_entity_1"].name == "my_entity_1"
-            and feature_set.fields["my_entity_1"].dtype == ValueType.INT64
-            and len(feature_set.features) == 2
-            and len(feature_set.entities) == 1
+                feature_set.name == "my_feature_set"
+                and "key1" in feature_set.labels
+                and feature_set.labels["key1"] == "val1"
+                and "key2" in feature_set.labels
+                and feature_set.labels["key2"] == "val2"
+                and feature_set.fields["my_feature_1"].name == "my_feature_1"
+                and feature_set.fields["my_feature_1"].dtype == ValueType.FLOAT
+                and feature_set.fields["my_entity_1"].name == "my_entity_1"
+                and feature_set.fields["my_entity_1"].dtype == ValueType.INT64
+                and len(feature_set.features) == 2
+                and len(feature_set.entities) == 1
         )
 
     @pytest.mark.parametrize(
@@ -485,14 +485,14 @@ class TestClient:
 
         feature_set = feature_sets[0]
         assert (
-            feature_set.name == "driver_car"
-            and "key1" in feature_set.labels
-            and feature_set.labels["key1"] == "val1"
-            and "key2" in feature_set.labels
-            and feature_set.labels["key2"] == "val2"
-            and feature_set.fields["feature_1"].name == "feature_1"
-            and feature_set.fields["feature_1"].dtype == ValueType.FLOAT
-            and len(feature_set.features) == 1
+                feature_set.name == "driver_car"
+                and "key1" in feature_set.labels
+                and feature_set.labels["key1"] == "val1"
+                and "key2" in feature_set.labels
+                and feature_set.labels["key2"] == "val2"
+                and feature_set.fields["feature_1"].name == "feature_1"
+                and feature_set.fields["feature_1"].dtype == ValueType.FLOAT
+                and len(feature_set.features) == 1
         )
 
     @pytest.mark.parametrize(
@@ -536,9 +536,9 @@ class TestClient:
             feature_dtype_list.append(feature_proto.dtype)
 
         assert (
-            set(ref_str_list) == set(["driver_car:feature_1", "driver_car:feature_2"])
-            and set(feature_name_list) == set(["feature_1", "feature_2"])
-            and set(feature_dtype_list) == set([ValueType.FLOAT, ValueType.STRING])
+                set(ref_str_list) == set(["driver_car:feature_1", "driver_car:feature_2"])
+                and set(feature_name_list) == set(["feature_1", "feature_2"])
+                and set(feature_dtype_list) == set([ValueType.FLOAT, ValueType.STRING])
         )
 
     @pytest.mark.parametrize(
@@ -590,11 +590,11 @@ class TestClient:
 
         ingest_job = ingest_jobs[0]
         assert (
-            ingest_job.status == IngestionJobStatus.RUNNING
-            and ingest_job.id == "kafka-to-redis"
-            and ingest_job.external_id == "job-2222"
-            and ingest_job.feature_sets[0].name == "driver"
-            and ingest_job.source.source_type == "Kafka"
+                ingest_job.status == IngestionJobStatus.RUNNING
+                and ingest_job.id == "kafka-to-redis"
+                and ingest_job.external_id == "job-2222"
+                and ingest_job.feature_sets[0].name == "driver"
+                and ingest_job.source.source_type == "Kafka"
         )
 
     @pytest.mark.parametrize(
@@ -794,20 +794,20 @@ class TestClient:
 
         # List Feature Sets
         assert (
-            len(feature_sets) == 2
-            and feature_sets[0].name == "my-feature-set-1"
-            and feature_sets[0].features[0].name == "fs1-my-feature-1"
-            and feature_sets[0].features[0].dtype == ValueType.INT64
-            and feature_sets[0].features[1].name == "fs1-my-feature-2"
-            and feature_sets[0].features[1].dtype == ValueType.STRING
-            and feature_sets[0].entities[0].name == "fs1-my-entity-1"
-            and feature_sets[0].entities[0].dtype == ValueType.INT64
-            and feature_sets[1].features[0].name == "fs2-my-feature-1"
-            and feature_sets[1].features[0].dtype == ValueType.STRING_LIST
-            and feature_sets[1].features[1].name == "fs2-my-feature-2"
-            and feature_sets[1].features[1].dtype == ValueType.BYTES_LIST
-            and feature_sets[1].entities[0].name == "fs2-my-entity-1"
-            and feature_sets[1].entities[0].dtype == ValueType.INT64
+                len(feature_sets) == 2
+                and feature_sets[0].name == "my-feature-set-1"
+                and feature_sets[0].features[0].name == "fs1-my-feature-1"
+                and feature_sets[0].features[0].dtype == ValueType.INT64
+                and feature_sets[0].features[1].name == "fs1-my-feature-2"
+                and feature_sets[0].features[1].dtype == ValueType.STRING
+                and feature_sets[0].entities[0].name == "fs1-my-entity-1"
+                and feature_sets[0].entities[0].dtype == ValueType.INT64
+                and feature_sets[1].features[0].name == "fs2-my-feature-1"
+                and feature_sets[1].features[0].dtype == ValueType.STRING_LIST
+                and feature_sets[1].features[1].name == "fs2-my-feature-2"
+                and feature_sets[1].features[1].dtype == ValueType.BYTES_LIST
+                and feature_sets[1].entities[0].name == "fs2-my-entity-1"
+                and feature_sets[1].entities[0].dtype == ValueType.INT64
         )
 
     @pytest.mark.parametrize(
@@ -848,7 +848,7 @@ class TestClient:
         [(dataframes.GOOD, lazy_fixture("client"), Exception)],
     )
     def test_feature_set_ingest_throws_exception_if_kafka_down(
-        self, dataframe, test_client, exception, mocker
+            self, dataframe, test_client, exception, mocker
     ):
 
         test_client.set_project("project1")
@@ -883,7 +883,7 @@ class TestClient:
         ],
     )
     def test_feature_set_ingest_fail_if_pending(
-        self, dataframe, exception, test_client, mocker
+            self, dataframe, exception, test_client, mocker
     ):
         with pytest.raises(exception):
             test_client.set_project("project1")
@@ -917,17 +917,17 @@ class TestClient:
         [
             (dataframes.BAD_NO_DATETIME, Exception, lazy_fixture("client")),
             (
-                dataframes.BAD_INCORRECT_DATETIME_TYPE,
-                Exception,
-                lazy_fixture("client"),
+                    dataframes.BAD_INCORRECT_DATETIME_TYPE,
+                    Exception,
+                    lazy_fixture("client"),
             ),
             (dataframes.BAD_NO_ENTITY, Exception, lazy_fixture("client")),
             (dataframes.NO_FEATURES, Exception, lazy_fixture("client")),
             (dataframes.BAD_NO_DATETIME, Exception, lazy_fixture("secure_client"),),
             (
-                dataframes.BAD_INCORRECT_DATETIME_TYPE,
-                Exception,
-                lazy_fixture("secure_client"),
+                    dataframes.BAD_INCORRECT_DATETIME_TYPE,
+                    Exception,
+                    lazy_fixture("secure_client"),
             ),
             (dataframes.BAD_NO_ENTITY, Exception, lazy_fixture("secure_client")),
             (dataframes.NO_FEATURES, Exception, lazy_fixture("secure_client")),
@@ -1005,7 +1005,7 @@ class TestClient:
             core_enable_ssl=True,
         )
         with mock.patch("grpc.secure_channel") as _grpc_mock, mock.patch(
-            "grpc.ssl_channel_credentials", MagicMock(return_value="test")
+                "grpc.ssl_channel_credentials", MagicMock(return_value="test")
         ) as _mocked_credentials:
             _ = client._serving_service
             _grpc_mock.assert_called_with(
@@ -1014,11 +1014,11 @@ class TestClient:
 
     @mock.patch("grpc.channel_ready_future")
     def test_secure_channel_creation_with_secure_serving_url(
-        self, _mocked_obj,
+            self, _mocked_obj,
     ):
         client = Client(core_url="localhost:50051", serving_url="localhost:443")
         with mock.patch("grpc.secure_channel") as _grpc_mock, mock.patch(
-            "grpc.ssl_channel_credentials", MagicMock(return_value="test")
+                "grpc.ssl_channel_credentials", MagicMock(return_value="test")
         ) as _mocked_credentials:
             _ = client._serving_service
             _grpc_mock.assert_called_with(
@@ -1029,7 +1029,7 @@ class TestClient:
     def test_secure_channel_creation_with_secure_core_url(self, _mocked_obj):
         client = Client(core_url="localhost:443", serving_url="localhost:50054")
         with mock.patch("grpc.secure_channel") as _grpc_mock, mock.patch(
-            "grpc.ssl_channel_credentials", MagicMock(return_value="test")
+                "grpc.ssl_channel_credentials", MagicMock(return_value="test")
         ) as _mocked_credentials:
             _ = client._core_service
             _grpc_mock.assert_called_with(
@@ -1038,12 +1038,12 @@ class TestClient:
 
     @mock.patch("grpc.channel_ready_future")
     def test_auth_success_with_secure_channel_on_core_url(
-        self, secure_core_client_with_auth
+            self, secure_core_client_with_auth
     ):
         secure_core_client_with_auth.list_feature_sets()
 
     def test_auth_success_with_insecure_channel_on_core_url(
-        self, insecure_core_server_with_auth
+            self, insecure_core_server_with_auth
     ):
         client = Client(
             core_url="localhost:50056", enable_auth=True, auth_token=_FAKE_JWT_TOKEN,
@@ -1051,7 +1051,7 @@ class TestClient:
         client.list_feature_sets()
 
     def test_no_auth_sent_when_auth_disabled(
-        self, insecure_core_server_that_blocks_auth
+            self, insecure_core_server_that_blocks_auth
     ):
         client = Client(core_url="localhost:50057")
         client.list_feature_sets()
