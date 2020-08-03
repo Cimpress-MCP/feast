@@ -121,6 +121,7 @@ public class ServingServiceConfig {
     dsProperties.put("role", config.get("role"));
     HikariConfig hkConfig = new HikariConfig();
     hkConfig.setMaximumPoolSize(100);
+    System.out.println("classname----" + config.get("class_name"));
     hkConfig.setDriverClassName(config.get("class_name"));
     hkConfig.setJdbcUrl(config.get("url"));
     hkConfig.setDataSourceProperties(dsProperties);

@@ -16,19 +16,27 @@
  */
 package feast.serving.it;
 
-
+import static org.awaitility.Awaitility.waitAtMost;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import feast.proto.types.FeatureRowProto.FeatureRow;
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.ClassRule;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.runners.model.InitializationError;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -38,7 +46,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @ActiveProfiles("it")
-@SpringBootTest()
+@SpringBootTest(properties = {"feast.active_store=historical_snowflake"})
 @Testcontainers
 public class ServingServiceStorageIT {
 
@@ -52,23 +60,6 @@ public class ServingServiceStorageIT {
   static void initialize(DynamicPropertyRegistry registry) throws UnknownHostException {
 
     System.out.print("initializing");
-    registry.add("feast.stores[0].name", () -> "online");
-    registry.add("feast.stores[0].type", () -> "REDIS");
-    // Redis needs to accessible by both core and serving, hence using host address
-    registry.add(
-        "feast.stores[0].config.host",
-        () -> {
-          try {
-            return InetAddress.getLocalHost().getHostAddress();
-          } catch (UnknownHostException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            return "";
-          }
-        });
-    registry.add("feast.stores[0].config.port", () -> REDIS_PORT);
-    registry.add("feast.stores[0].subscriptions[0].name", () -> "*");
-    registry.add("feast.stores[0].subscriptions[0].project", () -> "*");
   }
 
   @ClassRule @Container
@@ -87,8 +78,48 @@ public class ServingServiceStorageIT {
     System.out.print("global setup");
   }
 
+  public KafkaTemplate<String, FeatureRow> specKafkaTemplate() {
+
+    Map<String, Object> props = new HashMap<>();
+    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092,localhost:9094");
+
+    KafkaTemplate<String, FeatureRow> t =
+        new KafkaTemplate<>(
+            new DefaultKafkaProducerFactory<>(
+                props, new StringSerializer(), new KafkaSerialization.ProtoSerializer<>()));
+    t.setDefaultTopic("feast-features");
+    return t;
+  }
+
   @Test
   public void testdummy() {
+    assertTrue(1 == 1);
+  }
+
+  @Test
+  public void testSnowflakeSinkShouldPass() throws InterruptedException {
+    // apply feature set
+    CoreSimpleAPIClient coreClient = BatchTestUtils.getApiClientForCore(FEAST_CORE_PORT);
+    BatchTestUtils.applyFeatureSet(coreClient, "test_proj", "entity", "feature1");
+    List<FeatureRow> features = BatchTestUtils.ingestFeatures("test_proj", "entity", "feature1");
+    System.out.println("size of featurerow---" + features.size());
+    KafkaTemplate<String, FeatureRow> kafkaTemplate = specKafkaTemplate();
+    for (int i = 0; i < features.size(); i++) {
+
+      System.out.print("rows---" + features.get(i).getFeatureSet() + "" + features.get(i));
+      kafkaTemplate.send("feast-features", features.get(i));
+    }
+
+    waitAtMost(2, TimeUnit.MINUTES);
+
+    TimeUnit.MINUTES.sleep(2);
+    System.out.println("After 2 mins");
+
+    //        GetBatchFeaturesResponse featureResponse =
+    //     servingStub.getOnlineFeatures(onlineFeatureRequest);
+    //    //    assertEquals(1, featureResponse.getFieldValuesCount());
+    //    Map<String, Value> fieldsMap = featureResponse.getFieldValues(0).getFieldsMap();
+    //    assertTrue(fieldsMap.containsKey(ENTITY_ID));
     assertTrue(1 == 1);
   }
 }

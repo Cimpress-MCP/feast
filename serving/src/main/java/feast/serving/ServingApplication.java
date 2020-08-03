@@ -33,7 +33,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 @EnableConfigurationProperties(FeastProperties.class)
 public class ServingApplication {
   public static void main(String[] args) {
-    System.out.println("inside servingService application");
     SpringApplication.run(ServingApplication.class, args);
   }
 }
