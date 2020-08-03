@@ -1,5 +1,6 @@
 import csv
 import gzip
+from io import BufferedRandom
 from tempfile import TemporaryFile
 from typing import List, IO
 from urllib.parse import urlparse, ParseResult
@@ -83,7 +84,6 @@ class RetrievalJob:
             metadata=self.auth_metadata.get_signed_meta() if self.auth_metadata else (),
         ).job
 
-    # TODO: get files to support gzip csv
     def get_files(self, timeout_sec: int = int(defaults[CONFIG_TIMEOUT_KEY])):
         """
         Wait until job is done to get the file uri to Avro result files on
@@ -120,7 +120,6 @@ class RetrievalJob:
 
         return [urlparse(uri) for uri in self.job_proto.file_uris]
 
-    # TODO: reader to support obj in s3
     def result(self, timeout_sec: int = int(defaults[CONFIG_TIMEOUT_KEY])):
         """
         Wait until job is done to get an iterable rows of result. The row can
@@ -141,11 +140,10 @@ class RetrievalJob:
             file_obj.seek(0)
             self.result_object_reader(file_obj, file_uri)
 
-    # todo:
-    def result_object_reader(self, file_obj: TemporaryFile, file_uri: ParseResult):
+    def result_object_reader(self, file_obj: BufferedRandom, file_uri: ParseResult):
         """
         iterable of result object rows
-        :param file_obj: TemporaryFile: result object
+        :param file_obj: BufferedRandom: result object
         :return: Iterable of Avro or csv rows.
         """
         if self.job_proto.data_format == DATA_FORMAT_AVRO:
@@ -157,12 +155,12 @@ class RetrievalJob:
             ext = file_uri.path.lstrip('/').split('.')[-1]
             if ext == 'csv':
                 decode_obj = file_obj.read().decode("utf-8")
-                csv_reader = csv.reader(decode_obj.splitlines(), delimiter=',')
+                csv_reader = csv.DictReader(decode_obj.splitlines(), delimiter=',')
                 for record in csv_reader:
                     yield record
             elif ext == 'gz':
                 with gzip.open(file_obj, mode='rt') as f:
-                    csv_reader = csv.reader(f, delimiter=',')
+                    csv_reader = csv.DictReader(f, delimiter=',')
                     for record in csv_reader:
                         yield record
             else:
@@ -200,7 +198,6 @@ class RetrievalJob:
         records = [r for r in self.result(timeout_sec=timeout_sec)]
         return pd.DataFrame.from_records(records)
 
-    # TODO: update with csv, gzip
     def to_chunked_dataframe(
         self,
         max_chunk_size: int = -1,
