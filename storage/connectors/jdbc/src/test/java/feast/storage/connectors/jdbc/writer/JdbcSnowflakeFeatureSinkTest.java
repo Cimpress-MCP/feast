@@ -20,6 +20,7 @@ import static feast.storage.common.testing.TestUtil.field;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.util.Timestamps;
 import feast.common.models.FeatureSetReference;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.StoreProto;
@@ -28,10 +29,8 @@ import feast.proto.types.FieldProto;
 import feast.proto.types.ValueProto;
 import feast.proto.types.ValueProto.ValueType.Enum;
 import feast.storage.api.writer.FeatureSink;
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
+import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -55,7 +54,7 @@ public class JdbcSnowflakeFeatureSinkTest {
   private String database = "DEMO_DB";
   private String schema = "PUBLIC";
   private String warehouse = "COMPUTE_WH";
-  private String snowflakeUrl = "jdbc:snowflake://kia19877.snowflakecomputing.com";
+  private String snowflakeUrl = "jdbc:snowflake://nx46274.us-east-2.aws.snowflakecomputing.com";
   private String className = "net.snowflake.client.jdbc.SnowflakeDriver";
   private String tableName = "feast_features";
   private Connection conn;
@@ -155,12 +154,14 @@ public class JdbcSnowflakeFeatureSinkTest {
   }
 
   @Test
-  public void shouldWriteToSnowflake() throws SQLException {
+  public void shouldWriteToSnowflake() throws SQLException, ParseException {
 
+    String event_timestamp = "2019-12-31T16:00:00.00Z";
     List<FeatureRow> featureRows =
         ImmutableList.of(
             FeatureRow.newBuilder()
                 .setFeatureSet("snowflake_proj/feature_set_1")
+                .setEventTimestamp(Timestamps.parse(event_timestamp))
                 .addFields(field("entity", 1, Enum.INT64))
                 .addFields(field("feature", "two", Enum.STRING))
                 .build(),

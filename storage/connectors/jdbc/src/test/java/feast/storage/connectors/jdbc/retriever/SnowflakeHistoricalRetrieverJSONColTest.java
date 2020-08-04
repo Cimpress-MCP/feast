@@ -40,7 +40,7 @@ public class SnowflakeHistoricalRetrieverJSONColTest {
   private String staging_location = "s3://feast-snowflake-staging/test/";
 
   private Map<String, String> snowflakeConfig = new HashMap<>();
-  private String SFUrl = "jdbc:snowflake://ry42518.us-east-2.aws.snowflakecomputing.com";
+  private String SFUrl = "jdbc:snowflake://nx46274.us-east-2.aws.snowflakecomputing.com";
   private String SFClassName = "net.snowflake.client.jdbc.SnowflakeDriver";
   private String SFusername = System.getenv("SNOWFLAKE_USERNAME_RETRI");
   private String SFpw = System.getenv("SNOWFLAKE_PASSWORD_RETRI");

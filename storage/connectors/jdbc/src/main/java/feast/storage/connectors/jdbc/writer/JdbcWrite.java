@@ -93,21 +93,15 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
                                   Collectors.toMap(
                                       FieldProto.Field::getName, FieldProto.Field::getValue));
 
-                      // Set event_timestamp
+                      // Set event_timestamp, with no time zone
                       Instant eventTsInstant =
                           Instant.ofEpochSecond(element.getEventTimestamp().getSeconds())
                               .plusNanos(element.getEventTimestamp().getNanos());
-
-                      preparedStatement.setTimestamp(
-                          1,
-                          Timestamp.from(eventTsInstant),
-                          Calendar.getInstance(TimeZone.getTimeZone("UTC")));
+                      java.sql.Timestamp event_timestamp = Timestamp.from(eventTsInstant);
+                      preparedStatement.setTimestamp(1, event_timestamp);
 
                       // Set created_timestamp
-                      preparedStatement.setTimestamp(
-                          2,
-                          new Timestamp(System.currentTimeMillis()),
-                          Calendar.getInstance(TimeZone.getTimeZone("UTC")));
+                      preparedStatement.setTimestamp(2, new Timestamp(System.currentTimeMillis()));
 
                       // Set Project
 
@@ -249,20 +243,13 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
     String className = jdbcConfig.getClassName();
     String url = jdbcConfig.getUrl();
     log.info("setting the jdbc connection");
-    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
-      String database = jdbcConfig.getDatabase();
-      String schema = jdbcConfig.getSchema();
-      String warehouse = jdbcConfig.getWarehouse();
-      return JdbcIO.DataSourceConfiguration.create(className, url)
-          .withUsername(!username.isEmpty() ? username : null)
-          .withPassword(!password.isEmpty() ? password : null)
-          .withConnectionProperties(
-              String.format("warehouse=%s;db=%s;schema=%s", warehouse, database, schema));
-
-    } else {
-      return JdbcIO.DataSourceConfiguration.create(className, url)
-          .withUsername(!username.isEmpty() ? username : null)
-          .withPassword(!password.isEmpty() ? password : null);
-    }
+    String database = jdbcConfig.getDatabase();
+    String schema = jdbcConfig.getSchema();
+    String warehouse = jdbcConfig.getWarehouse();
+    return JdbcIO.DataSourceConfiguration.create(className, url)
+        .withUsername(!username.isEmpty() ? username : null)
+        .withPassword(!password.isEmpty() ? password : null)
+        .withConnectionProperties(
+            String.format("warehouse=%s;db=%s;schema=%s", warehouse, database, schema));
   }
 }
