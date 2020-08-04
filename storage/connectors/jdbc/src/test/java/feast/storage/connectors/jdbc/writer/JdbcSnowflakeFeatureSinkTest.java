@@ -49,13 +49,16 @@ public class JdbcSnowflakeFeatureSinkTest {
 
   // TODO: Update the variables to match your snowflake account
 
-  private String userName = System.getenv("SNOWFLAKE_USERNAME");
-  private String password = System.getenv("SNOWFLAKE_PASSWORD");
+  //  private String userName = System.getenv("SNOWFLAKE_USERNAME");
+  //  private String password = System.getenv("SNOWFLAKE_PASSWORD");
+  private String userName = "SWATIARORA";
+
+  private String password = "Vistaprint1@";
 
   private String database = "DEMO_DB";
   private String schema = "PUBLIC";
   private String warehouse = "COMPUTE_WH";
-  private String snowflakeUrl = "jdbc:snowflake://kia19877.snowflakecomputing.com";
+  private String snowflakeUrl = "jdbc:snowflake://vma27290.us-east-1.snowflakecomputing.com";
   private String className = "net.snowflake.client.jdbc.SnowflakeDriver";
   private String tableName = "feast_features";
   private Connection conn;

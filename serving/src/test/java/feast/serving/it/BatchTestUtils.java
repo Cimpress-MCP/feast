@@ -42,7 +42,7 @@ import org.apache.commons.lang3.tuple.Pair;
 public class BatchTestUtils {
 
   static SourceProto.Source defaultSource =
-      createSource("kafka:9092,localhost:9094", "FEAST_FEATURES");
+      createSource("kafka:9092,localhost:9094", "feast-features");
 
   public static SourceProto.Source getDefaultSource() {
     return defaultSource;
@@ -129,16 +129,16 @@ public class BatchTestUtils {
     List<FeatureRow> featureRows =
         ImmutableList.of(
             FeatureRow.newBuilder()
-                //                .setIngestionId(ingestion_id)
+                .setIngestionId(ingestion_id)
                 .setFeatureSet(featureSet)
                 .addFields(field(entityId, 1, Enum.INT64))
-                .addFields(field(featureName, "two", Enum.STRING))
+                .addFields(field(featureName, 1, Enum.INT64))
                 .build(),
             FeatureRow.newBuilder()
-                //                .setIngestionId(ingestion_id)
+                .setIngestionId(ingestion_id)
                 .setFeatureSet(featureSet)
                 .addFields(field(entityId, 2, Enum.INT64))
-                .addFields(field(featureName, "two", Enum.STRING))
+                .addFields(field(featureName, 2, Enum.INT64))
                 //		                .addFields(field("entity_id_secondary", "asjdh", Enum.STRING))
                 .build());
 

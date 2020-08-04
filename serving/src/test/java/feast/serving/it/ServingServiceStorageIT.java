@@ -16,7 +16,6 @@
  */
 package feast.serving.it;
 
-import static org.awaitility.Awaitility.waitAtMost;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import feast.proto.types.FeatureRowProto.FeatureRow;
@@ -106,17 +105,16 @@ public class ServingServiceStorageIT {
     KafkaTemplate<String, FeatureRow> kafkaTemplate = specKafkaTemplate();
     for (int i = 0; i < features.size(); i++) {
 
-      System.out.print("rows---" + features.get(i).getFeatureSet() + "" + features.get(i));
+      
       kafkaTemplate.send("feast-features", features.get(i));
     }
 
-    waitAtMost(2, TimeUnit.MINUTES);
-
     TimeUnit.MINUTES.sleep(2);
-    System.out.println("After 2 mins");
+//    System.out.println("After 2 mins");
 
-    //        GetBatchFeaturesResponse featureResponse =
-    //     servingStub.getOnlineFeatures(onlineFeatureRequest);
+    //            FeatureSet featureResponse =
+    //            		coreClient.simpleGetFeatureSet("test_proj", "test_1");
+    //            assertEquals(featureResponse.getMeta(),)
     //    //    assertEquals(1, featureResponse.getFieldValuesCount());
     //    Map<String, Value> fieldsMap = featureResponse.getFieldValues(0).getFieldsMap();
     //    assertTrue(fieldsMap.containsKey(ENTITY_ID));

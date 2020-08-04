@@ -19,7 +19,6 @@ package feast.storage.connectors.jdbc.writer;
 import feast.proto.core.StoreProto;
 import feast.proto.core.StoreProto.Store.JdbcConfig;
 import feast.proto.types.FeatureRowProto;
-import feast.proto.types.FeatureRowProto.FeatureRow;
 import feast.proto.types.FieldProto;
 import feast.proto.types.ValueProto;
 import feast.storage.api.writer.FailedElement;
@@ -52,7 +51,6 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
   private final StoreProto.Store.JdbcConfig config;
 
   public JdbcWrite(JdbcConfig config, JdbcTemplater jdbcTemplater) {
-
     this.config = config;
     this.jdbcTemplater = jdbcTemplater;
   }
@@ -72,9 +70,7 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
 
     int batchSize = this.config.getBatchSize() > 0 ? config.getBatchSize() : 1;
 
-    PCollection<FeatureRow> feature = input;
-
-    feature.apply(
+    input.apply(
         String.format("WriteFeatureRowToJdbcIO-%s", jobName),
         JdbcIO.<FeatureRowProto.FeatureRow>write()
             .withDataSourceConfiguration(create_dsconfig(this.config))
@@ -110,19 +106,16 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
                           Calendar.getInstance(TimeZone.getTimeZone("UTC")));
 
                       // Set Project
-
                       preparedStatement.setString(3, getProject(element.getFeatureSet()));
 
                       // Set FeatureSet
-
                       preparedStatement.setString(4, getFeatureSet(element.getFeatureSet()));
 
-                      //
+                      // Set feature
                       JSONObject json_variant = new JSONObject();
                       for (String row : fieldMap.keySet()) {
                         setFeatureValue(json_variant, row, fieldMap.get(row));
                       }
-
                       preparedStatement.setString(5, json_variant.toString());
 
                       // Set ingestion Id
@@ -132,6 +125,7 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
                       preparedStatement.setString(7, jobName);
 
                       preparedStatement.getConnection().commit();
+
                     } catch (SQLException e) {
                       log.error(
                           String.format(
@@ -248,21 +242,15 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
     String password = jdbcConfig.getPassword();
     String className = jdbcConfig.getClassName();
     String url = jdbcConfig.getUrl();
-    log.info("setting the jdbc connection");
-    if (className == "net.snowflake.client.jdbc.SnowflakeDriver") {
-      String database = jdbcConfig.getDatabase();
-      String schema = jdbcConfig.getSchema();
-      String warehouse = jdbcConfig.getWarehouse();
-      return JdbcIO.DataSourceConfiguration.create(className, url)
-          .withUsername(!username.isEmpty() ? username : null)
-          .withPassword(!password.isEmpty() ? password : null)
-          .withConnectionProperties(
-              String.format("warehouse=%s;db=%s;schema=%s", warehouse, database, schema));
 
-    } else {
-      return JdbcIO.DataSourceConfiguration.create(className, url)
-          .withUsername(!username.isEmpty() ? username : null)
-          .withPassword(!password.isEmpty() ? password : null);
-    }
+    String database = jdbcConfig.getDatabase();
+    String schema = jdbcConfig.getSchema();
+    String warehouse = jdbcConfig.getWarehouse();
+
+    return JdbcIO.DataSourceConfiguration.create(className, url)
+        .withUsername(!username.isEmpty() ? username : null)
+        .withPassword(!password.isEmpty() ? password : null)
+        .withConnectionProperties(
+            String.format("warehouse=%s;db=%s;schema=%s", warehouse, database, schema));
   }
 }

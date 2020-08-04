@@ -75,7 +75,6 @@ public class JdbcFeatureSink implements FeatureSink {
   @Override
   public PCollection<FeatureSetReference> prepareWrite(
       PCollection<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>> featureSetSpecs) {
-
     PCollection<FeatureSetReference> schemas =
         featureSetSpecs.apply(
             "createSchema",
