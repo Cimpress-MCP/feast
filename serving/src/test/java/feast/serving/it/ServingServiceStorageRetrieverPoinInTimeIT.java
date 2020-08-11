@@ -24,17 +24,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.protobuf.ProtocolStringList;
 import feast.proto.serving.ServingAPIProto.*;
 import feast.proto.serving.ServingServiceGrpc.ServingServiceBlockingStub;
+import feast.proto.types.FeatureRowProto.FeatureRow;
 import java.io.File;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.ClassRule;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.runners.model.InitializationError;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -71,6 +78,45 @@ public class ServingServiceStorageRetrieverPoinInTimeIT {
   @BeforeAll
   static void globalSetup() throws IOException, InitializationError, InterruptedException {
     System.out.print("global setup");
+  }
+
+  public KafkaTemplate<String, FeatureRow> specKafkaTemplate() {
+
+    Map<String, Object> props = new HashMap<>();
+    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092,localhost:9094");
+
+    KafkaTemplate<String, FeatureRow> t =
+        new KafkaTemplate<>(
+            new DefaultKafkaProducerFactory<>(
+                props, new StringSerializer(), new KafkaSerialization.ProtoSerializer<>()));
+    t.setDefaultTopic("feast-features");
+    return t;
+  }
+
+  @Test
+  public void testSnowflakeSinkShouldPass() throws InterruptedException {
+    // apply feature set
+    CoreSimpleAPIClient coreClient = SnowflakeTestUtils.getApiClientForCore(FEAST_CORE_PORT);
+    SnowflakeTestUtils.applyFeatureSet(
+        coreClient, "test_proj", "test_1", "entity", "feature1", MAX_AGE_SECOND);
+    List<FeatureRow> features =
+        SnowflakeTestUtils.ingestFeatures("test_proj", "entity", "feature1");
+    KafkaTemplate<String, FeatureRow> kafkaTemplate = specKafkaTemplate();
+    for (int i = 0; i < features.size(); i++) {
+
+      kafkaTemplate.send("feast-features", features.get(i));
+    }
+
+    TimeUnit.MINUTES.sleep(2);
+    //    System.out.println("After 2 mins");
+
+    //            FeatureSet featureResponse =
+    //            		coreClient.simpleGetFeatureSet("test_proj", "test_1");
+    //            assertEquals(featureResponse.getMeta(),)
+    //    //    assertEquals(1, featureResponse.getFieldValuesCount());
+    //    Map<String, Value> fieldsMap = featureResponse.getFieldValues(0).getFieldsMap();
+    //    assertTrue(fieldsMap.containsKey(ENTITY_ID));
+    assertTrue(1 == 1);
   }
 
   @Test

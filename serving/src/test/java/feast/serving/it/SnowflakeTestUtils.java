@@ -16,6 +16,7 @@
  */
 package feast.serving.it;
 
+import static feast.storage.common.testing.TestUtil.field;
 import static org.awaitility.Awaitility.waitAtMost;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.beans.HasPropertyWithValue.hasProperty;
@@ -27,6 +28,7 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.AmazonS3URI;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Duration;
 import feast.proto.core.CoreServiceGrpc;
 import feast.proto.core.FeatureSetProto;
@@ -34,11 +36,14 @@ import feast.proto.core.FeatureSetProto.FeatureSetStatus;
 import feast.proto.core.SourceProto;
 import feast.proto.serving.ServingAPIProto;
 import feast.proto.serving.ServingServiceGrpc;
+import feast.proto.types.FeatureRowProto.FeatureRow;
 import feast.proto.types.ValueProto;
+import feast.proto.types.ValueProto.ValueType.Enum;
 import io.grpc.Channel;
 import io.grpc.ManagedChannelBuilder;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
@@ -175,6 +180,35 @@ public class SnowflakeTestUtils {
                         .collect(Collectors.toList()))
                 .build())
         .build();
+  }
+
+  public static List<FeatureRow> ingestFeatures(
+      String projectName, String entityId, String featureName) {
+    // TODO Auto-generated method stub
+    String featureSetName = "test_1";
+    String featureSet = projectName + "/" + featureSetName;
+    String ingestion_id = getIngestionID(featureSetName);
+    List<FeatureRow> featureRows =
+        ImmutableList.of(
+            FeatureRow.newBuilder()
+                .setIngestionId(ingestion_id)
+                .setFeatureSet(featureSet)
+                .addFields(field(entityId, 1, Enum.INT64))
+                .addFields(field(featureName, 1, Enum.INT64))
+                .build(),
+            FeatureRow.newBuilder()
+                .setIngestionId(ingestion_id)
+                .setFeatureSet(featureSet)
+                .addFields(field(entityId, 2, Enum.INT64))
+                .addFields(field(featureName, 2, Enum.INT64))
+                //		                .addFields(field("entity_id_secondary", "asjdh", Enum.STRING))
+                .build());
+
+    return featureRows;
+  }
+
+  private static String getIngestionID(String featureSetName) {
+    return featureSetName + new Date().getTime();
   }
 
   public static ServingServiceGrpc.ServingServiceBlockingStub getServingServiceStub(

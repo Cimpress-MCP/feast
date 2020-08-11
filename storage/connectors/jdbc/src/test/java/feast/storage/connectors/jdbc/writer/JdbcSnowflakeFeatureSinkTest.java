@@ -18,6 +18,7 @@ package feast.storage.connectors.jdbc.writer;
 
 import static feast.storage.common.testing.TestUtil.field;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import feast.common.models.FeatureSetReference;
@@ -28,6 +29,8 @@ import feast.proto.types.FieldProto;
 import feast.proto.types.ValueProto;
 import feast.proto.types.ValueProto.ValueType.Enum;
 import feast.storage.api.writer.FeatureSink;
+
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -48,20 +51,23 @@ public class JdbcSnowflakeFeatureSinkTest {
   private FeatureSink snowflakeFeatureSinkObj;
 
   // TODO: Update the variables to match your snowflake account
-
-  private String userName = System.getenv("SNOWFLAKE_USERNAME");
-  private String password = System.getenv("SNOWFLAKE_PASSWORD");
-
-  private String database = "DEMO_DB";
-  private String schema = "PUBLIC";
-  private String warehouse = "COMPUTE_WH";
-  private String snowflakeUrl = "jdbc:snowflake://kia19877.snowflakecomputing.com";
-  private String className = "net.snowflake.client.jdbc.SnowflakeDriver";
+  private static final String OAUTH_CLIENT_SECRET_NAME = "<AWS_SECRET_NAME>";
+  private static final String OAUTH_CLIENT_ID = "<CLIENT_ID>";
+  
+  private String userName ;
+  private String password ;
+  private String database = "SANDBOX";
+  private String schema = "LAKSHMITEST";
+  private String warehouse = "PUBLIC";
+  private String snowflakeUrl = "jdbc:snowflake://vistaprint.eu-west-1.snowflakecomputing.com";
+  private String className = "com.snowflake.client.jdbc.SnowflakeDriver";
   private String tableName = "feast_features";
+  private String role = "DATABRICKS_ROLE";
   private Connection conn;
+  
 
   @Before
-  public void setUp() {
+  public void setUp() throws JsonProcessingException, IOException {
 
     FeatureSetProto.FeatureSetSpec spec1 =
         FeatureSetProto.FeatureSetSpec.newBuilder()
@@ -80,7 +86,10 @@ public class JdbcSnowflakeFeatureSinkTest {
 
     Map<FeatureSetReference, FeatureSetProto.FeatureSetSpec> specMap =
         ImmutableMap.of(ref1, spec1, ref2, spec2);
-
+    SnowflakeAuthorization sf_auth = new SnowflakeAuthorization();
+    String auth[] = sf_auth.getSnowFlakeCredentials(OAUTH_CLIENT_SECRET_NAME, OAUTH_CLIENT_ID);
+    this.userName = auth[0];
+    this.password = auth[1];
     this.snowflakeFeatureSinkObj =
         JdbcFeatureSink.fromConfig(
             StoreProto.Store.JdbcConfig.newBuilder()
@@ -92,6 +101,7 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setSchema(this.schema)
                 .setWarehouse(this.warehouse)
                 .setTableName(this.tableName)
+                .setRole(this.role)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
 
@@ -133,6 +143,7 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setDatabase(this.database)
                 .setSchema(this.schema)
                 .setWarehouse(this.warehouse)
+                .setRole(this.role)
                 .setTableName(tableName)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());

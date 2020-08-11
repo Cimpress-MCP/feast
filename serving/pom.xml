@@ -346,6 +346,11 @@
       <version>0.4.4-alpha.1</version>
       <scope>test</scope>
     </dependency>
+     <!-- Kafka -->
+    <dependency>
+       <groupId>org.springframework.kafka</groupId>
+       <artifactId>spring-kafka</artifactId>
+    </dependency>
   </dependencies>
 
   <profiles>

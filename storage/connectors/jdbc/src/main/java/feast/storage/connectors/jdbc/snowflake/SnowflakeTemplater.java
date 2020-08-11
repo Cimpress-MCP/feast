@@ -19,14 +19,11 @@ package feast.storage.connectors.jdbc.snowflake;
 import feast.proto.core.StoreProto;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
 import java.util.*;
-import org.slf4j.Logger;
 
 public class SnowflakeTemplater implements JdbcTemplater {
 
   /** */
   private static final long serialVersionUID = 1L;
-
-  private static final Logger log = org.slf4j.LoggerFactory.getLogger(SnowflakeTemplater.class);
 
   @Override
   public String getTableCreationSql(StoreProto.Store.JdbcConfig config) {
@@ -39,8 +36,8 @@ public class SnowflakeTemplater implements JdbcTemplater {
     }
     String createTableStatement =
         String.format(
-            "CREATE TABLE IF NOT EXISTS %s (%s);", config.getTableName(), columnsAndTypesSQL);
-    log.debug(createTableStatement);
+            "CREATE TABLE IF NOT EXISTS %s.%s.%s (%s);", config.getDatabase(),config.getSchema(),config.getTableName(), columnsAndTypesSQL);
+
     return createTableStatement;
   }
 
