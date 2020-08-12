@@ -16,7 +16,7 @@
  */
 package feast.storage.connectors.jdbc.retriever;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doNothing;
 
 import com.google.protobuf.Duration;
@@ -41,11 +41,9 @@ public class SnowflakeHistoricalRetrieverMockTest {
   private JdbcHistoricalRetriever snowflakeFeatureRetriever;
   private SnowflakeQueryTemplater snowflakeQueryTemplater;
   //  Snowflake account
-  //  private String staging_location = System.getenv("STAGING_LOCATION");
   private String staging_location = "s3://feast-snowflake-staging/test/";
-
   private Map<String, String> snowflakeConfig = new HashMap<>();
-  private String SFUrl = "jdbc:snowflake://nx46274.us-east-2.aws.snowflakecomputing.com";
+  private String SFUrl = "jdbc:snowflake://fakeTesting.aws.snowflakecomputing.com";
   private String SFClassName = "net.snowflake.client.jdbc.SnowflakeDriver";
   private String SFusername = "fakeUsername";
   private String SFpw = "fakePassword";

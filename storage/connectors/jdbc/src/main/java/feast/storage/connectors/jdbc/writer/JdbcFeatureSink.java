@@ -16,6 +16,8 @@
  */
 package feast.storage.connectors.jdbc.writer;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import feast.common.models.FeatureSetReference;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.StoreProto;
@@ -23,10 +25,6 @@ import feast.proto.core.StoreProto.Store.JdbcConfig;
 import feast.storage.api.writer.FeatureSink;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
 import feast.storage.connectors.jdbc.snowflake.SnowflakeTemplater;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Map;
 import java.util.Properties;
 import org.apache.beam.sdk.transforms.DoFn;
@@ -34,6 +32,7 @@ import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 public class JdbcFeatureSink implements FeatureSink {
   /** */
@@ -42,7 +41,7 @@ public class JdbcFeatureSink implements FeatureSink {
   private static final Logger log = org.slf4j.LoggerFactory.getLogger(JdbcFeatureSink.class);
 
   private final StoreProto.Store.JdbcConfig config;
-
+  //  private JdbcTemplate jdbcTemplate;
   public JdbcTemplater getJdbcTemplater() {
     return jdbcTemplater;
   }
@@ -51,6 +50,8 @@ public class JdbcFeatureSink implements FeatureSink {
 
   public JdbcFeatureSink(JdbcConfig config) {
     this.config = config;
+    // ONLY for execute sql queries
+    //    this.jdbcTemplate = jdbcTemplate;
     this.jdbcTemplater = getJdbcTemplaterForClass(config.getClassName());
   }
 
@@ -75,7 +76,6 @@ public class JdbcFeatureSink implements FeatureSink {
   @Override
   public PCollection<FeatureSetReference> prepareWrite(
       PCollection<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>> featureSetSpecs) {
-
     PCollection<FeatureSetReference> schemas =
         featureSetSpecs.apply(
             "createSchema",
@@ -96,28 +96,29 @@ public class JdbcFeatureSink implements FeatureSink {
                 }));
 
     Map<String, String> requiredColumns = this.jdbcTemplater.getRequiredColumns();
-    Properties props = new Properties();
-    props.put("user", this.config.getUsername());
-    props.put("password", this.config.getPassword());
-    props.put("db", this.config.getDatabase());
-    props.put("schema", this.config.getSchema());
 
-    try {
-      Class.forName(this.config.getClassName());
-      Connection conn = DriverManager.getConnection(this.config.getUrl(), props);
-      String createSqlTableCreationQuery = this.jdbcTemplater.getTableCreationSql(this.config);
-      Statement stmt = conn.createStatement();
-      stmt.execute(createSqlTableCreationQuery);
-
-    } catch (ClassNotFoundException | SQLException e) {
-      throw new RuntimeException(
-          String.format(
-              "Could not connect to database with url %s and classname %s",
-              this.config.getUrl(), this.config.getClassName()),
-          e);
-    }
+    // create featureset table using jdbcTemplate
+    String createSqlTableCreationQuery = this.jdbcTemplater.getTableCreationSql(this.config);
+    JdbcTemplate jdbcTemplate = createJdbcTemplate();
+    jdbcTemplate.execute(createSqlTableCreationQuery);
 
     return schemas;
+  }
+
+  public JdbcTemplate createJdbcTemplate() {
+    Properties dsProperties = new Properties();
+    dsProperties.put("user", config.getUsername());
+    dsProperties.put("password", config.getPassword());
+    dsProperties.put("db", config.getDatabase());
+    dsProperties.put("schema", config.getSchema());
+    dsProperties.put("role", config.getRole());
+    HikariConfig hkConfig = new HikariConfig();
+    hkConfig.setMaximumPoolSize(100);
+    hkConfig.setDriverClassName(config.getClassName());
+    hkConfig.setDataSourceProperties(dsProperties);
+    hkConfig.setJdbcUrl(config.getUrl());
+    final HikariDataSource ds = new HikariDataSource(hkConfig);
+    return new JdbcTemplate(ds);
   }
 
   @Override

@@ -111,7 +111,7 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
 
                       preparedStatement.setString(4, getFeatureSet(element.getFeatureSet()));
 
-                      //
+                      // Set feature as json
                       JSONObject json_variant = new JSONObject();
                       for (String row : fieldMap.keySet()) {
                         setFeatureValue(json_variant, row, fieldMap.get(row));
@@ -236,8 +236,7 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
     }
   }
 
-  public static JdbcIO.DataSourceConfiguration create_dsconfig(
-      StoreProto.Store.JdbcConfig jdbcConfig) {
+  public JdbcIO.DataSourceConfiguration create_dsconfig(StoreProto.Store.JdbcConfig jdbcConfig) {
     String username = jdbcConfig.getUsername();
     String password = jdbcConfig.getPassword();
     String className = jdbcConfig.getClassName();
@@ -246,10 +245,12 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
     String database = jdbcConfig.getDatabase();
     String schema = jdbcConfig.getSchema();
     String warehouse = jdbcConfig.getWarehouse();
+    String role = jdbcConfig.getRole();
     return JdbcIO.DataSourceConfiguration.create(className, url)
         .withUsername(!username.isEmpty() ? username : null)
         .withPassword(!password.isEmpty() ? password : null)
         .withConnectionProperties(
-            String.format("warehouse=%s;db=%s;schema=%s", warehouse, database, schema));
+            String.format(
+                "warehouse=%s;db=%s;schema=%s;role=%s", warehouse, database, schema, role));
   }
 }

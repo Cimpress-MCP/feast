@@ -57,6 +57,7 @@ public class JdbcSnowflakeFeatureSinkTest {
   private String snowflakeUrl = "jdbc:snowflake://nx46274.us-east-2.aws.snowflakecomputing.com";
   private String className = "net.snowflake.client.jdbc.SnowflakeDriver";
   private String tableName = "feast_features";
+  private String role = "ACCOUNTADMIN";
   private Connection conn;
 
   @Before
@@ -79,7 +80,6 @@ public class JdbcSnowflakeFeatureSinkTest {
 
     Map<FeatureSetReference, FeatureSetProto.FeatureSetSpec> specMap =
         ImmutableMap.of(ref1, spec1, ref2, spec2);
-
     this.snowflakeFeatureSinkObj =
         JdbcFeatureSink.fromConfig(
             StoreProto.Store.JdbcConfig.newBuilder()
@@ -91,6 +91,7 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setSchema(this.schema)
                 .setWarehouse(this.warehouse)
                 .setTableName(this.tableName)
+                .setRole(this.role)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
 
@@ -111,6 +112,7 @@ public class JdbcSnowflakeFeatureSinkTest {
       props.put("password", this.password);
       props.put("db", this.database);
       props.put("schema", this.schema);
+      props.put("role", this.role);
       DriverManager.getConnection(this.snowflakeUrl, props);
       this.conn = DriverManager.getConnection(this.snowflakeUrl, props);
     } catch (ClassNotFoundException | SQLException e) {
@@ -133,6 +135,7 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setSchema(this.schema)
                 .setWarehouse(this.warehouse)
                 .setTableName(tableName)
+                .setRole(this.role)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
     List<FeatureRow> featureRows =
