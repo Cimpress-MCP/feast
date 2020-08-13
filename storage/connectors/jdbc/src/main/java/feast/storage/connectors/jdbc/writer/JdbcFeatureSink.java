@@ -56,10 +56,10 @@ public class JdbcFeatureSink implements FeatureSink {
 
   private JdbcTemplater getJdbcTemplaterForClass(String className) {
     switch (className) {
-      case "net.snowflake.client.jdbc.SnowflakeDriver" :
+      case "net.snowflake.client.jdbc.SnowflakeDriver":
         return new SnowflakeTemplater();
-      case "com.snowflake.client.jdbc.SnowflakeDriver" :
-          return new SnowflakeTemplater();
+      case "com.snowflake.client.jdbc.SnowflakeDriver":
+        return new SnowflakeTemplater();
       default:
         throw new RuntimeException(
             "JDBC class name was not specified, was incorrect, or had no implementation for templating.");
@@ -104,7 +104,7 @@ public class JdbcFeatureSink implements FeatureSink {
     props.put("db", this.config.getDatabase());
     props.put("schema", this.config.getSchema());
     props.put("role", this.config.getRole());
-   
+
     try {
       Class.forName(this.config.getClassName());
       Connection conn = DriverManager.getConnection(this.config.getUrl(), props);

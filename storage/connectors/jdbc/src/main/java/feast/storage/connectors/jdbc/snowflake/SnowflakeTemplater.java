@@ -36,7 +36,8 @@ public class SnowflakeTemplater implements JdbcTemplater {
     }
     String createTableStatement =
         String.format(
-            "CREATE TABLE IF NOT EXISTS %s.%s.%s (%s);", config.getDatabase(),config.getSchema(),config.getTableName(), columnsAndTypesSQL);
+            "CREATE TABLE IF NOT EXISTS %s.%s.%s (%s);",
+            config.getDatabase(), config.getSchema(), config.getTableName(), columnsAndTypesSQL);
 
     return createTableStatement;
   }

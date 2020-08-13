@@ -257,6 +257,7 @@ public class JdbcWrite extends PTransform<PCollection<FeatureRowProto.FeatureRow
         .withUsername(!username.isEmpty() ? username : null)
         .withPassword(!password.isEmpty() ? password : null)
         .withConnectionProperties(
-            String.format("warehouse=%s;db=%s;schema=%s;role=%s", warehouse, database, schema, role));
+            String.format(
+                "warehouse=%s;db=%s;schema=%s;role=%s", warehouse, database, schema, role));
   }
 }

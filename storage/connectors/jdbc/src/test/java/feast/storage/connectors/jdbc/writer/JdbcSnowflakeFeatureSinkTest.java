@@ -29,7 +29,6 @@ import feast.proto.types.FieldProto;
 import feast.proto.types.ValueProto;
 import feast.proto.types.ValueProto.ValueType.Enum;
 import feast.storage.api.writer.FeatureSink;
-
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -53,18 +52,17 @@ public class JdbcSnowflakeFeatureSinkTest {
   // TODO: Update the variables to match your snowflake account
   private static final String OAUTH_CLIENT_SECRET_NAME = "<AWS_SECRET_NAME>";
   private static final String OAUTH_CLIENT_ID = "<CLIENT_ID>";
-  
-  private String userName ;
-  private String password ;
-  private String database = "SANDBOX";
-  private String schema = "LAKSHMITEST";
+
+  private String userName;
+  private String password;
+  private String database = "<DATABASE>";
+  private String schema = "<SCHEMA>";
   private String warehouse = "PUBLIC";
-  private String snowflakeUrl = "jdbc:snowflake://vistaprint.eu-west-1.snowflakecomputing.com";
+  private String snowflakeUrl = "<URL>";
   private String className = "com.snowflake.client.jdbc.SnowflakeDriver";
   private String tableName = "feast_features";
-  private String role = "DATABRICKS_ROLE";
+  private String role = "<ROLE>";
   private Connection conn;
-  
 
   @Before
   public void setUp() throws JsonProcessingException, IOException {
