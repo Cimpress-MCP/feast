@@ -84,7 +84,7 @@ feast:
         schema: PUBLIC
         database: DEMO_DB
         role: ACCOUNTADMIN
-        table_name: FEAST_FEATURES_TEST
+        table_name: FEAST_FEATURES
         url: jdbc:snowflake://test.snowflakecomputing.com
         username: username
         password: password

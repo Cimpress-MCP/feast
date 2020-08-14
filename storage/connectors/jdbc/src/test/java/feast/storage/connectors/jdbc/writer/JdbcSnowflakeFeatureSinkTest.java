@@ -36,12 +36,11 @@ import java.util.Map;
 import java.util.Properties;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 
+@Ignore
 public class JdbcSnowflakeFeatureSinkTest {
+  /** Manual tests needs a testing Snowflake account */
   @Rule public transient TestPipeline p = TestPipeline.create();
 
   private FeatureSink snowflakeFeatureSinkObj;
@@ -54,7 +53,7 @@ public class JdbcSnowflakeFeatureSinkTest {
   private String database = "DEMO_DB";
   private String schema = "PUBLIC";
   private String warehouse = "COMPUTE_WH";
-  private String snowflakeUrl = "jdbc:snowflake://nx46274.us-east-2.aws.snowflakecomputing.com";
+  private String snowflakeUrl = System.getenv("SNOWFLAKE_URL");
   private String className = "net.snowflake.client.jdbc.SnowflakeDriver";
   private String tableName = "feast_features";
   private String role = "ACCOUNTADMIN";

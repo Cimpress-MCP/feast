@@ -39,6 +39,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.Assert;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.runners.model.InitializationError;
@@ -56,9 +57,15 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @ActiveProfiles("it")
 @SpringBootTest()
 @Testcontainers
+@Ignore
 public class ServingServiceSnowflakeStorageIT {
-
+  /**
+   * Manual tests needs a testing Snowflake, and AWS S3 bucket accounts Run this manual e2e test
+   * with snowflake and s3 bucket configs 1. Update application-it.properties 2. Update with a
+   * customize core image in docker-compose-it-core.yml
+   */
   static final String CORE = "core_1";
+
   static final int CORE_START_MAX_WAIT_TIME_IN_MINUTES = 3;
   static final int FEAST_CORE_PORT = 6565;
   static final int FEAST_SERVING_PORT = 6566;
@@ -105,10 +112,10 @@ public class ServingServiceSnowflakeStorageIT {
       throws IOException, InterruptedException, ParseException {
 
     String entitySourceUri = "s3://feast-snowflake-staging/test/entity_tables/entities_3dates.csv";
-    CoreSimpleAPIClient coreClient = SnowflakeTestUtils.getApiClientForCore(FEAST_CORE_PORT);
-    SnowflakeTestUtils.applyFeatureSet(
+    CoreSimpleAPIClient coreClient = IntegrationTestUtils.getApiClientForCore(FEAST_CORE_PORT);
+    IntegrationTestUtils.applyFeatureSet(
         coreClient, PROJECT_NAME, FEATURE_SET, ENTITY_NAME, TEST_FEATURE_1, MAX_AGE_SECOND);
-    List<FeatureRow> features = SnowflakeTestUtils.ingestFeatures(PROJECT_NAME, FEATURE_SET);
+    List<FeatureRow> features = IntegrationTestUtils.ingestFeatures(PROJECT_NAME, FEATURE_SET);
     KafkaTemplate<String, FeatureRow> kafkaTemplate = specKafkaTemplate();
     for (int i = 0; i < features.size(); i++) {
       kafkaTemplate.send(kafkaTopic, features.get(i));
@@ -117,9 +124,9 @@ public class ServingServiceSnowflakeStorageIT {
     TimeUnit.MINUTES.sleep(2);
     // Run getBatchFeatures on Serving
     ServingServiceBlockingStub servingStub =
-        SnowflakeTestUtils.getServingServiceStub(FEAST_SERVING_PORT);
+        IntegrationTestUtils.getServingServiceStub(false, FEAST_SERVING_PORT, null);
     GetBatchFeaturesRequest getBatchFeaturesRequest =
-        SnowflakeTestUtils.createGetBatchFeaturesRequest(
+        IntegrationTestUtils.createGetBatchFeaturesRequest(
             entitySourceUri, TEST_FEATURE_1, FEATURE_SET, PROJECT_NAME);
     GetBatchFeaturesResponse response = servingStub.getBatchFeatures(getBatchFeaturesRequest);
     Job resultJob = response.getJob();
@@ -133,10 +140,7 @@ public class ServingServiceSnowflakeStorageIT {
     ProtocolStringList resultUris = resultJob.getFileUrisList();
 
     // get csv.gz file from s3
-    List<String> resultLines = SnowflakeTestUtils.readFromS3(resultUris.get(0));
-    for (String line : resultLines) {
-      System.out.println(line);
-    }
+    List<String> resultLines = IntegrationTestUtils.readFromS3(resultUris.get(0));
     Assert.assertEquals("\\" + "\\N", resultLines.get(1).split(",")[3]);
     Assert.assertEquals("100", resultLines.get(2).split(",")[3]);
     Assert.assertEquals("300", resultLines.get(3).split(",")[3]);
@@ -147,10 +151,10 @@ public class ServingServiceSnowflakeStorageIT {
       throws IOException, InterruptedException, ParseException {
 
     String entitySourceUri = "s3://feast-snowflake-staging/test/entity_tables/entities_3dates.csv";
-    CoreSimpleAPIClient coreClient = SnowflakeTestUtils.getApiClientForCore(FEAST_CORE_PORT);
-    SnowflakeTestUtils.applyFeatureSet(
+    CoreSimpleAPIClient coreClient = IntegrationTestUtils.getApiClientForCore(FEAST_CORE_PORT);
+    IntegrationTestUtils.applyFeatureSet(
         coreClient, PROJECT_NAME, FEATURE_SET, ENTITY_NAME, TEST_FEATURE_1, null);
-    List<FeatureRow> features = SnowflakeTestUtils.ingestFeatures(PROJECT_NAME, FEATURE_SET);
+    List<FeatureRow> features = IntegrationTestUtils.ingestFeatures(PROJECT_NAME, FEATURE_SET);
     KafkaTemplate<String, FeatureRow> kafkaTemplate = specKafkaTemplate();
     for (int i = 0; i < features.size(); i++) {
       kafkaTemplate.send(kafkaTopic, features.get(i));
@@ -159,9 +163,9 @@ public class ServingServiceSnowflakeStorageIT {
     TimeUnit.MINUTES.sleep(2);
     // Run getBatchFeatures on Serving
     ServingServiceBlockingStub servingStub =
-        SnowflakeTestUtils.getServingServiceStub(FEAST_SERVING_PORT);
+        IntegrationTestUtils.getServingServiceStub(false, FEAST_SERVING_PORT, null);
     GetBatchFeaturesRequest getBatchFeaturesRequest =
-        SnowflakeTestUtils.createGetBatchFeaturesRequest(
+        IntegrationTestUtils.createGetBatchFeaturesRequest(
             entitySourceUri, TEST_FEATURE_1, FEATURE_SET, PROJECT_NAME);
     GetBatchFeaturesResponse response = servingStub.getBatchFeatures(getBatchFeaturesRequest);
     Job resultJob = response.getJob();
@@ -175,10 +179,7 @@ public class ServingServiceSnowflakeStorageIT {
     ProtocolStringList resultUris = resultJob.getFileUrisList();
 
     // get csv.gz file from s3
-    List<String> resultLines = SnowflakeTestUtils.readFromS3(resultUris.get(0));
-    for (String line : resultLines) {
-      System.out.println(line);
-    }
+    List<String> resultLines = IntegrationTestUtils.readFromS3(resultUris.get(0));
     Assert.assertEquals("400", resultLines.get(1).split(",")[3]);
     Assert.assertEquals("100", resultLines.get(2).split(",")[3]);
     Assert.assertEquals("300", resultLines.get(3).split(",")[3]);
@@ -189,9 +190,9 @@ public class ServingServiceSnowflakeStorageIT {
 
     String entitySourceUri = "s3://feast-snowflake-staging/test/entity_tables/entities_3dates.csv";
     ServingServiceBlockingStub servingStub =
-        SnowflakeTestUtils.getServingServiceStub(FEAST_SERVING_PORT);
+        IntegrationTestUtils.getServingServiceStub(false, FEAST_SERVING_PORT, null);
     GetBatchFeaturesRequest getBatchFeaturesRequest =
-        SnowflakeTestUtils.createGetBatchFeaturesRequest(
+        IntegrationTestUtils.createGetBatchFeaturesRequest(
             entitySourceUri, TEST_FEATURE_1, FEATURE_SET, PROJECT_NAME);
 
     String expectedErrorMsg =
