@@ -33,8 +33,10 @@ import feast.proto.types.FieldProto;
 import feast.proto.types.ValueProto;
 import feast.proto.types.ValueProto.ValueType.Enum;
 import feast.storage.connectors.jdbc.common.JdbcTemplater;
+import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
+import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.jdbc.JdbcIO;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
@@ -68,9 +70,10 @@ public class JdbcSnowflakeFeatureSinkMockTest {
   private String testDbUrl = "jdbc:sqlite:memory:myDb";
   private String testDbUsername = "sa";
   private String tesDbPassword = "sa";
+  private List<FeatureRow> testFeatureRows;
 
   @Before
-  public void setUp() {
+  public void setUp() throws ParseException {
     MockitoAnnotations.initMocks(this);
     // setup featuresets
     FeatureSetProto.FeatureSetSpec spec1 =
@@ -102,31 +105,8 @@ public class JdbcSnowflakeFeatureSinkMockTest {
             .setBatchSize(1) // This must be set to 1 for DirectRunner
             .build();
     this.snowflakeFeatureSinkObj = (JdbcFeatureSink) JdbcFeatureSink.fromConfig(this.jdbcConfig);
-  }
-
-  @Test
-  public void shouldStartPrepareWrite() {
-    // Mocking the jdbcTemplate
-    JdbcFeatureSink fakeSnowflakeFeatureSinkObj = spy(snowflakeFeatureSinkObj);
-    doNothing().when(jdbcTemplate).execute(any(String.class));
-    Mockito.doReturn(jdbcTemplate).when(fakeSnowflakeFeatureSinkObj).createJdbcTemplate();
-    PCollection<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>> featureSetSpecs =
-        p.apply("CreateSchema", Create.of(specMap));
-    PCollection<FeatureSetReference> actualSchemas =
-        fakeSnowflakeFeatureSinkObj.prepareWrite(featureSetSpecs);
-    String actualName = actualSchemas.getName();
-    p.run();
-    Assert.assertEquals("createSchema/ParMultiDo(Anonymous).output", actualName);
-  }
-
-  @Test
-  public void shouldWriteToSnowflake() throws Exception {
-    JdbcIO.DataSourceConfiguration testConfig =
-        JdbcIO.DataSourceConfiguration.create(this.testDriverClassName, this.testDbUrl)
-            .withUsername(this.testDbUsername)
-            .withPassword(this.tesDbPassword);
     String event_timestamp = "2019-12-31T16:00:00.00Z";
-    List<FeatureRow> featureRows =
+    testFeatureRows =
         ImmutableList.of(
             FeatureRow.newBuilder()
                 .setFeatureSet("snowflake_proj/feature_set_1")
@@ -162,6 +142,51 @@ public class JdbcSnowflakeFeatureSinkMockTest {
                 .addFields(field("entity", 2, Enum.INT64))
                 .addFields(field("entity_id_secondary", "asjdh", Enum.STRING))
                 .build());
+  }
+
+  @Test
+  public void shouldStartPrepareWrite() {
+    // Mocking the jdbcTemplate
+    JdbcFeatureSink fakeSnowflakeFeatureSinkObj = spy(snowflakeFeatureSinkObj);
+    doNothing().when(jdbcTemplate).execute(any(String.class));
+    Mockito.doReturn(jdbcTemplate).when(fakeSnowflakeFeatureSinkObj).createJdbcTemplate();
+    PCollection<KV<FeatureSetReference, FeatureSetProto.FeatureSetSpec>> featureSetSpecs =
+        p.apply("CreateSchema", Create.of(specMap));
+    PCollection<FeatureSetReference> actualSchemas =
+        fakeSnowflakeFeatureSinkObj.prepareWrite(featureSetSpecs);
+    String actualName = actualSchemas.getName();
+    p.run();
+    Assert.assertEquals("createSchema/ParMultiDo(Anonymous).output", actualName);
+  }
+
+  @Test(expected = Pipeline.PipelineExecutionException.class)
+  public void shouldNotWriteToSnowflakeTableNotExists() {
+    JdbcIO.DataSourceConfiguration testConfig =
+        JdbcIO.DataSourceConfiguration.create(this.testDriverClassName, this.testDbUrl)
+            .withUsername(this.testDbUsername)
+            .withPassword(this.tesDbPassword);
+
+    // Mock jdbcTemplater and jdbcWrite for testing on Sqlite
+    JdbcTemplater jdbcTemplater = this.snowflakeFeatureSinkObj.getJdbcTemplater();
+    JdbcTemplater testJdbcTemplater = spy(jdbcTemplater);
+    JdbcWrite jdbcWrite = new JdbcWrite(this.jdbcConfig, testJdbcTemplater);
+    JdbcWrite testJdbcWrite = spy(jdbcWrite);
+    when(testJdbcWrite.create_dsconfig(this.jdbcConfig)).thenReturn(testConfig);
+    String testInsertionSql =
+        "INSERT INTO feast_features (event_timestamp,created_timestamp,project,featureset,feature,ingestion_id,job_id) select ?,?,?,?,json(?),?,?;";
+    when(testJdbcTemplater.getFeatureRowInsertSql(this.tableName)).thenReturn(testInsertionSql);
+
+    // Create feast_features table
+    p.apply(Create.of(testFeatureRows)).apply(testJdbcWrite);
+    p.run();
+  }
+
+  @Test
+  public void shouldWriteToSnowflake() {
+    JdbcIO.DataSourceConfiguration testConfig =
+        JdbcIO.DataSourceConfiguration.create(this.testDriverClassName, this.testDbUrl)
+            .withUsername(this.testDbUsername)
+            .withPassword(this.tesDbPassword);
 
     // Mock jdbcTemplater and jdbcWrite for testing on Sqlite
     JdbcTemplater jdbcTemplater = this.snowflakeFeatureSinkObj.getJdbcTemplater();
@@ -177,7 +202,7 @@ public class JdbcSnowflakeFeatureSinkMockTest {
     String createSqlTableCreationQuery = testJdbcTemplater.getTableCreationSql(this.jdbcConfig);
     JdbcTemplate jdbcTemplate = createTestJdbcTemplate();
     jdbcTemplate.execute(createSqlTableCreationQuery);
-    p.apply(Create.of(featureRows)).apply(testJdbcWrite);
+    p.apply(Create.of(testFeatureRows)).apply(testJdbcWrite);
     p.run();
     List<Map<String, Object>> resultsRows =
         jdbcTemplate.queryForList("SELECT * FROM feast_features WHERE featureset='feature_set_1'");
