@@ -68,6 +68,20 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>3.0.0-M5</version>
+        <executions>
+          <execution>
+            <id>integration-tests</id>
+            <configuration>
+              <excludes>
+                <exclude>**/ServingServiceSnowflakeStorageIT.java</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
 
     </plugins>
   </build>
@@ -248,6 +262,14 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <!--  aws s3 client for testing  -->
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk</artifactId>
+      <version>1.11.827</version>
+      <scope>test</scope>
+    </dependency>
+
 
     <dependency>
       <groupId>org.mockito</groupId>
@@ -339,6 +361,12 @@
       <artifactId>keto-client</artifactId>
       <version>0.4.4-alpha.1</version>
       <scope>test</scope>
+    </dependency>
+     <!-- Kafka -->
+    <dependency>
+       <groupId>org.springframework.kafka</groupId>
+       <artifactId>spring-kafka</artifactId>
+       <scope>test</scope>
     </dependency>
   </dependencies>
 
