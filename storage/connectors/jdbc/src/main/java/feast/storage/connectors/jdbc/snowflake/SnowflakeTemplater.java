@@ -48,8 +48,8 @@ public class SnowflakeTemplater implements JdbcTemplater {
   public Map<String, String> getRequiredColumns() {
     Map<String, String> requiredColumns = new LinkedHashMap<>();
 
-    requiredColumns.put("event_timestamp", "TIMESTAMP_LTZ");
-    requiredColumns.put("created_timestamp", "TIMESTAMP_LTZ");
+    requiredColumns.put("event_timestamp", "TIMESTAMP_NTZ");
+    requiredColumns.put("created_timestamp", "TIMESTAMP_NTZ");
     requiredColumns.put("project", "VARCHAR");
     requiredColumns.put("featureset", "VARCHAR");
     requiredColumns.put("feature", "VARIANT");
