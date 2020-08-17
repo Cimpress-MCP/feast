@@ -20,6 +20,7 @@ import static feast.storage.common.testing.TestUtil.field;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.util.Timestamps;
 import feast.common.models.FeatureSetReference;
 import feast.proto.core.FeatureSetProto;
 import feast.proto.core.StoreProto;
@@ -28,21 +29,18 @@ import feast.proto.types.FieldProto;
 import feast.proto.types.ValueProto;
 import feast.proto.types.ValueProto.ValueType.Enum;
 import feast.storage.api.writer.FeatureSink;
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
+import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.transforms.Create;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 
+@Ignore
 public class JdbcSnowflakeFeatureSinkTest {
+  /** Manual test needs a testing Snowflake account */
   @Rule public transient TestPipeline p = TestPipeline.create();
 
   private FeatureSink snowflakeFeatureSinkObj;
@@ -55,9 +53,10 @@ public class JdbcSnowflakeFeatureSinkTest {
   private String database = "DEMO_DB";
   private String schema = "PUBLIC";
   private String warehouse = "COMPUTE_WH";
-  private String snowflakeUrl = "jdbc:snowflake://kia19877.snowflakecomputing.com";
+  private String snowflakeUrl = System.getenv("SNOWFLAKE_URL");
   private String className = "net.snowflake.client.jdbc.SnowflakeDriver";
   private String tableName = "feast_features";
+  private String role = "ACCOUNTADMIN";
   private Connection conn;
 
   @Before
@@ -80,7 +79,6 @@ public class JdbcSnowflakeFeatureSinkTest {
 
     Map<FeatureSetReference, FeatureSetProto.FeatureSetSpec> specMap =
         ImmutableMap.of(ref1, spec1, ref2, spec2);
-
     this.snowflakeFeatureSinkObj =
         JdbcFeatureSink.fromConfig(
             StoreProto.Store.JdbcConfig.newBuilder()
@@ -92,6 +90,7 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setSchema(this.schema)
                 .setWarehouse(this.warehouse)
                 .setTableName(this.tableName)
+                .setRole(this.role)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
 
@@ -112,6 +111,7 @@ public class JdbcSnowflakeFeatureSinkTest {
       props.put("password", this.password);
       props.put("db", this.database);
       props.put("schema", this.schema);
+      props.put("role", this.role);
       DriverManager.getConnection(this.snowflakeUrl, props);
       this.conn = DriverManager.getConnection(this.snowflakeUrl, props);
     } catch (ClassNotFoundException | SQLException e) {
@@ -134,6 +134,7 @@ public class JdbcSnowflakeFeatureSinkTest {
                 .setSchema(this.schema)
                 .setWarehouse(this.warehouse)
                 .setTableName(tableName)
+                .setRole(this.role)
                 .setBatchSize(1) // This must be set to 1 for DirectRunner
                 .build());
     List<FeatureRow> featureRows =
@@ -155,12 +156,14 @@ public class JdbcSnowflakeFeatureSinkTest {
   }
 
   @Test
-  public void shouldWriteToSnowflake() throws SQLException {
+  public void shouldWriteToSnowflake() throws SQLException, ParseException {
 
+    String event_timestamp = "2019-12-31T16:00:00.00Z";
     List<FeatureRow> featureRows =
         ImmutableList.of(
             FeatureRow.newBuilder()
                 .setFeatureSet("snowflake_proj/feature_set_1")
+                .setEventTimestamp(Timestamps.parse(event_timestamp))
                 .addFields(field("entity", 1, Enum.INT64))
                 .addFields(field("feature", "two", Enum.STRING))
                 .build(),
