@@ -40,7 +40,7 @@ import org.junit.*;
 
 @Ignore
 public class JdbcSnowflakeFeatureSinkTest {
-  /** Manual tests needs a testing Snowflake account */
+  /** Manual test needs a testing Snowflake account */
   @Rule public transient TestPipeline p = TestPipeline.create();
 
   private FeatureSink snowflakeFeatureSinkObj;

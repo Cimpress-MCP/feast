@@ -54,15 +54,15 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+@Ignore("This manual test needs a testing Snowflake account!")
 @ActiveProfiles("it")
-@SpringBootTest()
+@SpringBootTest(properties = {"feast.active_store=historical_snowflake"})
 @Testcontainers
-@Ignore
 public class ServingServiceSnowflakeStorageIT {
   /**
-   * Manual tests needs a testing Snowflake, and AWS S3 bucket accounts Run this manual e2e test
-   * with snowflake and s3 bucket configs 1. Update application-it.properties 2. Update with a
-   * customize core image in docker-compose-it-core.yml
+   * Manual test needs a testing Snowflake, and AWS S3 bucket accounts Run this manual e2e test with
+   * snowflake and s3 bucket configs 1. Update application-it.properties 2. Update with a Feast core
+   * (which contains JDBC_SNOWFLAKE STORE) image in docker-compose-it-core.yml
    */
   static final String CORE = "core_1";
 

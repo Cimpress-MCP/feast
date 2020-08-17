@@ -40,7 +40,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @Ignore
 public class SnowflakeHistoricalRetrieverTest {
-  /** Manual tests needs a testing Snowflake account */
+  /** Manual test needs a testing Snowflake account */
   private JdbcHistoricalRetriever snowflakeFeatureRetriever;
   //  Snowflake account
   private String staging_location = "s3://feast-snowflake-staging/test/";

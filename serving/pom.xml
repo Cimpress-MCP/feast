@@ -68,6 +68,20 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>3.0.0-M5</version>
+        <executions>
+          <execution>
+            <id>integration-tests</id>
+            <configuration>
+              <excludes>
+                <exclude>**/ServingServiceSnowflakeStorageIT.java</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
 
     </plugins>
   </build>
@@ -255,6 +269,7 @@
       <version>1.11.827</version>
       <scope>test</scope>
     </dependency>
+
 
     <dependency>
       <groupId>org.mockito</groupId>
