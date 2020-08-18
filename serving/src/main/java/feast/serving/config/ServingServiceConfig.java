@@ -30,8 +30,8 @@ import feast.serving.specs.CachedSpecService;
 import feast.storage.api.retriever.HistoricalRetriever;
 import feast.storage.api.retriever.OnlineRetriever;
 import feast.storage.connectors.bigquery.retriever.BigQueryHistoricalRetriever;
-import feast.storage.connectors.jdbc.retriever.JdbcHistoricalRetriever;
-import feast.storage.connectors.jdbc.retriever.SnowflakeQueryTemplater;
+import feast.storage.connectors.snowflake.retriever.SnowflakeHistoricalRetriever;
+import feast.storage.connectors.snowflake.retriever.SnowflakeQueryTemplater;
 import feast.storage.connectors.redis.retriever.RedisClusterOnlineRetriever;
 import feast.storage.connectors.redis.retriever.RedisOnlineRetriever;
 import io.opentracing.Tracer;
@@ -101,7 +101,7 @@ public class ServingServiceConfig {
       case "net.snowflake.client.jdbc.SnowflakeDriver":
         SnowflakeQueryTemplater snowflakeQueryTemplater =
             new SnowflakeQueryTemplater(config, this.createJdbcTemplate(feastProperties));
-        return JdbcHistoricalRetriever.create(config, snowflakeQueryTemplater);
+        return SnowflakeHistoricalRetriever.create(config, snowflakeQueryTemplater);
       default:
         throw new IllegalArgumentException(
             String.format(
