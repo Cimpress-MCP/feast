@@ -55,7 +55,7 @@ public class JdbcSnowflakeFeatureSinkMockTest {
   @Rule public transient TestPipeline p = TestPipeline.create();
 
   private SnowflakeFeatureSink snowflakeFeatureSinkObj;
-  private StoreProto.Store.JdbcConfig jdbcConfig;
+  private StoreProto.Store.SnowflakeConfig snowflakeConfig;
   private String userName = "fakeUsername";
   private String password = "fakePassword";
   private String database = "DEMO_DB";
@@ -92,8 +92,8 @@ public class JdbcSnowflakeFeatureSinkMockTest {
     FeatureSetReference ref2 = FeatureSetReference.of(spec2.getProject(), spec2.getName(), 1);
 
     specMap = ImmutableMap.of(ref1, spec1, ref2, spec2);
-    this.jdbcConfig =
-        StoreProto.Store.JdbcConfig.newBuilder()
+    this.snowflakeConfig =
+        StoreProto.Store.SnowflakeConfig.newBuilder()
             .setUrl(this.snowflakeUrl)
             .setClassName(this.className)
             .setUsername(this.userName)
@@ -105,7 +105,7 @@ public class JdbcSnowflakeFeatureSinkMockTest {
             .setBatchSize(1) // This must be set to 1 for DirectRunner
             .build();
     this.snowflakeFeatureSinkObj =
-        (SnowflakeFeatureSink) SnowflakeFeatureSink.fromConfig(this.jdbcConfig);
+        (SnowflakeFeatureSink) SnowflakeFeatureSink.fromConfig(this.snowflakeConfig);
     String event_timestamp = "2019-12-31T16:00:00.00Z";
     testFeatureRows =
         ImmutableList.of(
@@ -170,9 +170,9 @@ public class JdbcSnowflakeFeatureSinkMockTest {
     // Mock databaseTemplater and jdbcWrite for testing on Sqlite
     DatabaseTemplater databaseTemplater = this.snowflakeFeatureSinkObj.getDatabaseTemplater();
     DatabaseTemplater testDatabaseTemplater = spy(databaseTemplater);
-    SnowflakeWrite snowflakeWrite = new SnowflakeWrite(this.jdbcConfig, testDatabaseTemplater);
+    SnowflakeWrite snowflakeWrite = new SnowflakeWrite(this.snowflakeConfig, testDatabaseTemplater);
     SnowflakeWrite testSnowflakeWrite = Mockito.spy(snowflakeWrite);
-    when(testSnowflakeWrite.create_dsconfig(this.jdbcConfig)).thenReturn(testConfig);
+    when(testSnowflakeWrite.create_dsconfig(this.snowflakeConfig)).thenReturn(testConfig);
     String testInsertionSql =
         "INSERT INTO feast_features (event_timestamp,created_timestamp,project,featureset,feature,ingestion_id,job_id) select ?,?,?,?,json(?),?,?;";
     when(testDatabaseTemplater.getFeatureRowInsertSql(this.tableName)).thenReturn(testInsertionSql);
@@ -192,15 +192,16 @@ public class JdbcSnowflakeFeatureSinkMockTest {
     // Mock databaseTemplater and jdbcWrite for testing on Sqlite
     DatabaseTemplater databaseTemplater = this.snowflakeFeatureSinkObj.getDatabaseTemplater();
     DatabaseTemplater testDatabaseTemplater = spy(databaseTemplater);
-    SnowflakeWrite snowflakeWrite = new SnowflakeWrite(this.jdbcConfig, testDatabaseTemplater);
+    SnowflakeWrite snowflakeWrite = new SnowflakeWrite(this.snowflakeConfig, testDatabaseTemplater);
     SnowflakeWrite testSnowflakeWrite = Mockito.spy(snowflakeWrite);
-    when(testSnowflakeWrite.create_dsconfig(this.jdbcConfig)).thenReturn(testConfig);
+    when(testSnowflakeWrite.create_dsconfig(this.snowflakeConfig)).thenReturn(testConfig);
     String testInsertionSql =
         "INSERT INTO feast_features (event_timestamp,created_timestamp,project,featureset,feature,ingestion_id,job_id) select ?,?,?,?,json(?),?,?;";
     when(testDatabaseTemplater.getFeatureRowInsertSql(this.tableName)).thenReturn(testInsertionSql);
 
     // Create feast_features table
-    String createSqlTableCreationQuery = testDatabaseTemplater.getTableCreationSql(this.jdbcConfig);
+    String createSqlTableCreationQuery =
+        testDatabaseTemplater.getTableCreationSql(this.snowflakeConfig);
     JdbcTemplate jdbcTemplate = createTestJdbcTemplate();
     jdbcTemplate.execute(createSqlTableCreationQuery);
     p.apply(Create.of(testFeatureRows)).apply(testSnowflakeWrite);

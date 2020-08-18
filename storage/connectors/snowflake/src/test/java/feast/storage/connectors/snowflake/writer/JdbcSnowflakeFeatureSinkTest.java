@@ -81,7 +81,7 @@ public class JdbcSnowflakeFeatureSinkTest {
         ImmutableMap.of(ref1, spec1, ref2, spec2);
     this.snowflakeFeatureSinkObj =
         SnowflakeFeatureSink.fromConfig(
-            StoreProto.Store.JdbcConfig.newBuilder()
+            StoreProto.Store.SnowflakeConfig.newBuilder()
                 .setUrl(this.snowflakeUrl)
                 .setClassName(this.className)
                 .setUsername(this.userName)
@@ -125,7 +125,7 @@ public class JdbcSnowflakeFeatureSinkTest {
     String tableName = "fake_tableName";
     FeatureSink snowflakeFeatureSinkObj2 =
         SnowflakeFeatureSink.fromConfig(
-            StoreProto.Store.JdbcConfig.newBuilder()
+            StoreProto.Store.SnowflakeConfig.newBuilder()
                 .setUrl(this.snowflakeUrl)
                 .setClassName(this.className)
                 .setUsername(this.userName)
