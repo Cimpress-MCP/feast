@@ -30,10 +30,10 @@ import feast.serving.specs.CachedSpecService;
 import feast.storage.api.retriever.HistoricalRetriever;
 import feast.storage.api.retriever.OnlineRetriever;
 import feast.storage.connectors.bigquery.retriever.BigQueryHistoricalRetriever;
-import feast.storage.connectors.jdbc.retriever.JdbcHistoricalRetriever;
-import feast.storage.connectors.jdbc.retriever.SnowflakeQueryTemplater;
 import feast.storage.connectors.redis.retriever.RedisClusterOnlineRetriever;
 import feast.storage.connectors.redis.retriever.RedisOnlineRetriever;
+import feast.storage.connectors.snowflake.retriever.SnowflakeHistoricalRetriever;
+import feast.storage.connectors.snowflake.retriever.SnowflakeQueryTemplater;
 import io.opentracing.Tracer;
 import java.util.Map;
 import java.util.Properties;
@@ -74,12 +74,12 @@ public class ServingServiceConfig {
         HistoricalRetriever bqRetriever = BigQueryHistoricalRetriever.create(config);
         servingService = new HistoricalServingService(bqRetriever, specService, jobService);
         break;
-      case JDBC:
+      case Snowflake:
         validateJobServicePresence(jobService);
-        HistoricalRetriever jdbcHistoricalRetriever =
-            this.createJdbcHistoricalRetriever(feastProperties);
+        HistoricalRetriever snowflakeHistoricalRetriever =
+            this.createSnowflakeHistoricalRetriever(feastProperties);
         servingService =
-            new HistoricalServingService(jdbcHistoricalRetriever, specService, jobService);
+            new HistoricalServingService(snowflakeHistoricalRetriever, specService, jobService);
         break;
       case CASSANDRA:
       case UNRECOGNIZED:
@@ -93,7 +93,7 @@ public class ServingServiceConfig {
     return servingService;
   }
 
-  public HistoricalRetriever createJdbcHistoricalRetriever(FeastProperties feastProperties) {
+  public HistoricalRetriever createSnowflakeHistoricalRetriever(FeastProperties feastProperties) {
     FeastProperties.Store store = feastProperties.getActiveStore();
     Map<String, String> config = store.getConfig();
     String className = config.get("class_name");
@@ -101,7 +101,7 @@ public class ServingServiceConfig {
       case "net.snowflake.client.jdbc.SnowflakeDriver":
         SnowflakeQueryTemplater snowflakeQueryTemplater =
             new SnowflakeQueryTemplater(config, this.createJdbcTemplate(feastProperties));
-        return JdbcHistoricalRetriever.create(config, snowflakeQueryTemplater);
+        return SnowflakeHistoricalRetriever.create(config, snowflakeQueryTemplater);
       default:
         throw new IllegalArgumentException(
             String.format(
@@ -110,7 +110,7 @@ public class ServingServiceConfig {
     }
   }
 
-  public DataSource createDataSource(FeastProperties feastProperties) {
+  public DataSource createSnowflakeDataSource(FeastProperties feastProperties) {
     FeastProperties.Store store = feastProperties.getActiveStore();
     Map<String, String> config = store.getConfig();
     Properties dsProperties = new Properties();
@@ -128,7 +128,7 @@ public class ServingServiceConfig {
   }
 
   public JdbcTemplate createJdbcTemplate(FeastProperties feastProperties) {
-    return new JdbcTemplate(this.createDataSource(feastProperties));
+    return new JdbcTemplate(this.createSnowflakeDataSource(feastProperties));
   }
 
   private void validateJobServicePresence(JobService jobService) {
