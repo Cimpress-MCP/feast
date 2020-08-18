@@ -74,12 +74,12 @@ public class ServingServiceConfig {
         HistoricalRetriever bqRetriever = BigQueryHistoricalRetriever.create(config);
         servingService = new HistoricalServingService(bqRetriever, specService, jobService);
         break;
-      case JDBC:
+      case Snowflake:
         validateJobServicePresence(jobService);
-        HistoricalRetriever jdbcHistoricalRetriever =
-            this.createJdbcHistoricalRetriever(feastProperties);
+        HistoricalRetriever snowflakeHistoricalRetriever =
+            this.createSnowflakeHistoricalRetriever(feastProperties);
         servingService =
-            new HistoricalServingService(jdbcHistoricalRetriever, specService, jobService);
+            new HistoricalServingService(snowflakeHistoricalRetriever, specService, jobService);
         break;
       case CASSANDRA:
       case UNRECOGNIZED:
@@ -93,7 +93,7 @@ public class ServingServiceConfig {
     return servingService;
   }
 
-  public HistoricalRetriever createJdbcHistoricalRetriever(FeastProperties feastProperties) {
+  public HistoricalRetriever createSnowflakeHistoricalRetriever(FeastProperties feastProperties) {
     FeastProperties.Store store = feastProperties.getActiveStore();
     Map<String, String> config = store.getConfig();
     String className = config.get("class_name");
@@ -110,7 +110,7 @@ public class ServingServiceConfig {
     }
   }
 
-  public DataSource createDataSource(FeastProperties feastProperties) {
+  public DataSource createSnowflakeDataSource(FeastProperties feastProperties) {
     FeastProperties.Store store = feastProperties.getActiveStore();
     Map<String, String> config = store.getConfig();
     Properties dsProperties = new Properties();
@@ -128,7 +128,7 @@ public class ServingServiceConfig {
   }
 
   public JdbcTemplate createJdbcTemplate(FeastProperties feastProperties) {
-    return new JdbcTemplate(this.createDataSource(feastProperties));
+    return new JdbcTemplate(this.createSnowflakeDataSource(feastProperties));
   }
 
   private void validateJobServicePresence(JobService jobService) {

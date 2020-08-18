@@ -79,7 +79,7 @@ feast:
         - name: "*"
           project: "*"
     - name: historical_snowflake
-      type: JDBC
+      type: Snowflake
       config:  # Store specific configuration.
         schema: PUBLIC
         database: DEMO_DB
