@@ -173,6 +173,10 @@ public class JdbcSnowflakeFeatureSinkMockTest {
     SnowflakeWrite snowflakeWrite = new SnowflakeWrite(this.snowflakeConfig, testDatabaseTemplater);
     SnowflakeWrite testSnowflakeWrite = Mockito.spy(snowflakeWrite);
     when(testSnowflakeWrite.create_dsconfig(this.snowflakeConfig)).thenReturn(testConfig);
+    // Drop the feature set table if exists
+    JdbcTemplate jdbcTemplate = createTestJdbcTemplate();
+    String dropTable = "DROP TABLE IF EXISTS feast_features";
+    jdbcTemplate.execute(dropTable);
     String testInsertionSql =
         "INSERT INTO feast_features (event_timestamp,created_timestamp,project,featureset,feature,ingestion_id,job_id) select ?,?,?,?,json(?),?,?;";
     when(testDatabaseTemplater.getFeatureRowInsertSql(this.tableName)).thenReturn(testInsertionSql);
