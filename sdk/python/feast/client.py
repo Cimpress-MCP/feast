@@ -549,7 +549,7 @@ class Client:
         entity_rows: Union[pd.DataFrame, str],
         compute_statistics: bool = False,
         project: str = None,
-        data_format: DataFormat = DataFormat.DATA_FORMAT_AVRO, # type: ignore
+        data_format: DataFormat = DataFormat.DATA_FORMAT_AVRO,  # type: ignore
     ) -> RetrievalJob:
         """
         Deprecated. Please see get_historical_features.
@@ -569,7 +569,7 @@ class Client:
         entity_rows: Union[pd.DataFrame, str],
         compute_statistics: bool = False,
         project: str = None,
-        data_format: DataFormat = DataFormat.DATA_FORMAT_AVRO, # type: ignore
+        data_format: DataFormat = DataFormat.DATA_FORMAT_AVRO,  # type: ignore
     ) -> RetrievalJob:
         """
         Retrieves historical features from a Feast Serving deployment.
