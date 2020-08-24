@@ -28,7 +28,7 @@ from feast.staging.storage_client import get_staging_client
 
 
 def export_source_to_staging_location(
-    source: Union[pd.DataFrame, str], staging_location_uri: str, data_format: DataFormat
+    source: Union[pd.DataFrame, str], staging_location_uri: str, data_format: DataFormat # type: ignore
 ) -> List[str]:
     """
     Uploads a DataFrame as an Avro file to a remote staging location.
@@ -109,7 +109,7 @@ def export_source_to_staging_location(
 def export_dataframe_to_local(
     df: pd.DataFrame,
     dir_path: Optional[str] = None,
-    data_format: DataFormat = DataFormat.DATA_FORMAT_AVRO,
+    data_format: DataFormat = DataFormat.DATA_FORMAT_AVRO, # type: ignore
 ) -> Tuple[str, str, str]:
     """
     Exports a pandas DataFrame to the local filesystem.
@@ -172,7 +172,7 @@ def export_dataframe_to_local(
     return dir_path, file_name, dest_path
 
 
-def _get_file_name(data_format: DataFormat = DataFormat.DATA_FORMAT_AVRO) -> str:
+def _get_file_name(data_format: DataFormat = DataFormat.DATA_FORMAT_AVRO) -> str: # type: ignore
     """
     Create a random file name.
 
