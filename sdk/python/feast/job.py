@@ -1,8 +1,7 @@
 import csv
 import gzip
 from io import BufferedRandom
-from tempfile import TemporaryFile
-from typing import IO, List
+from typing import List
 from urllib.parse import ParseResult, urlparse
 
 import fastavro
